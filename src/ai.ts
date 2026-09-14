@@ -37,9 +37,6 @@ export async function aiHandler(c: Context) {
 
   const body: Record<string, unknown> = {
     contents: messages,
-    generationConfig: {
-      temperature: 0.7,
-    },
   }
 
   if (payload.system?.trim()) {
@@ -48,11 +45,10 @@ export async function aiHandler(c: Context) {
     }
   }
 
-  // Use Gemini's native REST endpoint. This is important for Google's newer
-  // AQ.* Auth Keys: the native endpoint authenticates API keys with the
-  // x-goog-api-key header, rather than treating the key as an OAuth token.
+  // Gemini 3.6 Flash is a current stable model. Use the native Gemini REST
+  // endpoint so newer AQ.* Auth Keys are authenticated with x-goog-api-key.
   const response = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
     {
       method: 'POST',
       headers: {
