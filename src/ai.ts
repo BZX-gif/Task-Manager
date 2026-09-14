@@ -4,10 +4,9 @@ export interface WorkerEnv {
   GEMINI_API_KEY: string
 }
 
-type AIContext = Context<{ Bindings: WorkerEnv }>
-
-export async function aiHandler(c: AIContext) {
-  const apiKey = c.env.GEMINI_API_KEY?.trim()
+export async function aiHandler(c: Context) {
+  const env = c.env as WorkerEnv
+  const apiKey = env.GEMINI_API_KEY?.trim()
 
   if (!apiKey) {
     return c.json({ error: { message: 'GEMINI_API_KEY is not configured on this Worker.' } }, 500)
@@ -56,7 +55,10 @@ export async function aiHandler(c: AIContext) {
   const data = await response.json()
 
   if (!response.ok) {
-    return c.json(data, response.status as 400 | 401 | 403 | 404 | 429 | 500 | 502 | 503 | 504)
+    return new Response(JSON.stringify(data), {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   return c.json({
