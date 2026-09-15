@@ -27,73 +27,74 @@ Workers VPC Network binding with `network_id: "cf1:network"`:
 - https://developers.cloudflare.com/cloudflare-one/traffic-policies/egress-policies/dedicated-egress-ips/
 - https://developers.cloudflare.com/workers/configuration/placement/
 
-Dedicated Gateway egress IPs are account-provisioned and tied to data centers.
-Placement hints optimize execution proximity; they are not a guarantee of Google's
-IP classification. **AI Gateway is a different product** and is not used here as an
-assumed geolocation fix. Merely adding a VPC binding without an egress policy does
-not establish acceptable egress.
+The first experiment uses **default/shared Gateway egress**, not dedicated IPs.
+Workers VPC is available on Free and Paid plans and is free during its open beta.
+Dedicated Gateway egress is a separate Enterprise feature, is not required for this
+experiment, and is not configured here. No Enterprise features, BYOIP, paid proxy,
+or additional AI provider are being activated.
 
-The smallest implementation keeps Gemini and adds an explicit transport choice:
-`direct` (unchanged default) or `gateway` (only the bound Gateway fetch). No second
-AI provider, proxy URL, public proxy route, automatic fallback or retry is added.
-Gateway misconfiguration fails closed rather than reverting to rejected shared IPs.
+**AI Gateway is a different product** and is not used here. Routing through Zero
+Trust Gateway is supported, but does not guarantee Google will accept its shared
+IP/location classification. This is a diagnostic experiment, not a verified fix.
+
+The existing implementation keeps Gemini and selects `direct` (ordinary Worker
+fetch) or `gateway` (only the bound Gateway fetch). The code defaults to `direct`
+when the variable is absent; `wrangler.jsonc` now explicitly selects `gateway`.
+Gateway misconfiguration fails closed rather than reverting to direct egress.
 The origin remains fixed to Google; redirects are refused to avoid forwarding keys.
-This can remove the offending shared egress path **only after** account provisioning
-and successful Google acceptance testing. It cannot guarantee Google's policy.
+No arbitrary proxy URL, location spoofing, automatic fallback or retry is added.
 
-## STOP: operator action required before enabling Gateway
+## Diagnostic configuration — do not deploy yet
 
-No Cloudflare account entitlement, dedicated IP or policy is established by this
-repository. Do not deploy the commented Gateway configuration as a claimed fix.
+The repository now contains:
 
-1. Contact your Cloudflare account team to confirm Workers VPC / Mesh Gateway egress
-   availability and pricing and provision dedicated egress IPs in two locations
-   where your legitimate Gemini usage is supported. Confirm IPv4 and IPv6 coverage
-   and Google acceptance; do not use location spoofing. Review Google's applicable
-   API terms and region requirements.
-2. In Cloudflare **Zero Trust → Traffic policies → Traffic settings**, enable
-   **Allow Secure Web Gateway to proxy traffic**, selecting TCP.
-3. In **Traffic policies → Egress policies**, create a policy matching the Gemini
-   destination (`generativelanguage.googleapis.com`) and choose your provisioned
-   dedicated primary and secondary egress locations. Consult Cloudflare on the
-   correct destination selector for Worker traffic. Do not choose `0.0.0.0` as the
-   secondary: that can revert to nearest/default egress. Confirm the effective
-   policy and failover behavior with Cloudflare; both paths must be acceptable.
-4. Retain the existing `GEMINI_API_KEY` Worker runtime secret. No new API key is
-   required. In `wrangler.jsonc`, enable the documented optional configuration:
+```json
+"vars": { "GEMINI_TRANSPORT": "gateway" },
+"vpc_networks": [
+  { "binding": "GEMINI_EGRESS", "network_id": "cf1:network", "remote": true }
+]
+```
 
-   ```json
-   "vars": { "GEMINI_TRANSPORT": "gateway" },
-   "vpc_networks": [
-     { "binding": "GEMINI_EGRESS", "network_id": "cf1:network", "remote": true }
-   ]
-   ```
+Retain `GEMINI_API_KEY` as the existing Worker runtime secret. Do not configure
+or purchase dedicated egress IPs, Enterprise features, BYOIP, or a paid proxy.
+No account-side policies or services are changed by editing this repository.
+The binding uses the account's Gateway routing and existing applicable policies;
+if that account already has dedicated-egress policies, check them before a future
+live test to ensure this experiment actually uses default/shared egress.
 
-   Merge with any existing vars/bindings, rather than replacing them. Keep this
-   configuration in source control so a later Wrangler deployment preserves it.
-   Remote local bindings contact the real account; mocked tests do not use them.
-5. Run `npm run verify` and `npx wrangler deploy --dry-run`, then deploy only after
-   approval with `npm run deploy`. Review Worker Observability logs and Gateway
-   DNS/HTTP/Network logs to confirm policy matching and actual egress. Do not enable
-   request-header/body logging or record the key or personal productivity context.
-6. From the production app, run Plan My Day and confirm POST `/api/ai` returns 200
-   with a nonempty `{ text }`. Smoke-test all seven commands. Test primary and
-   secondary egress with Cloudflare assistance. If Google still rejects either IP,
-   stop and escalate the IP classification to Google/Cloudflare; do not retry 400s.
+Current verification is limited to `npm run verify` and
+`npx wrangler deploy --dry-run`. A dry run validates packaging/configuration, not
+account readiness, policy matching, the runtime secret, or Google's acceptance.
+`remote: true` allows real account bindings during local development: do not start
+remote local development as a substitute for an approved live test. Mocked tests
+make no external AI requests.
+
+### Future live test, only after explicit approval
+
+1. Confirm the account's Zero Trust/Gateway setup and applicable DNS, HTTP, network
+   and egress policies permit the Gemini destination. Do not activate paid features
+   or change unrelated security policies. Use the default/shared Gateway route.
+2. Deploy only after explicit approval. Review Worker Observability and Gateway
+   logs to confirm policy matching and routing. Do not log request headers/bodies,
+   the API key, or personal productivity context.
+3. Run Plan My Day in the production app and check that POST `/api/ai` returns 200
+   with a nonempty `{ text }`; smoke-test the other six commands. A repeated
+   `provider_location` / 503 means this experiment has not resolved Google's
+   rejection. Do not retry deterministic 400s or claim success based on a dry run.
+
+### Reversal
+
+Set `vars.GEMINI_TRANSPORT` to `"direct"` in `wrangler.jsonc` and redeploy only with
+approval. The binding may remain unused or be removed. Direct mode uses ordinary
+Worker fetch even if the binding is present. This restores the original network
+path, not a promise that Gemini will accept that path. Keep configuration changes
+in source control so subsequent deployments preserve the intended selection.
 
 The existing endpoint has no application authentication (the app has no accounts).
-No new endpoint is introduced here. Before enabling chargeable infrastructure,
-protect the personal app with Cloudflare Access restricted to your identity and
-appropriate rate limiting. Cover the workers.dev hostname too (or disable it when
-using a protected custom domain); origin checks alone are not authentication.
-
-If dedicated egress is unavailable or uneconomic, **do not enable this transport**.
-The next architecture decision requires operator approval: either an authenticated,
-owner-controlled regional Gemini backend (fixed destination, managed secrets,
-verified region, Access/service authentication and quotas), or an explicitly chosen
-Workers AI binding as a location-only provider fallback. Neither infrastructure nor
-provider billing/terms is silently assumed here. A future provider fallback should
-trigger only on `provider_location`, never on authentication or rate-limit failures.
+No new endpoint is introduced here. For a future live test, restrict the personal
+app with Cloudflare Access and appropriate rate limiting. Cover the workers.dev
+hostname too (or disable it when using a protected custom domain); origin checks
+alone are not authentication. Do not disable existing protections for this test.
 
 ## Runtime configuration and errors
 
@@ -105,7 +106,8 @@ trigger only on `provider_location`, never on authentication or rate-limit failu
   https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-6-flash
   Verify generateContent access from approved egress. A 404 is diagnosed separately;
   only change the override to a model confirmed available to this project.
-- `GEMINI_TRANSPORT`: optional `direct` (default) or `gateway`.
+- `GEMINI_TRANSPORT`: `direct` or `gateway`; code default is `direct`, while the
+  diagnostic Wrangler configuration explicitly selects `gateway`.
 - `GEMINI_EGRESS`: VPC Network binding required only for `gateway`; not a secret.
 
 Success remains `{ text }`. Errors retain `{ error: { message } }` and add a stable

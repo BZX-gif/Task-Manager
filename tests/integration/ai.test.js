@@ -51,9 +51,13 @@ for (const [upstream, detail, status, code] of [
 
 test('Gateway uses only the binding and configurable Gemini model', async (t) => {
   t.mock.method(globalThis, 'fetch', () => assert.fail('must not use direct egress'))
-  const binding = { async fetch(url) {
+  const binding = { async fetch(url, init) {
     assert.equal(this, binding)
-    assert.match(url, /models\/test-model:generateContent$/)
+    assert.equal(url, 'https://generativelanguage.googleapis.com/v1beta/models/test-model:generateContent')
+    assert.equal(init.method, 'POST')
+    assert.equal(init.headers['x-goog-api-key'], env.GEMINI_API_KEY)
+    assert.equal(init.redirect, 'error')
+    assert.equal(JSON.parse(init.body).contents[0].parts[0].text, 'Plan my day')
     return answer()
   } }
   const response = await request({ ...env, GEMINI_TRANSPORT: 'gateway', GEMINI_MODEL: 'test-model', GEMINI_EGRESS: binding })
@@ -101,4 +105,15 @@ test('invalid JSON, malformed success, empty answer, safety and timeout', async 
     assert.equal((await response.json()).error.code, code)
     mock.mock.restore()
   }
+})
+
+
+test('explicit direct rollback ignores an existing Gateway binding', async (t) => {
+  let calls = 0
+  t.mock.method(globalThis, 'fetch', async () => { calls++; return answer() })
+  const response = await request({ ...env, GEMINI_TRANSPORT: 'direct', GEMINI_EGRESS: {
+    async fetch() { assert.fail('direct mode must not call Gateway') },
+  } })
+  assert.deepEqual(await response.json(), { text: 'A plan' })
+  assert.equal(calls, 1)
 })

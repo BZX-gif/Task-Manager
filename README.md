@@ -168,6 +168,7 @@ npm run deploy                           # npm run build && wrangler deploy
 ### Gemini egress / production location failures
 
 See [the AI egress runbook](docs/ai-egress.md) for the opt-in Cloudflare Gateway
-transport, required account provisioning, sanitized error codes, model override,
-and production verification. Direct Gemini remains the default; deploying code
-alone does not fix Google rejecting the current shared egress IP.
+transport, shared-egress diagnostic configuration, sanitized error codes, model
+override, and production verification. Wrangler now selects Gateway for an
+approval-gated experiment; direct Gemini remains available. No dedicated egress
+is required for this test, and Google acceptance has not been verified.
