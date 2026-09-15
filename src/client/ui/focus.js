@@ -234,8 +234,20 @@ export function completeFocus() {
   syncScoreHistory(currentDayKey())
   closeFocusOverlay()
   playChime()
-  const task = record.taskId ? state.tasks.find((t) => t.id === record.taskId) : null
-  if (task && !task.done) {
+  const linkedTask = record.taskId ? state.tasks.find((t) => t.id === record.taskId) : null
+  const task = linkedTask && !linkedTask.done ? linkedTask : null
+  if (task && state.settings.focus.autoCompleteTask) {
+    // finishing a focus session on a task finishes the task (Settings → Focus)
+    commit((s) => {
+      const target = s.tasks.find((t) => t.id === task.id)
+      if (target) {
+        target.done = true
+        target.completedAt = Date.now()
+        rollSeriesForward(target)
+      }
+    })
+    toast(`Session complete · ${formatDuration(minutes)} on “${task.title}” — task done 🎉`, 'success')
+  } else if (task) {
     toast(`Session complete · ${formatDuration(minutes)} on “${task.title}”`, 'success', {
       timeout: 12000,
       action: {

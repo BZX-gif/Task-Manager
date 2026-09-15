@@ -63,6 +63,10 @@ export function renderSettings() {
           <input type="number" min="30" step="15" class="input-field" data-setting="focus.targetMinutes" value="${settings.focus.targetMinutes}">
         </div>
       </div>
+      <label class="flex items-center gap-3 text-[13.5px] text-slate-200">
+        <input type="checkbox" data-setting="focus.autoCompleteTask" ${settings.focus.autoCompleteTask ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
+        Completing a focus session marks its task done
+      </label>
       <p class="text-[12px] text-slate-500">${fieldRow('Focused today', `${state.focus.sessions.filter((s) => s.date === currentDayKey()).reduce((sum, s) => sum + s.focusedSeconds, 0) / 60 | 0} min`)}</p>
     </div>
 

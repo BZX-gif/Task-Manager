@@ -210,6 +210,11 @@ test('focus session: pause, resume, link a task and complete into analytics', as
   assert.equal(sessions[0].focusedSeconds, 900)
   assert.equal(sessions[0].status, 'completed')
   assert.equal(sessions[0].taskId, active.taskId, 'session kept its task link')
+  if (active.taskId) {
+    const linked = state().tasks.find((t) => t.id === active.taskId)
+    assert.equal(linked.done, true, 'finishing a session completes its task (Settings → Focus)')
+    assert.ok(linked.completedAt, 'completion is timestamped')
+  }
 })
 
 test('focus minutes flow into the daily score and progress view', async () => {

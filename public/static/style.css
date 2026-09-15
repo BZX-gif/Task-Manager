@@ -614,6 +614,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 /* ---------- Task rows ---------- */
 .task-row.is-overdue { border-color: rgba(251,113,133,0.28); background: rgba(251,113,133,0.06); }
 
+/* ---------- Long strings & narrow screens: never overflow the card ---------- */
+.truncate, .min-w-0 { min-width: 0; }
+.glass-card { max-width: 100%; }
+.task-row, .top3-row, .tt-row { max-width: 100%; }
+.task-row > *, .top3-row > *, .tt-row > * { min-width: 0; }
+#view-assistant pre, #view-assistant code { overflow-wrap: anywhere; }
+#greeting-text, #quote-text { overflow: hidden; text-overflow: ellipsis; }
+
 /* ---------- Mobile polish ---------- */
 @media (max-width: 640px) {
   .focus-ring-wrap { width: 190px; height: 190px; }

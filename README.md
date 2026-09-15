@@ -58,7 +58,7 @@ npx wrangler secret put GEMINI_API_KEY     # production
 - Start from any task, from **DO THIS NOW**, from the sidebar, or with <kbd>F</kbd> / the header chip.
 - Presets 25 / 50 / 90 plus a custom length (1–600 min), optional 5-min break timer, circular progress ring, fullscreen distraction-free overlay.
 - Pause · resume · complete · stop · +5 min · re-link to another task — the session survives a page refresh (it is persisted immediately, not debounced) and the header chip brings it back.
-- Completing a session credits focused minutes, updates today's score, and (optionally) asks whether the linked task is done.
+- Completing a session credits focused minutes, updates today's score, and marks the linked task done when Settings → Focus → "Completing a focus session marks its task done" is on.
 - Sub-minute sessions are discarded so analytics stay meaningful.
 
 ### Today's Top 3
