@@ -2,11 +2,13 @@ import type { Context } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
 export interface WorkerEnv {
-  GEMINI_API_KEY: string
+  GEMINI_API_KEY?: string
+  GEMINI_MODEL?: string
+  GEMINI_TRANSPORT?: 'direct' | 'gateway'
+  GEMINI_EGRESS?: { fetch(input: string, init: RequestInit): Promise<Response> }
 }
 
 const GEMINI_MODEL = 'gemini-3.6-flash'
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 const REQUEST_TIMEOUT_MS = 25_000
 
 /** Friendly, non-technical messages — never leak provider errors or secrets. */
@@ -20,28 +22,29 @@ const FRIENDLY = {
   network: 'The assistant could not be reached. Check your connection and try again.',
 }
 
-/**
- * Never forward an arbitrary upstream status: the client only needs to know
- * "rate limited" (429) or "something went wrong upstream" (502).
- */
-function clientStatus(status: number): ContentfulStatusCode {
-  return status === 429 ? 429 : 502
-}
-
-function friendlyForStatus(status: number): string {
-  if (status === 429) return FRIENDLY.rateLimited
-  if (status === 400) return FRIENDLY.badRequest
-  if (status === 401 || status === 403) return FRIENDLY.unavailable
-  if (status >= 500) return FRIENDLY.unavailable
-  return FRIENDLY.empty
+/** Only fixed categories are logged: provider bodies can echo credentials/prompts. */
+function upstreamFailure(status: number, data: any): { code: string; status: ContentfulStatusCode; message: string } {
+  const reason = typeof data?.error?.message === 'string' ? data.error.message : ''
+  if (status === 400 && data?.error?.status === 'FAILED_PRECONDITION' && /user location is not supported for the api use/i.test(reason)) {
+    return { code: 'provider_location', status: 503, message: FRIENDLY.unavailable }
+  }
+  if (status === 401 || status === 403 || (status === 400 &&
+    ((Array.isArray(data?.error?.details) && data.error.details.some((detail: any) => detail?.reason === 'API_KEY_INVALID')) || /api key not valid|api_key_invalid/i.test(reason)))) {
+    // These are server credentials, not the browser user's authentication.
+    return { code: 'provider_authentication', status: 500, message: FRIENDLY.unavailable }
+  }
+  if (status === 429) return { code: 'provider_rate_limit', status: 429, message: FRIENDLY.rateLimited }
+  if (status === 404) return { code: 'provider_model_configuration', status: 500, message: FRIENDLY.unavailable }
+  if (status === 400) return { code: 'provider_bad_request', status: 400, message: FRIENDLY.badRequest }
+  if (status >= 500) return { code: 'provider_unavailable', status: 503, message: FRIENDLY.unavailable }
+  return { code: 'provider_protocol', status: 502, message: FRIENDLY.unavailable }
 }
 
 export async function aiHandler(c: Context) {
   const env = c.env as WorkerEnv | undefined
-  const apiKey = env?.GEMINI_API_KEY?.trim()
-
-  if (!apiKey) {
-    return c.json({ error: { message: FRIENDLY.missingKey } }, 500)
+  const fail = (code: string, status: ContentfulStatusCode, message: string, upstreamStatus?: number) => {
+    console.warn('[ai]', JSON.stringify({ provider: 'gemini', transport: env?.GEMINI_TRANSPORT === 'gateway' ? 'gateway' : 'direct', code, upstreamStatus }))
+    return c.json({ error: { code, message } }, status)
   }
 
   let payload: {
@@ -53,7 +56,14 @@ export async function aiHandler(c: Context) {
   try {
     payload = await c.req.json()
   } catch {
-    return c.json({ error: { message: 'Invalid JSON request.' } }, 400)
+    return fail('malformed_request', 400, 'Invalid JSON request.')
+  }
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload) || !Array.isArray(payload.messages) ||
+    (payload.system !== undefined && typeof payload.system !== 'string') ||
+    (payload.context !== undefined && typeof payload.context !== 'string') ||
+    payload.messages.some((message) => !message || typeof message.content !== 'string' || !['user', 'model', 'assistant'].includes(message.role))) {
+    return fail('malformed_request', 400, FRIENDLY.badRequest)
   }
 
   const messages = (payload.messages ?? [])
@@ -65,8 +75,21 @@ export async function aiHandler(c: Context) {
     }))
 
   if (!messages.length) {
-    return c.json({ error: { message: 'A user message is required.' } }, 400)
+    return fail('malformed_request', 400, 'A user message is required.')
   }
+
+  const apiKey = env?.GEMINI_API_KEY?.trim()
+  if (!apiKey) return fail('configuration', 500, FRIENDLY.missingKey)
+  const model = env?.GEMINI_MODEL ?? GEMINI_MODEL
+  const transport = env?.GEMINI_TRANSPORT ?? 'direct'
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(model) || !['direct', 'gateway'].includes(transport) ||
+    (transport === 'gateway' && typeof env?.GEMINI_EGRESS?.fetch !== 'function')) {
+    return fail('configuration', 500, 'The assistant server configuration needs attention.')
+  }
+  // Fixed Google origin, no caller-controlled proxy or destination. Fail closed
+  // if Gateway is selected: never silently revert to rejected shared egress.
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+  const send = transport === 'gateway' ? env!.GEMINI_EGRESS!.fetch.bind(env!.GEMINI_EGRESS) : fetch
 
   // The productivity snapshot travels with the system instruction: one small
   // context block, no personal notes, no history beyond the last few turns.
@@ -90,8 +113,9 @@ export async function aiHandler(c: Context) {
 
   let response: Response
   try {
-    response = await fetch(GEMINI_ENDPOINT, {
+    response = await send(endpoint, {
       method: 'POST',
+      redirect: 'error',
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': apiKey,
@@ -100,41 +124,36 @@ export async function aiHandler(c: Context) {
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
   } catch (error) {
-    console.warn('[ai] upstream request failed:', (error as Error)?.name || 'unknown')
     const timedOut = (error as Error)?.name === 'TimeoutError' || (error as Error)?.name === 'AbortError'
-    return c.json({ error: { message: timedOut ? FRIENDLY.timeout : FRIENDLY.network } }, 504)
+    return fail(timedOut ? 'provider_timeout' : 'provider_network', timedOut ? 504 : 503, timedOut ? FRIENDLY.timeout : FRIENDLY.network)
   }
 
   if (!response.ok) {
-    // Log the provider's reason for the developer, return something friendly.
-    let detail = ''
-    try {
-      detail = (await response.text()).slice(0, 500)
-    } catch {
-      /* ignore */
-    }
-    console.warn(`[ai] upstream ${response.status}: ${detail}`)
-    return c.json({ error: { message: friendlyForStatus(response.status) } }, clientStatus(response.status))
+    let detail: unknown
+    try { detail = await response.json() } catch { /* no raw response logging */ }
+    const failure = upstreamFailure(response.status, detail)
+    return fail(failure.code, failure.status, failure.message, response.status)
   }
 
   let data: any
   try {
     data = await response.json()
   } catch {
-    return c.json({ error: { message: FRIENDLY.unavailable } }, 502)
+    return fail('provider_protocol', 502, FRIENDLY.unavailable)
   }
 
-  const text = (data?.candidates?.[0]?.content?.parts ?? [])
-    .map((part: { text?: string }) => part?.text ?? '')
+  const parts = data?.candidates?.[0]?.content?.parts
+  const text = (Array.isArray(parts) ? parts : [])
+    .map((part: { text?: string }) => typeof part?.text === 'string' ? part.text : '')
     .join('')
     .trim()
 
   if (!text) {
     const finishReason = data?.candidates?.[0]?.finishReason
     if (finishReason === 'SAFETY' || finishReason === 'PROHIBITED_CONTENT') {
-      return c.json({ error: { message: 'That request was blocked by the assistant’s safety filter. Try rephrasing it.' } }, 422)
+      return fail('provider_safety', 422, 'That request was blocked by the assistant’s safety filter. Try rephrasing it.')
     }
-    return c.json({ error: { message: FRIENDLY.empty } }, 502)
+    return fail('provider_empty', 502, FRIENDLY.empty)
   }
 
   return c.json({ text })
