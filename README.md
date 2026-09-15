@@ -120,7 +120,7 @@ Shows what was missed, how much usable time is left today, and a realistic compr
 | `GET /static/*`, `/icons/*` | Client bundle, compiled CSS, fonts, icons |
 | `GET /manifest.webmanifest`, `/sw.js` | PWA metadata + service worker |
 | `GET /api/health` | `{ ok, name, ai: 'server-side', time }` |
-| `POST /api/ai` | `{ system?, context?, messages[] }` → `{ text }` — 400 bad JSON · 422 blocked · 429/502 upstream · 504 timeout · 500 missing secret |
+| `POST /api/ai` | `{ system?, context?, messages[] }` → `{ text }` — 400 malformed/provider input · 422 blocked · 429 rate limit · 503 availability/location · 502 invalid upstream reply · 504 timeout · 500 configuration/auth |
 
 The browser never talks to Gemini. It posts to `/api/ai`; the Worker adds `GEMINI_API_KEY` (a Worker secret) and strips everything on the way back.
 
@@ -164,3 +164,10 @@ npm run deploy                           # npm run build && wrangler deploy
 ```
 
 `wrangler.jsonc` keeps `main: ./dist/index.js`, `assets: ./dist`, `nodejs_compat` and `secrets.required: ["GEMINI_API_KEY"]`.
+
+### Gemini egress / production location failures
+
+See [the AI egress runbook](docs/ai-egress.md) for the opt-in Cloudflare Gateway
+transport, required account provisioning, sanitized error codes, model override,
+and production verification. Direct Gemini remains the default; deploying code
+alone does not fix Google rejecting the current shared egress IP.

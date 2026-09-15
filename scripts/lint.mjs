@@ -46,6 +46,7 @@ const SECRET_PATTERNS = [
 ]
 const scanned = [
   ...clientFiles,
+  path.join(root, 'tests', 'integration', 'ai.test.js'),
   ...(await walk(path.join(root, 'public'), (f) => f.endsWith('.js'))),
   ...(await walk(path.join(root, 'scripts'), (f) => f.endsWith('.mjs'))),
   path.join(root, 'src', 'ai.ts'),

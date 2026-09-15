@@ -9,6 +9,10 @@
   "secrets": {
     "required": ["GEMINI_API_KEY"]
   },
+  // Optional, only AFTER Gateway dedicated egress is provisioned and verified:
+  // "vars": { "GEMINI_TRANSPORT": "gateway" },
+  // "vpc_networks": [{ "binding": "GEMINI_EGRESS", "network_id": "cf1:network", "remote": true }],
+  // GEMINI_MODEL may override the existing gemini-3.6-flash default.
   "assets": {
     "directory": "./dist"
   }
