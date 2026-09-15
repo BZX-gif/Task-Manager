@@ -1,9 +1,10 @@
 module.exports = {
   apps: [
     {
-      name: 'webapp',
+      name: 'command-center',
+      // Workers (not Pages): build first, then serve the built Worker locally
       script: 'npx',
-      args: 'wrangler pages dev dist --ip 0.0.0.0 --port 3000',
+      args: 'wrangler dev --ip 0.0.0.0 --port 3000',
       env: {
         NODE_ENV: 'development',
         PORT: 3000
