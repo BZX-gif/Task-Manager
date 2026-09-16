@@ -119,15 +119,22 @@ test('an unreadable payload is rescued, reported and never silently dropped', as
 /* ------------------------------------------------------------ persistence */
 
 test('a running focus session survives a reload', async () => {
-  const { window } = await boot()
+  const { window, $ } = await boot()
   let reloaded = null
   try {
     window.CC.openFocusMode()
     await settle()
     window.document.querySelector('#focus-start')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
-    await settle(120)
+    await settle()
+    // the Focus Launch briefing is UI-only: no session is fabricated in storage
+    assert.ok($('.focus-launch'), 'the mission briefing appears before the clock starts')
+    assert.match($('.focus-launch').textContent, /READY\?/)
+    assert.equal(window.CC.getState().focus.active, null, 'nothing is persisted before entering the zone')
+
+    // let the automatic 3-2-1 countdown start the mission on its own
+    await settle(1900)
     const active = window.CC.getState().focus.active
-    assert.ok(active, 'session running')
+    assert.ok(active, 'session running after the launch countdown')
     assert.equal(active.running, true)
 
     const persisted = JSON.parse(window.localStorage.getItem('kcc_state_v1'))
@@ -141,6 +148,7 @@ test('a running focus session survives a reload', async () => {
     assert.equal(restored.plannedMinutes, active.plannedMinutes)
     assert.equal(restored.running, true)
     assert.ok(reloaded.$('.focus-overlay'), 'the focus overlay is put back on screen')
+    assert.ok(reloaded.$('.focus-clock'), 'a restored session lands on the Focus Core, not the briefing')
   } finally {
     window.close()
     reloaded?.window.close()
@@ -252,6 +260,11 @@ test('protected time blocks are honoured by the recovery planner', async () => {
 
 test('focus entry points and mobile navigation work', async () => {
   const { window, $, errors } = await boot()
+  const click = (selector) => {
+    const element = $(selector)
+    assert.ok(element, `element not found: ${selector}`)
+    element.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+  }
   try {
     // sidebar "Start Focus" opens the picker overlay
     $('#focus-mini-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
@@ -274,26 +287,56 @@ test('focus entry points and mobile navigation work', async () => {
     await settle()
     assert.equal($('[data-custom]').textContent.trim(), '45 min')
 
-    // header chip appears only while a session runs
-    $('#focus-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    // starting goes through the Focus Launch briefing — and it can be backed out of
+    click('#focus-start')
+    await settle()
+    assert.match($('.focus-overlay').textContent, /READY\?/, 'the briefing appears before the clock starts')
+    assert.match($('.focus-overlay').textContent, /45 MINUTES/, 'the custom length is carried into the briefing')
+    assert.equal(window.CC.getState().focus.active, null, 'no session exists during the briefing')
+    click('[data-focus-launch-back]')
+    await settle()
+    assert.ok($('#focus-start'), 'Change plan returns to the picker without starting anything')
+
+    // launching for real: the header chip appears only while a session runs
+    click('#focus-start')
+    await settle()
+    click('#focus-launch-enter')
     await settle(120)
+    assert.equal(window.CC.getState().focus.active?.plannedMinutes, 45, 'the custom 45-minute mission starts')
     assert.equal($('#active-timer-chip').classList.contains('hidden'), false, 'timer chip visible while running')
     $('#active-timer-chip').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
     await settle()
     assert.ok($('.focus-overlay'), 'chip reopens the session')
+    assert.ok($('.focus-clock'), 'the Focus Core is on screen')
+
+    // ending early is a dignity screen, not a shame screen — and it can be cancelled
+    click('[data-focus-stop]')
+    await settle()
+    assert.match($('.focus-overlay').textContent, /End this session\?/, 'stopping asks first')
+    assert.match($('.focus-overlay').textContent, /That is still real work\./)
+    assert.match($('.focus-overlay').textContent, /aren’t logged/, 'the sub-minute rule is explained honestly')
+    assert.ok(window.CC.getState().focus.active, 'the session is untouched while deciding')
+    click('[data-focus-resume-session]')
+    await settle()
+    assert.ok($('#focus-time'), 'Keep focusing returns to the timer')
     // stopping immediately logs nothing (no junk sessions in analytics)
     window.CC.stopFocus({ quiet: true })
     await settle(60)
     assert.equal(window.CC.getState().focus.active, null, 'stop clears the session')
     assert.equal(window.CC.getState().focus.sessions.length, 0, 'a sub-minute session is discarded')
 
-    // …but a real one is recorded with the chosen length
+    // …but a real one is recorded with the chosen length, through the same screen
     window.CC.openFocusMode()
     await settle()
-    $('#focus-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    click('#focus-start')
+    await settle()
+    click('#focus-launch-enter')
     await settle(120)
     window.CC.getState().focus.active.accumulatedSeconds = 300
-    window.CC.stopFocus({ quiet: true })
+    click('[data-focus-stop]')
+    await settle()
+    assert.doesNotMatch($('.focus-overlay').textContent, /aren’t logged/, 'a real session is not threatened with the discard rule')
+    click('[data-focus-end-now]')
     await settle(80)
     const recorded = window.CC.getState().focus.sessions
     assert.equal(recorded.length, 1, 'a real session is recorded')
@@ -306,6 +349,116 @@ test('focus entry points and mobile navigation work', async () => {
     $('#mobile-menu-btn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
     await settle()
     assert.equal($('#mobile-nav').classList.contains('hidden'), false, 'mobile nav opens')
+    assert.deepEqual(errors, [])
+  } finally {
+    window.close()
+  }
+})
+
+/* ------------------------------------------------------- the focus mission */
+
+test('the focus mission: presets, phases, milestones, final minute, keyboard and the ceremony', async () => {
+  const { window, $, errors, toasts } = await boot()
+  const click = (selector) => {
+    const element = $(selector)
+    assert.ok(element, `element not found: ${selector}`)
+    element.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+  }
+  const key = (k) => $('.focus-overlay').dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }))
+  const startMission = async (preset) => {
+    window.CC.openFocusMode()
+    await settle()
+    click(`#focus-presets [data-minutes="${preset}"]`)
+    click('#focus-start')
+    await settle()
+    click('#focus-launch-enter')
+    await settle(40)
+  }
+  try {
+    /* — 90-minute preset: briefing, launch, discard ——————————————— */
+    await startMission(90)
+    assert.equal(window.CC.getState().focus.active.plannedMinutes, 90, 'the 90-minute preset is honoured')
+    assert.match($('#focus-phase').textContent, /WARMING UP/, 'a fresh mission starts in warm-up')
+    window.CC.stopFocus({ quiet: true })
+    await settle(40)
+
+    /* — 50-minute preset becomes a 60-minute mission via both +5 paths — */
+    await startMission(50)
+    assert.equal(window.CC.getState().focus.active.plannedMinutes, 50, 'the 50-minute preset is honoured')
+    assert.match($('.focus-overlay').textContent, /Focus Mode/, 'the product name is still present')
+    assert.equal($('.focus-energy').getAttribute('role'), 'progressbar', 'progress is exposed to assistive tech')
+    assert.ok($('.fz-node.current'), 'the running mission is the hollow momentum node')
+    assert.match($('.focus-overlay').textContent, /Deep Work/, 'an unlinked mission uses the generic label')
+
+    key(' ') // Space pauses
+    await settle()
+    assert.equal(window.CC.getState().focus.active.running, false, 'Space pauses the session')
+    assert.match($('#focus-state').textContent, /Paused/)
+    key(' ') // Space resumes
+    await settle()
+    assert.equal(window.CC.getState().focus.active.running, true, 'Space resumes the session')
+
+    key('+') // "+" adds five minutes
+    await settle()
+    assert.equal(window.CC.getState().focus.active.plannedMinutes, 55, '+ adds five minutes from the keyboard')
+    click('[data-focus-plus]')
+    await settle()
+    assert.equal(window.CC.getState().focus.active.plannedMinutes, 60, 'the +5 min button still works')
+
+    // Escape minimises; the same mission comes back untouched
+    key('Escape')
+    await settle()
+    assert.equal($('.focus-overlay'), null, 'Esc minimises the overlay')
+    window.CC.openFocusMode()
+    await settle()
+    assert.equal(window.CC.getState().focus.active.plannedMinutes, 60, 'minimising never disturbs the session')
+
+    /* — momentum and phases driven by the real clock — */
+    // jump to ~50%: deep work + the 25% and 50% milestones collapse into one message
+    window.CC.getState().focus.active.accumulatedSeconds = 1800
+    await settle(1150) // one real tick of the timer
+    assert.equal($('.focus-overlay').classList.contains('phase-deep'), true, '50% enters the deep-work presentation')
+    assert.match($('#focus-phase').textContent, /DEEP WORK/)
+    assert.match($('#focus-percent').textContent, /50%/)
+    assert.match($('#focus-milestone').textContent, /in the zone/, 'crossing 50% shows the highest milestone only once')
+    assert.match($('#focus-elapsed').textContent, /^Focused 30:0\d of 1:00:00$/, 'focused vs total tracks the real elapsed time')
+
+    // jump to ~93%: final push
+    window.CC.getState().focus.active.accumulatedSeconds = 3350
+    await settle(1150)
+    assert.equal($('.focus-overlay').classList.contains('phase-push'), true, '90% enters the final push')
+    assert.match($('#focus-phase').textContent, /FINAL PUSH/)
+
+    // inside the last 10 seconds: "Almost there."
+    window.CC.getState().focus.active.accumulatedSeconds = 3595
+    await settle(1150)
+    assert.equal($('.focus-overlay').classList.contains('focus-final-almost'), true, 'the last seconds get their own state')
+    assert.match($('#focus-final-hint').textContent, /Almost there\./)
+
+    // the clock reaches zero: invited to complete, never auto-completed
+    window.CC.getState().focus.active.accumulatedSeconds = 3600
+    await settle(1150)
+    assert.equal($('.focus-overlay').classList.contains('mission-ready'), true, 'goal reached highlights completion')
+    assert.match($('#focus-state').textContent, /Goal reached/)
+    assert.ok(toasts.some((t) => /Focus time reached/.test(t)), 'the existing goal-reached toast still fires')
+    assert.ok(window.CC.getState().focus.active, 'nothing is auto-completed')
+
+    /* — completion ceremony with real metrics only — */
+    window.CC.completeFocus()
+    await settle()
+    assert.ok($('.focus-celebration'), 'the ceremony replaces the timer')
+    assert.match($('.focus-celebration').textContent, /SESSION COMPLETE/)
+    assert.match($('.focus-celebration').textContent, /\+60 FOCUS MINUTES/)
+    assert.match($('.focus-celebration').textContent, /Score\s*\d+\/100/, 'the real daily score is shown')
+    assert.match($('.focus-celebration').textContent, /day streak/, 'the real streak state is shown')
+    assert.match($('.focus-celebration').textContent, /You finished what you started\./)
+    const logged = window.CC.getState().focus.sessions.at(-1)
+    assert.equal(logged.status, 'completed')
+    assert.equal(logged.plannedMinutes, 60)
+    assert.ok(logged.focusedSeconds >= 3590, 'the genuinely focused time is credited')
+    click('.focus-celebration .btn-primary') // DONE
+    await settle()
+    assert.equal($('.focus-overlay'), null, 'DONE closes the ceremony')
     assert.deepEqual(errors, [])
   } finally {
     window.close()
