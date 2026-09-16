@@ -186,6 +186,14 @@ test('"Do this now" recommends a real task and can start a focus session', async
   }
   assert.ok($('.focus-overlay'), 'focus overlay opened')
   assert.match($('.focus-overlay').textContent, /Focus Mode/)
+  // the Focus Launch briefing leads straight into the Focus Core
+  const enter = $('#focus-launch-enter')
+  if (enter) {
+    click(enter)
+    await settle()
+    assert.ok($('.focus-clock'), 'the Focus Core is on screen')
+    assert.match($('#focus-phase').textContent, /WARMING UP/, 'a fresh mission starts in the warm-up phase')
+  }
 })
 
 test('focus session: pause, resume, link a task and complete into analytics', async () => {
@@ -205,6 +213,7 @@ test('focus session: pause, resume, link a task and complete into analytics', as
   window.CC.completeFocus()
   await settle()
   assert.equal(state().focus.active, null, 'session finished')
+  assert.match($('.focus-celebration')?.textContent || '', /SESSION COMPLETE/, 'completion ends in the ceremony')
   const sessions = state().focus.sessions
   assert.equal(sessions.length, 1)
   assert.equal(sessions[0].focusedSeconds, 900)

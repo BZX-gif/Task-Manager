@@ -54,12 +54,14 @@ npx wrangler secret put GEMINI_API_KEY     # production
 
 ## What it does
 
-### Focus mode
+### Focus mode — the Focus Mission
 - Start from any task, from **DO THIS NOW**, from the sidebar, or with <kbd>F</kbd> / the header chip.
-- Presets 25 / 50 / 90 plus a custom length (1–600 min), optional 5-min break timer, circular progress ring, fullscreen distraction-free overlay.
-- Pause · resume · complete · stop · +5 min · re-link to another task — the session survives a page refresh (it is persisted immediately, not debounced) and the header chip brings it back.
-- Completing a session credits focused minutes, updates today's score, and marks the linked task done when Settings → Focus → "Completing a focus session marks its task done" is on.
-- Sub-minute sessions are discarded so analytics stay meaningful.
+- Presets 25 / 50 / 90 plus a custom length (1–600 min), optional 5-min break timer, fullscreen distraction-free overlay.
+- A session is framed as a **mission**: a skippable Focus Launch briefing (READY? → task → length → *Everything else can wait* → ENTER THE ZONE with a 3-2-1), a calm Focus Core (phase + percent, large clock, an energy bar with milestone ticks), phases WARMING UP → BUILDING MOMENTUM → DEEP WORK → FINAL PUSH, transient milestones at 25/50/75/90%, a quiet final-minute state, and a completion ceremony with your real numbers (focused minutes, today's score, Top 3, streak) — never invented XP.
+- Momentum: today's real session history renders as a node chain under the timer; ending early opens a dignity screen ("end this session? — that is still real work"), never a shame screen.
+- <kbd>Space</kbd> pause/resume · <kbd>+</kbd> add 5 min · <kbd>Esc</kbd> minimise; pause · resume · complete · end · +5 min · re-link to another task — the session survives a page refresh (it is persisted immediately, not debounced) and the header chip brings it back.
+- Completing a session credits focused minutes, updates today's score, and marks the linked task done when Settings → Focus → "Completing a focus session marks its task done" is on (otherwise the ceremony offers the button).
+- Sub-minute sessions are discarded so analytics stay meaningful, and ambient/final-minute visuals respect `prefers-reduced-motion`.
 
 ### Today's Top 3
 Exactly three priorities per day, stored as **task ids** (`state.top3[dateKey]`), never duplicated records. Each row has completion state, focus action, edit and remove. If you have fewer than three, the card offers the best candidates.
