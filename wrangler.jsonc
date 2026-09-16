@@ -9,10 +9,6 @@
   "secrets": {
     "required": ["GEMINI_API_KEY"]
   },
-  // Diagnostic: default/shared Gateway egress; no dedicated IPs required.
-  // Set GEMINI_TRANSPORT to "direct" to revert to ordinary Worker fetch.
-  "vars": { "GEMINI_TRANSPORT": "gateway" },
-  "vpc_networks": [{ "binding": "GEMINI_EGRESS", "network_id": "cf1:network", "remote": true }],
   // GEMINI_MODEL may override the existing gemini-3.6-flash default.
   "assets": {
     "directory": "./dist"
