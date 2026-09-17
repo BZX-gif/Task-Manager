@@ -48,8 +48,8 @@ export function renderTasks() {
       </div>
     </div>
 
-    <div class="glass-card p-4 sm:p-5">
-      <div class="space-y-2.5" data-task-list>
+    <div class="task-list-surface">
+      <div data-task-list>
         ${list.length ? list.map((t) => taskRowHtml(t, today)).join('') : emptyStateForFilter()}
       </div>
     </div>

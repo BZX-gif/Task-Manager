@@ -30,29 +30,29 @@ export function renderSettings() {
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="section-title">Profile & Settings</h2>
-        <p class="section-sub">Personal productivity command center for ${escapeHtml(settings.userName || 'you')} — everything stored locally, private, no social.</p>
+        <p class="section-sub">Your workspace, your preferences. Stored on this device. Never public.</p>
       </div>
       <span class="chip">Schema v${STATE_VERSION}</span>
     </div>
 
     <!-- Profile / Personal -->
-    <div class="glass-card p-5 space-y-4">
+    <div class="glass-card settings-section p-5 space-y-4">
       <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-user text-accent-2"></i>Profile</h3>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label class="field-label">Your name</label>
-          <input class="input-field" data-setting="userName" value="${escapeHtml(settings.userName)}">
+          <label class="field-label" for="setting-userName">Your name</label>
+          <input class="input-field" id="setting-userName" data-setting="userName" value="${escapeHtml(settings.userName)}">
         </div>
         <div>
-          <label class="field-label">Week starts on</label>
-          <select class="input-field" data-setting="weekStart">
+          <label class="field-label" for="setting-weekStart">Week starts on</label>
+          <select class="input-field" id="setting-weekStart" data-setting="weekStart">
             <option value="1" ${settings.weekStart === 1 ? 'selected' : ''}>Monday</option>
             <option value="0" ${settings.weekStart === 0 ? 'selected' : ''}>Sunday</option>
           </select>
         </div>
         <div>
-          <label class="field-label">Day ends at</label>
-          <input type="time" class="input-field" data-setting="dayEnd" value="${settings.dayEnd}">
+          <label class="field-label" for="setting-dayEnd">Day ends at</label>
+          <input type="time" class="input-field" id="setting-dayEnd" data-setting="dayEnd" value="${settings.dayEnd}">
         </div>
       </div>
       <div class="divide-y divide-white/5">
@@ -67,7 +67,7 @@ export function renderSettings() {
     </div>
 
     <!-- MY TITLES — Private -->
-    <div class="glass-card p-5 space-y-5">
+    <div class="glass-card settings-section p-5 space-y-5">
       <div class="flex items-center justify-between gap-3">
         <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-crown text-accent-4"></i>MY TITLES</h3>
         <span class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Private · Local only</span>
@@ -91,7 +91,7 @@ export function renderSettings() {
     </div>
 
     <!-- AI -->
-    <div class="glass-card p-5 space-y-3">
+    <div class="glass-card settings-section p-5 space-y-3">
       <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-shield-halved text-accent"></i>Gemini Assistant</h3>
       <p class="text-[13px] text-slate-400">The assistant runs through your Cloudflare Worker (<code class="text-accent-2">/api/ai</code>). The API key is a Worker secret and never reaches the browser — nothing is stored in this page.</p>
       <div class="flex flex-wrap items-center gap-3">
@@ -102,24 +102,24 @@ export function renderSettings() {
     </div>
 
     <!-- Focus -->
-    <div class="glass-card p-5 space-y-4">
+    <div class="glass-card settings-section p-5 space-y-4">
       <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-stopwatch text-accent-2"></i>Focus Mode</h3>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label class="field-label">Default session</label>
-          <select class="input-field" data-setting="focus.defaultMinutes">
+          <label class="field-label" for="setting-focus.defaultMinutes">Default session</label>
+          <select class="input-field" id="setting-focus.defaultMinutes" data-setting="focus.defaultMinutes">
             ${[...new Set([...FOCUS_PRESETS, settings.focus.defaultMinutes])].sort((a, b) => a - b).map((m) => `<option value="${m}" ${settings.focus.defaultMinutes === m ? 'selected' : ''}>${m} min</option>`).join('')}
           </select>
         </div>
         <div>
-          <label class="field-label">Break length</label>
-          <select class="input-field" data-setting="focus.breakMinutes">
+          <label class="field-label" for="setting-focus.breakMinutes">Break length</label>
+          <select class="input-field" id="setting-focus.breakMinutes" data-setting="focus.breakMinutes">
             ${[...new Set([...BREAK_PRESETS, settings.focus.breakMinutes])].sort((a, b) => a - b).map((m) => `<option value="${m}" ${settings.focus.breakMinutes === m ? 'selected' : ''}>${m} min</option>`).join('')}
           </select>
         </div>
         <div>
-          <label class="field-label">Daily focus target</label>
-          <input type="number" min="30" step="15" class="input-field" data-setting="focus.targetMinutes" value="${settings.focus.targetMinutes}">
+          <label class="field-label" for="setting-focus.targetMinutes">Daily focus target</label>
+          <input type="number" min="30" step="15" class="input-field" id="setting-focus.targetMinutes" data-setting="focus.targetMinutes" value="${settings.focus.targetMinutes}">
         </div>
       </div>
       <label class="flex items-center gap-3 text-[13.5px] text-slate-200">
@@ -130,7 +130,7 @@ export function renderSettings() {
     </div>
 
     <!-- Reminders -->
-    <div class="glass-card p-5 space-y-4">
+    <div class="glass-card settings-section p-5 space-y-4">
       <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-bell text-accent-3"></i>Reminders</h3>
       <label class="flex items-center gap-3 text-[13.5px] text-slate-200">
         <input type="checkbox" data-setting="reminders.enabled" ${reminders.enabled ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
@@ -156,12 +156,12 @@ export function renderSettings() {
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label class="field-label">Warn before (minutes)</label>
-          <input type="number" min="1" max="60" class="input-field" data-setting="reminders.beforeMinutes" value="${reminders.beforeMinutes}">
+          <label class="field-label" for="setting-reminders.beforeMinutes">Warn before (minutes)</label>
+          <input type="number" min="1" max="60" class="input-field" id="setting-reminders.beforeMinutes" data-setting="reminders.beforeMinutes" value="${reminders.beforeMinutes}">
         </div>
         <div>
-          <label class="field-label">Top 3 nudge</label>
-          <input type="time" class="input-field" data-setting="reminders.top3NudgeAt" value="${reminders.top3NudgeAt || ''}">
+          <label class="field-label" for="setting-reminders.top3NudgeAt">Top 3 nudge</label>
+          <input type="time" class="input-field" id="setting-reminders.top3NudgeAt" data-setting="reminders.top3NudgeAt" value="${reminders.top3NudgeAt || ''}">
         </div>
         <div>
           <label class="field-label">Desktop notifications</label>
@@ -174,7 +174,7 @@ export function renderSettings() {
     </div>
 
     <!-- Protected time -->
-    <div class="glass-card p-5 space-y-4">
+    <div class="glass-card settings-section p-5 space-y-4">
       <div class="flex items-center justify-between gap-3">
         <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-moon text-accent-2"></i>Protected Time</h3>
         <button class="btn-ghost !py-1.5 !text-xs" data-action="add-protected"><i class="fa-solid fa-plus mr-1.5"></i>Add window</button>
@@ -201,7 +201,7 @@ export function renderSettings() {
     </div>
 
     <!-- Categories -->
-    <div class="glass-card p-5 space-y-4">
+    <div class="glass-card settings-section p-5 space-y-4">
       <div class="flex items-center justify-between gap-3">
         <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-tags text-accent-4"></i>Categories</h3>
         <button class="btn-ghost !py-1.5 !text-xs" data-action="add-category"><i class="fa-solid fa-plus mr-1.5"></i>Add category</button>
@@ -222,7 +222,7 @@ export function renderSettings() {
     </div>
 
     <!-- Day & data -->
-    <div class="glass-card p-5 space-y-4">
+    <div class="glass-card settings-section p-5 space-y-4">
       <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-database text-accent-3"></i>Data & Day</h3>
       <div class="divide-y divide-white/5">
         ${fieldRow('Storage used', `${usage.kb} kB`, `key: ${STORAGE_KEY}`)}
@@ -246,7 +246,7 @@ export function renderSettings() {
     <div class="glass-card p-5">
       <h3 class="section-title text-base flex items-center gap-2 mb-2"><i class="fa-solid fa-circle-info text-slate-400"></i>About</h3>
       <p class="text-[13px] text-slate-500 leading-relaxed">
-        Command Center v2.1 · Private titles + Discipline Monster · Runs on Cloudflare Workers + Hono with a 100% local-first client.
+        Command Center v2.3 · Private titles + Discipline Monster · Runs on Cloudflare Workers + Hono with a 100% local-first client.
         Focus sessions, priorities, recurring tasks, reminders, weekly review and analytics all work offline;
         only the AI assistant needs the internet. No backend, no database, no social features — ₹0 cost.
       </p>
@@ -263,7 +263,7 @@ function titleCardHtml(d) {
       <div class="title-card is-unlocked">
         <div class="title-card-glow" aria-hidden="true"></div>
         <div class="title-card-top">
-          <span class="title-card-icon is-unlocked">${escapeHtml(def.icon)}</span>
+          <span class="title-card-icon is-unlocked"><i class="fa-solid fa-award" aria-hidden="true"></i></span>
           <span class="chip chip-good">UNLOCKED ✓</span>
         </div>
         <h4 class="title-card-name">${escapeHtml(def.name)}</h4>
@@ -282,7 +282,7 @@ function titleCardHtml(d) {
   return `
     <div class="title-card is-locked">
       <div class="title-card-top">
-        <span class="title-card-icon">${escapeHtml(def.lockedIcon)}</span>
+        <span class="title-card-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
         <span class="chip">${d.progress} / ${d.total}</span>
       </div>
       <h4 class="title-card-name">${escapeHtml(def.name)}</h4>
@@ -301,16 +301,16 @@ function titleCardHtml(d) {
 
 function lockedFutureTitlesHtml() {
   const future = [
-    { icon: '🎯', name: 'FOCUS BEAST', sub: 'DEEP WORK MASTER' },
-    { icon: '👑', name: 'CONSISTENCY KING', sub: '30 DAY STREAK' },
-    { icon: '⚔️', name: 'TASK SLAYER', sub: '100 TASKS CRUSHED' },
-    { icon: '🧠', name: 'DEEP WORK BEAST', sub: '50 HOURS FOCUSED' },
-    { icon: '🤖', name: '30 DAY MACHINE', sub: 'MONTH OF DISCIPLINE' },
+    { icon: 'fa-bullseye', name: 'FOCUS BEAST', sub: 'DEEP WORK MASTER' },
+    { icon: 'fa-crown', name: 'CONSISTENCY KING', sub: '30 DAY STREAK' },
+    { icon: 'fa-check-double', name: 'TASK SLAYER', sub: '100 TASKS CRUSHED' },
+    { icon: 'fa-brain', name: 'DEEP WORK BEAST', sub: '50 HOURS FOCUSED' },
+    { icon: 'fa-calendar-check', name: '30 DAY MACHINE', sub: 'MONTH OF DISCIPLINE' },
   ]
   return future.map(f => `
     <div class="title-card is-locked is-future">
       <div class="title-card-top">
-        <span class="title-card-icon">${escapeHtml(f.icon)}</span>
+        <span class="title-card-icon"><i class="fa-solid ${escapeHtml(f.icon)}" aria-hidden="true"></i></span>
         <span class="chip">LOCKED</span>
       </div>
       <h4 class="title-card-name">${escapeHtml(f.name)}</h4>
