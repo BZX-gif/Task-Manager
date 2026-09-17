@@ -963,11 +963,312 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .fz-stat-chips { gap: 0.4rem; }
 }
 
+/* ==========================================================================
+   v2.1 — Discipline Monster + Premium Glass Command Center
+   ========================================================================== */
+
+/* ---------- Premium glass upgrade ---------- */
+body {
+  background: radial-gradient(120% 120% at 10% 0%, #101a35 0%, #070a14 45%, #05070d 100%);
+  background-attachment: fixed;
+}
+.glass-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.05) inset,
+    0 8px 32px -12px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,255,255,0.02) inset;
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.glass-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 12px 40px -14px rgba(0,0,0,0.75),
+    0 0 24px -8px rgba(124,92,255,0.15);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-card { background: linear-gradient(180deg, #131a2e, #0e1424); }
+}
+
+/* ---------- Discipline Monster — dashboard card ---------- */
+.discipline-dash-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, rgba(251,191,36,0.10), rgba(124,92,255,0.06) 60%, rgba(255,255,255,0.02));
+  border: 1px solid rgba(251,191,36,0.18);
+}
+.discipline-dash-card::before {
+  content: '';
+  position: absolute;
+  top: -40%; right: -20%;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(251,191,36,0.22), transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.discipline-dash-card.is-unlocked {
+  background: linear-gradient(165deg, rgba(251,191,36,0.16), rgba(245,158,11,0.08) 55%, rgba(124,92,255,0.05));
+  border-color: rgba(251,191,36,0.32);
+  box-shadow: 0 0 0 1px rgba(251,191,36,0.15) inset, 0 20px 60px -24px rgba(251,191,36,0.35);
+}
+.discipline-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.discipline-icon {
+  width: 2.4rem; height: 2.4rem;
+  display: grid; place-items: center;
+  border-radius: 0.8rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.discipline-icon.is-unlocked {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 20px -6px rgba(251,191,36,0.6);
+}
+.discipline-name {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  color: #fff;
+  line-height: 1.1;
+}
+.discipline-sub {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a1a8bd;
+  margin-top: 0.15rem;
+}
+.discipline-fill {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b, #fbbf24);
+  background-size: 200% 100%;
+  animation: disciplineShimmer 2.5s linear infinite;
+}
+@keyframes disciplineShimmer {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+.streak-dot.is-perfect { box-shadow: 0 0 0 1px rgba(251,191,36,0.4), 0 0 10px rgba(251,191,36,0.25); }
+
+/* ---------- Title cards — Profile ---------- */
+.title-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+.title-grid.locked { opacity: 0.85; }
+.title-card {
+  position: relative;
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 32px -16px rgba(0,0,0,0.6);
+  overflow: hidden;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+.title-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.14); }
+.title-card.is-unlocked {
+  background: linear-gradient(160deg, rgba(251,191,36,0.14), rgba(124,92,255,0.06) 60%, rgba(255,255,255,0.02));
+  border-color: rgba(251,191,36,0.28);
+  box-shadow: 0 0 0 1px rgba(251,191,36,0.12) inset, 0 16px 48px -20px rgba(251,191,36,0.35);
+}
+.title-card.is-unlocked .title-card-glow {
+  position: absolute;
+  top: -30%; right: -20%;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(251,191,36,0.25), transparent 70%);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.title-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.title-card-icon {
+  width: 2.6rem; height: 2.6rem;
+  display: grid; place-items: center;
+  border-radius: 0.9rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 1.35rem;
+}
+.title-card-icon.is-unlocked {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-color: transparent;
+  box-shadow: 0 8px 24px -8px rgba(251,191,36,0.6);
+}
+.title-card-name {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+.title-card-sub {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9aa3ba;
+  margin-top: 0.2rem;
+}
+.title-card-meta { margin-top: 0.9rem; }
+.title-card.is-future { opacity: 0.6; }
+
+/* ---------- Title unlock celebration ---------- */
+.title-unlock-wrap {
+  position: relative;
+  text-align: center;
+  padding: 1.5rem 0.5rem 0.5rem;
+  opacity: 0;
+  transform: scale(0.96) translateY(12px);
+  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+.title-unlock-wrap.is-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+.title-unlock-wrap.reduce-motion {
+  transition: opacity 0.2s ease;
+  transform: none !important;
+}
+.title-unlock-glow {
+  position: absolute;
+  top: 10%; left: 50%;
+  width: 260px; height: 260px;
+  margin-left: -130px;
+  background: radial-gradient(circle, rgba(251,191,36,0.22), rgba(124,92,255,0.12) 50%, transparent 75%);
+  filter: blur(18px);
+  pointer-events: none;
+  animation: unlockGlow 3s ease-in-out infinite alternate;
+}
+@keyframes unlockGlow {
+  from { opacity: 0.6; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1.08); }
+}
+.title-unlock-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  color: #fcd34d;
+  margin: 0;
+}
+.title-unlock-badge {
+  width: 4.2rem; height: 4.2rem;
+  margin: 1.2rem auto 0;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  display: grid; place-items: center;
+  box-shadow: 0 12px 32px -10px rgba(251,191,36,0.6), 0 0 0 1px rgba(255,255,255,0.12) inset;
+  animation: unlockBadge 0.7s cubic-bezier(0.16,1,0.3,1) 0.15s both;
+}
+@keyframes unlockBadge {
+  from { transform: scale(0.7) rotate(-8deg); opacity: 0; }
+  to { transform: scale(1) rotate(0); opacity: 1; }
+}
+.title-unlock-icon { font-size: 1.9rem; }
+.title-unlock-name {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.4rem, 4vw, 1.9rem);
+  color: #fff;
+  margin: 1rem 0 0;
+  letter-spacing: 0.02em;
+}
+.title-unlock-sub {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  margin: 0.35rem 0 0;
+}
+.title-unlock-detail {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #fbbf24;
+  margin: 1rem 0 0;
+}
+.title-unlock-divider {
+  width: 48px; height: 1px;
+  margin: 1rem auto;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+}
+.title-unlock-message {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #9aa3ba;
+  margin: 0;
+}
+
+/* ---------- Premium nav & header polish ---------- */
+#sidebar {
+  background: linear-gradient(180deg, rgba(10,14,26,0.88), rgba(7,10,20,0.92));
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+header {
+  background: linear-gradient(180deg, rgba(5,7,13,0.88), rgba(5,7,13,0.72));
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+
+/* ---------- Task & timetable glass refinement ---------- */
+.task-row, .tt-row, .top3-row {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.task-row:hover, .tt-row:hover {
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 4px 20px -8px rgba(0,0,0,0.5);
+}
+
+/* ---------- Modal glass ---------- */
+.modal-box {
+  background: linear-gradient(180deg, rgba(19,26,46,0.92), rgba(14,20,36,0.96));
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .title-grid { grid-template-columns: 1fr; }
+  .discipline-dash-card::before { width: 120px; height: 120px; }
+  .glass-card { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   /* Focus mode: ambient drift, celebration and pulses go fully still */
   .fz-orb,
   .fz-count-tick,
   .fz-burst,
-  .fz-node.current { animation: none !important; }
+  .fz-node.current,
+  .title-unlock-glow,
+  .title-unlock-badge,
+  .discipline-fill { animation: none !important; }
+  .title-unlock-wrap { transform: none !important; }
 }
+

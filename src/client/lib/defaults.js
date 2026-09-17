@@ -3,7 +3,7 @@
    Kept separate from the store so tests and migrations can import them alone.
    ------------------------------------------------------------------------- */
 
-export const STATE_VERSION = 2
+export const STATE_VERSION = 3
 
 export const DEFAULT_CATEGORIES = [
   { id: 'body', name: 'Body & Recovery', color: '#34d399' },

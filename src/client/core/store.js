@@ -14,6 +14,7 @@ import { materializeOccurrences, nextOccurrenceAfterCompletion } from '../lib/re
 import { pruneTop3 } from '../lib/top3.js'
 import { pruneSentLog } from '../lib/reminders.js'
 import { addDays, dateKey, nowMinutes as nowMinutesOf } from '../lib/dates.js'
+import { syncDailyProgress, evaluateTitles, computeDisciplineStreak } from '../lib/achievements.js'
 import { emit } from './bus.js'
 import { toast } from './dom.js'
 
@@ -59,6 +60,12 @@ export function initStore({ now = new Date() } = {}) {
   state.dayPlans = trimMap(state.dayPlans, 400)
   syncScoreHistory(today, now)
 
+  // v3: discipline monster — full backfill + title evaluation
+  if (!state.dailyProgress) state.dailyProgress = {}
+  if (!state.titles) state.titles = { disciplineMonster: { unlocked: false, unlockedAt: null, unlockedAtTs: null, seen: false, bestStreak: 0, currentStreak: 0 } }
+  syncDailyProgress(state, today, now, { full: true })
+  syncTitles(state, today, now)
+
   saveState(state)
   invalidate()
   return state
@@ -98,8 +105,21 @@ export function flush() {
 
 /** Mutate state, persist, invalidate caches and notify views. */
 export function commit(mutator, { immediate = false, silent = false } = {}) {
+  const prevUnlocked = state?.titles?.disciplineMonster?.unlocked || false
   if (typeof mutator === 'function') mutator(state)
   materializeDayPlan(state, currentDayKey())
+  // light sync for today only (performance) + title evaluation
+  try {
+    const today = currentDayKey()
+    syncDailyProgress(state, today, new Date(), { full: false })
+    const newly = syncTitles(state, today, new Date())
+    if (newly && !prevUnlocked) {
+      // emit for unlock modal — handled in main.js / titles UI
+      emit('titles:unlocked', newly)
+    }
+  } catch (e) {
+    console.warn('[achievements] sync failed', e)
+  }
   save({ immediate })
   invalidate()
   if (!silent) notify()
@@ -216,6 +236,48 @@ export function appContext(nowDate = new Date()) {
     nowMinutes: minutesNow(nowDate),
     stats: todayStats(nowDate),
   }
+}
+
+/**
+ * Sync private titles (Discipline Monster) — updates state.titles in place.
+ * Returns newly unlocked info if transition from locked → unlocked.
+ */
+export function syncTitles(stateObj, todayKey, nowDate = new Date()) {
+  if (!stateObj.titles) stateObj.titles = { disciplineMonster: { unlocked: false, unlockedAt: null, unlockedAtTs: null, seen: false, bestStreak: 0, currentStreak: 0 } }
+  const evaluated = evaluateTitles(stateObj, todayKey, nowDate)
+  const dm = evaluated.disciplineMonster
+  const prev = stateObj.titles.disciplineMonster || {}
+  const wasUnlocked = !!prev.unlocked
+  const nowUnlocked = !!dm.unlocked
+
+  stateObj.titles.disciplineMonster = {
+    unlocked: nowUnlocked,
+    unlockedAt: dm.unlockedAt || prev.unlockedAt || null,
+    unlockedAtTs: dm.unlockedAtTs || prev.unlockedAtTs || (nowUnlocked ? nowDate.getTime() : null),
+    seen: prev.seen || false,
+    bestStreak: dm.best,
+    currentStreak: dm.current,
+  }
+
+  if (!wasUnlocked && nowUnlocked) {
+    // First time unlock — record date
+    if (!stateObj.titles.disciplineMonster.unlockedAt) {
+      stateObj.titles.disciplineMonster.unlockedAt = todayKey
+      stateObj.titles.disciplineMonster.unlockedAtTs = nowDate.getTime()
+    }
+    return { key: 'disciplineMonster', definition: dm.definition, streak: dm }
+  }
+  return null
+}
+
+export function disciplineStreak(nowDate = new Date()) {
+  const today = currentDayKey(nowDate)
+  return computeDisciplineStreak(state, today, nowDate)
+}
+
+export function titlesInfo(nowDate = new Date()) {
+  const today = currentDayKey(nowDate)
+  return evaluateTitles(state, today, nowDate)
 }
 
 /** Announce migration/warnings once, after the first paint. */
