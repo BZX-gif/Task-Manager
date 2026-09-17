@@ -8,16 +8,18 @@ import { renderDashboard } from '../views/dashboard.js'
 import { renderTimetable } from '../views/timetable.js'
 import { renderTasks } from '../views/tasks.js'
 import { renderProgress } from '../views/progress.js'
+import { renderProfile } from '../views/profile.js'
 import { renderAssistant } from '../views/assistant.js'
 import { renderSettings } from '../views/settings.js'
 
-export const VIEWS = ['dashboard', 'timetable', 'tasks', 'progress', 'assistant', 'settings']
+export const VIEWS = ['dashboard', 'timetable', 'tasks', 'progress', 'profile', 'assistant', 'settings']
 
 const RENDERERS = {
   dashboard: renderDashboard,
   timetable: renderTimetable,
   tasks: renderTasks,
   progress: renderProgress,
+  profile: renderProfile,
   assistant: renderAssistant,
   settings: renderSettings,
 }

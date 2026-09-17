@@ -24,7 +24,7 @@ src/ai.ts           POST /api/ai → Gemini with the secret key
 src/client/lib/**   17 pure, unit-tested modules (score, focus, recurrence, …)
 src/client/core/**  store + persistence, event bus, DOM helpers, charts, day plan
 src/client/ui/**    focus mode, chrome widgets, router, quick capture, reminders, PWA
-src/client/views/** dashboard, timetable, tasks, progress, weekly review, recovery, assistant, settings
+src/client/views/** dashboard, timetable, tasks, progress, profile (private titles), weekly review, recovery, assistant, settings
 public/sw.js        Service worker (offline shell)
 tests/unit/**       Pure-logic tests (node:test)
 tests/integration/** Real Worker routes + the real bundle booted in jsdom
@@ -62,6 +62,15 @@ npx wrangler secret put GEMINI_API_KEY     # production
 - <kbd>Space</kbd> pause/resume · <kbd>+</kbd> add 5 min · <kbd>Esc</kbd> minimise; pause · resume · complete · end · +5 min · re-link to another task — the session survives a page refresh (it is persisted immediately, not debounced) and the header chip brings it back.
 - Completing a session credits focused minutes, updates today's score, and marks the linked task done when Settings → Focus → "Completing a focus session marks its task done" is on (otherwise the ceremony offers the button).
 - Sub-minute sessions are discarded so analytics stay meaningful, and ambient/final-minute visuals respect `prefers-reduced-motion`.
+
+### Private titles — ⚡ DISCIPLINE MONSTER
+A local-only achievement: **10 consecutive Perfect Days**. A *Perfect Day* = **100% of that day's planned tasks AND 100% of that day's timetable blocks that have already started** — and only when the day actually had a plan (an empty day is never 100%).
+
+- Days are the user's **local calendar days**; consecutive means consecutive dates, and the run only counts days that are *finished* (today is shown live as "perfect so far" but banks at midnight, so a title can never unlock early and then be lost).
+- Each day keeps a small snapshot in `state.achievements.days[YYYY-MM-DD]` inside the existing `kcc_state_v1` payload: planned work is a **high-water mark** (deleting/moving/deferring an unfinished task or editing the timetable cannot rescue a day) and finished days are **frozen** (later edits and completion changes never rewrite them).
+- Surfaces: a one-time glass **unlock ceremony** (`✦ TITLE UNLOCKED ✦`), the small **DISCIPLINE MONSTER** progression strip on the dashboard, and **MY TITLES / LOCKED TITLES** on the Profile (unlock date, progress ticks, "N DAYS TO GO").
+- Adding another title later is a config entry in `src/client/lib/achievements.js` (`TITLE_CATALOG` + a requirement kind) — the store, Profile, dashboard strip and ceremony all read from that configuration.
+- **Private by design**: no profile, leaderboard, feed, share/publish button, URL or API — it lives only in this browser's localStorage. (`FOCUS BEAST`, `CONSISTENCY KING`, `TASK SLAYER`, `DEEP WORK BEAST`, `30 DAY MACHINE` are listed as locked/coming soon, unimplemented.)
 
 ### Today's Top 3
 Exactly three priorities per day, stored as **task ids** (`state.top3[dateKey]`), never duplicated records. Each row has completion state, focus action, edit and remove. If you have fewer than three, the card offers the best candidates.
@@ -110,7 +119,7 @@ Shows what was missed, how much usable time is left today, and a realistic compr
 - Settings → Export JSON writes a versioned backup; Import validates the schema, keeps a copy of your current data first, then reloads the UI. **Reset All Data** asks for explicit confirmation and keeps the same rescue copy behaviour.
 
 ### Keyboard
-<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd> quick capture · <kbd>F</kbd> focus mode · <kbd>Esc</kbd> close the top overlay · <kbd>1</kbd>–<kbd>6</kbd> switch views · <kbd>Enter</kbd> send in the assistant (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line).
+<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd> quick capture · <kbd>F</kbd> focus mode · <kbd>Esc</kbd> close the top overlay · <kbd>1</kbd>–<kbd>7</kbd> switch views (7 = Profile, with your private titles) · <kbd>Enter</kbd> send in the assistant (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line).
 
 ---
 
@@ -130,7 +139,7 @@ The browser never talks to Gemini. It posts to `/api/ai`; the Worker adds `GEMIN
 
 ## Data & safety
 
-- Everything lives in `localStorage` under `kcc_state_v1` — no server database, no accounts, no paid services.
+- Everything lives in `localStorage` under `kcc_state_v1` — no server database, no accounts, no paid services. Private titles are stored in the same payload (`state.achievements`) — no second storage mechanism, no network calls.
 - **Migrations are additive.** v1 payloads are upgraded in place and a copy is written to `kcc_backup_pre_v2` before anything changes; the old browser-side API key is deleted, not migrated.
 - Unreadable payloads are never destroyed: the raw string is parked in `kcc_backup_unreadable` and the user is told.
 - Clearing browser data still erases everything — use **Settings → Export JSON** regularly.
@@ -142,7 +151,7 @@ The browser never talks to Gemini. It posts to `/api/ai`; the Worker adds `GEMIN
 ```bash
 npm run lint        # secrets, no CDN/CSP regressions, shell asset refs, CC.* API coverage, syntax
 npm run typecheck   # Worker (strict TS) + client JS (checkJs, 0 errors)
-npm run test:unit   # 101 pure-logic tests
+npm run test:unit   # pure-logic tests (score, focus, dates, achievements, …)
 npm run test:integration   # builds, then drives the real Worker + bundle in jsdom
 npm test            # build + both suites
 ```

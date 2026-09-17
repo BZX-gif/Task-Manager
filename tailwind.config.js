@@ -11,7 +11,9 @@ export default {
   darkMode: 'class',
   content: [
     './src/index.tsx',
-    './src/shell.js',
+    // the shell markup lives in src/shell.ts (it used to be shell.js, which
+    // silently dropped every layout/nav class from the compiled stylesheet)
+    './src/shell.ts',
     './src/client/**/*.{js,ts}',
   ],
   theme: {

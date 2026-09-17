@@ -12,7 +12,8 @@ import { overdueTasks } from '../lib/score.js'
 import { PRIORITY_COLORS, PRIORITY_ORDER } from '../lib/defaults.js'
 import { drawChart } from '../core/charts.js'
 import { escapeHtml, hint, qsa, toast } from '../core/dom.js'
-import { commit, currentDayKey, rollSeriesForward, state, statsFor } from '../core/store.js'
+import { commit, currentDayKey, rollSeriesForward, state, statsFor, titleStates } from '../core/store.js'
+import { disciplineStripHtml } from '../ui/titles.js'
 import { statusForStreakDot } from './shared.js'
 import { openFocusPickerForTask } from '../ui/focus.js'
 import { openTaskModal } from './tasks.js'
@@ -34,6 +35,7 @@ export function renderDashboard() {
     .filter((t) => t.date === today && !t.done)
     .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
   const week = weekTrend(now)
+  const titles = titleStates(now)
 
   section.innerHTML = `
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -85,6 +87,9 @@ export function renderDashboard() {
         </p>
       </div>
     </div>
+
+    <!-- Private title progression (small on purpose) -->
+    ${disciplineStripHtml(titles)}
 
     <!-- Top 3 + Do This Now -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -295,6 +300,10 @@ function taskLineHtml(task, today) {
 /* ---------------------------------------------------------------- binding */
 
 function bindDashboard(section, { today, action }) {
+  qsa(section, '[data-open-title]').forEach((btn) =>
+    btn.addEventListener('click', () => window.CC?.switchView?.('profile')),
+  )
+
   qsa(section, '[data-action]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const kind = btn.dataset.action

@@ -9,6 +9,7 @@
 
 import { CORRUPT_BACKUP_KEY, loadState, makeContext, saveState, uid } from '../lib/state.js'
 import { dayStats, materializeDayPlan, streakHistory } from '../lib/daystats.js'
+import { syncAchievements, titleResults } from '../lib/achievements.js'
 import { computeStreak } from '../lib/streak.js'
 import { materializeOccurrences, nextOccurrenceAfterCompletion } from '../lib/recurrence.js'
 import { pruneTop3 } from '../lib/top3.js'
@@ -23,6 +24,9 @@ export let state = null
 const listeners = new Set()
 let saveTimer = null
 let statsCache = new Map()
+let titlesCache = null
+/** the local day the achievements were last synced for (day-rollover guard) */
+let syncedDayKey = null
 let status = { migrated: false, warnings: [], fresh: true, corrupted: false }
 
 /** The browser storage used by the app (localStorage, or a stub in tests). */
@@ -58,6 +62,9 @@ export function initStore({ now = new Date() } = {}) {
   state.reminders.sent = pruneSentLog(state.reminders.sent, today, 14)
   state.dayPlans = trimMap(state.dayPlans, 400)
   syncScoreHistory(today, now)
+  // freezes finished days + stamps any title earned since the last visit
+  syncAchievements(state, { todayKey: today, now, full: true })
+  syncedDayKey = today
 
   saveState(state)
   invalidate()
@@ -98,8 +105,14 @@ export function flush() {
 
 /** Mutate state, persist, invalidate caches and notify views. */
 export function commit(mutator, { immediate = false, silent = false } = {}) {
+  // if the calendar day changed while the app was open, close yesterday out
+  // *before* this mutation lands (so later edits can never rewrite it)
+  const today = currentDayKey()
+  if (syncedDayKey && syncedDayKey !== today) syncAchievements(state, { todayKey: today, now: new Date() })
   if (typeof mutator === 'function') mutator(state)
-  materializeDayPlan(state, currentDayKey())
+  materializeDayPlan(state, today)
+  syncAchievements(state, { todayKey: today, now: new Date() })
+  syncedDayKey = today
   save({ immediate })
   invalidate()
   if (!silent) notify()
@@ -107,6 +120,8 @@ export function commit(mutator, { immediate = false, silent = false } = {}) {
 
 export function replaceState(next) {
   state = next
+  syncedDayKey = null
+  syncAchievementsNow({ full: true })
   invalidate()
   save({ immediate: true })
   notify()
@@ -146,6 +161,44 @@ export function minutesNow(date = new Date()) {
 
 export function invalidate() {
   statsCache = new Map()
+  titlesCache = null
+}
+
+/**
+ * Recompute the day snapshots / unlock stamps for the current local day.
+ * Used at boot, on the minute tick and when the tab becomes visible again, so
+ * a day that ends while the app stays open is closed on time.
+ * @param {{ nowDate?: Date, full?: boolean }} [options]
+ */
+export function syncAchievementsNow({ nowDate = new Date(), full = false } = {}) {
+  if (!state) return null
+  const todayKey = currentDayKey(nowDate)
+  const result = syncAchievements(state, { todayKey, now: nowDate, full })
+  syncedDayKey = todayKey
+  invalidate()
+  // a day that ended while the app was open must be stored, not just computed
+  if (result?.changed) save({ immediate: true })
+  return result
+}
+
+/**
+ * Title progress for the current local day (cached until the next change).
+ * @param {Date} [nowDate]
+ */
+export function titleStates(nowDate = new Date()) {
+  if (!state) return []
+  const todayKey = currentDayKey(nowDate)
+  const key = `${todayKey}:${Math.floor(nowDate.getTime() / 60000)}`
+  if (titlesCache?.key === key) return titlesCache.value
+  const value = titleResults(state, { todayKey, now: nowDate })
+  titlesCache = { key, value }
+  return value
+}
+
+/** The perfect-day run behind the titles (streak, best, today, recent dots). */
+export function perfectDayRun(nowDate = new Date()) {
+  const titles = titleStates(nowDate)
+  return titles[0]?.run || null
 }
 
 /** Cached day stats (invalidated on every commit). */

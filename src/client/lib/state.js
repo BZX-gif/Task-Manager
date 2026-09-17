@@ -87,6 +87,43 @@ export function normalizeTask(task, ctx) {
   }
 }
 
+/* -------------------------------------------------------------------------
+   Achievements — private titles (DISCIPLINE MONSTER → …)
+   Only local daily snapshots + unlock stamps live here; the earning rules are
+   in lib/achievements.js. Additive: payloads without this key simply get an
+   empty collection, so no schema bump is needed.
+   ------------------------------------------------------------------------- */
+export function normalizeAchievementDay(day) {
+  return {
+    tasksPlanned: clampNumber(day?.tasksPlanned, 0, 5000, 0),
+    tasksCompleted: clampNumber(day?.tasksCompleted, 0, 5000, 0),
+    blocksPlanned: clampNumber(day?.blocksPlanned, 0, 5000, 0),
+    blocksCompleted: clampNumber(day?.blocksCompleted, 0, 5000, 0),
+    blocksScheduled: clampNumber(day?.blocksScheduled, 0, 5000, 0),
+    perfect: day?.perfect === true,
+    frozen: day?.frozen === true,
+  }
+}
+
+export function normalizeAchievements(raw, ctx = makeContext()) {
+  /** @type {{days: Record<string, any>, unlocked: Record<string, any>}} */
+  const out = { days: {}, unlocked: {} } // transient flags are never persisted
+  for (const [key, day] of Object.entries(isObj(raw?.days) ? raw.days : {})) {
+    if (!isValidKey(key)) continue
+    out.days[key] = normalizeAchievementDay(day)
+  }
+  for (const [id, entry] of Object.entries(isObj(raw?.unlocked) ? raw.unlocked : {})) {
+    if (!/^[a-z0-9-]{1,40}$/.test(id)) continue
+    out.unlocked[id] = {
+      dateKey: isValidKey(entry?.dateKey) ? entry.dateKey : null,
+      at: Number.isFinite(entry?.at) ? entry.at : ctx.now,
+      seen: entry?.seen === true,
+      streak: clampNumber(entry?.streak, 0, 10000, 0),
+    }
+  }
+  return out
+}
+
 export function normalizeFocusSession(session) {
   if (!isObj(session)) return null
   const focusedSeconds = clampNumber(session.focusedSeconds, 0, 12 * 3600, 0)
@@ -151,6 +188,7 @@ export function emptyState(ctx = makeContext()) {
     dayPlans: {},
     focus: { active: null, sessions: [] },
     scoreHistory: {},
+    achievements: { days: {}, unlocked: {} },
     chatHistory: [],
     reminders: { sent: {} },
     settings: normalizeSettings({}),
@@ -210,6 +248,7 @@ export function migrateStateV1ToV2(raw, ctx = makeContext()) {
   next.focus.sessions = asArray(next.focus.sessions)
   next.focus.active = isObj(next.focus.active) ? next.focus.active : null
   next.scoreHistory = isObj(raw.scoreHistory) ? raw.scoreHistory : {}
+  next.achievements = normalizeAchievements(raw.achievements, ctx)
   next.chatHistory = asArray(raw.chatHistory).slice(-40)
   next.reminders = isObj(raw.reminders) ? raw.reminders : { sent: {} }
   next.reminders.sent = isObj(next.reminders.sent) ? next.reminders.sent : {}
@@ -324,6 +363,8 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
       computedAt: Number.isFinite(value?.computedAt) ? value.computedAt : ctx.now,
     }
   }
+
+  state.achievements = normalizeAchievements(raw.achievements, ctx)
 
   state.settings = normalizeSettings(raw.settings)
   state.onboarding = { ...DEFAULT_SETTINGS.onboarding, ...(isObj(raw.onboarding) ? raw.onboarding : isObj(raw.settings?.onboarding) ? raw.settings.onboarding : {}) }

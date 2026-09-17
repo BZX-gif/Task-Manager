@@ -28,6 +28,10 @@ interface Window {
     hasRunningSession(): boolean
     addTaskToTop3(taskId: string): { ok: boolean; reason?: string; ids: string[] }
     streakInfo(): { current: number; best: number; recent: Array<{ dateKey: string; score: number; isToday: boolean; status: string }> }
+    /** my private titles (DISCIPLINE MONSTER → …) with live local progress */
+    titlesInfo(): any[]
+    /** the perfect-day run behind the titles */
+    perfectRun(): any
     todayKey(date?: Date): string
     getState(): any
     askAI(text: string): void
