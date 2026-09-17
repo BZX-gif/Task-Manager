@@ -28,6 +28,8 @@ interface Window {
     hasRunningSession(): boolean
     addTaskToTop3(taskId: string): { ok: boolean; reason?: string; ids: string[] }
     streakInfo(): { current: number; best: number; recent: Array<{ dateKey: string; score: number; isToday: boolean; status: string }> }
+    disciplineInfo(): any
+    titles(): any
     todayKey(date?: Date): string
     getState(): any
     askAI(text: string): void

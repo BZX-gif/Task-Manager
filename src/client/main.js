@@ -5,7 +5,7 @@
 
 import { closeModal, isModalOpen, toast } from './core/dom.js'
 import { on } from './core/bus.js'
-import { announceStatus, commit, currentDayKey, ensureRecurringOccurrences, initStore, state, streak, syncScoreHistory } from './core/store.js'
+import { announceStatus, commit, currentDayKey, ensureRecurringOccurrences, initStore, state, streak, syncScoreHistory, titlesInfo, disciplineStreak } from './core/store.js'
 import { addToTop3 } from './lib/top3.js'
 import { initRouter, refreshCurrentView, switchView } from './ui/router.js'
 import { footerVersion, refreshFocusChip, refreshStreakWidget, renderQuoteInline, startChromeTimers, toggleMobileNav } from './ui/chrome.js'
@@ -18,8 +18,9 @@ import { initPwa } from './ui/pwa.js'
 import { openTaskModal } from './views/tasks.js'
 import { openWeeklyReview } from './views/review.js'
 import { openRecoveryModal } from './views/recovery.js'
+import { handleTitlesUnlocked } from './ui/titles.js'
 
-const APP_VERSION = '2.0'
+const APP_VERSION = '2.1'
 
 function refreshAll() {
   refreshStreakWidget()
@@ -31,6 +32,14 @@ function streakInfo() {
   const result = streak()
   const recent = result.recent.map((day) => ({ ...day, status: dayStatus(state, day.dateKey).status }))
   return { ...result, recent }
+}
+
+function disciplineInfo() {
+  return disciplineStreak()
+}
+
+function titles() {
+  return titlesInfo()
 }
 
 /* ------------------------------------------------------------------ API */
@@ -65,6 +74,8 @@ window.CC = {
     return result
   },
   streakInfo,
+  disciplineInfo,
+  titles,
   todayKey: currentDayKey,
   /**
    * Read-only access to the current state — used by the automated smoke test
@@ -142,6 +153,9 @@ function boot() {
   on('store:change', () => {
     refreshStreakWidget()
     refreshFocusChip()
+  })
+  on('titles:unlocked', (detail) => {
+    handleTitlesUnlocked(detail)
   })
 
   // write before the tab goes away so nothing is lost

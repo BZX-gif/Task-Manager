@@ -81,7 +81,7 @@ test('a legacy v1 payload boots into v2 with every record intact', async () => {
     await settle(120)
     const state = window.CC.getState()
 
-    assert.equal(state.version, 2)
+    assert.equal(state.version, 3)
     assert.equal(state.tasks.length >= 2, true, 'tasks preserved')
     assert.ok(state.tasks.some((t) => t.title === 'Revise Polity' && t.done === true))
     assert.equal(state.timetable.length, 1)

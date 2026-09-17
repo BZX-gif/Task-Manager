@@ -12,12 +12,13 @@ import { overdueTasks } from '../lib/score.js'
 import { PRIORITY_COLORS, PRIORITY_ORDER } from '../lib/defaults.js'
 import { drawChart } from '../core/charts.js'
 import { escapeHtml, hint, qsa, toast } from '../core/dom.js'
-import { commit, currentDayKey, rollSeriesForward, state, statsFor } from '../core/store.js'
+import { commit, currentDayKey, rollSeriesForward, state, statsFor, titlesInfo } from '../core/store.js'
 import { statusForStreakDot } from './shared.js'
 import { openFocusPickerForTask } from '../ui/focus.js'
 import { openTaskModal } from './tasks.js'
 import { openWeeklyReview } from './review.js'
 import { openRecoveryModal } from './recovery.js'
+import { formatUnlockDate } from '../lib/achievements.js'
 
 export function renderDashboard() {
   const section = document.getElementById('view-dashboard')
@@ -26,6 +27,8 @@ export function renderDashboard() {
   const today = currentDayKey(now)
   const stats = statsFor(today, { now })
   const streakInfo = window.CC?.streakInfo?.() || { current: 0, best: 0, recent: [] }
+  const titles = titlesInfo(now)
+  const discipline = titles.disciplineMonster
   const action = currentAction(now, today)
   const top3 = top3Stats(state, today)
   const overdue = overdueTasks(state, today)
@@ -47,7 +50,7 @@ export function renderDashboard() {
       </div>
     </div>
 
-    <!-- Score · Streak · Focus -->
+    <!-- Score · Streak · Discipline -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
       <div class="glass-card p-5 lg:col-span-2" data-card="score">
         <div class="flex items-start justify-between gap-3 mb-3">
@@ -70,19 +73,25 @@ export function renderDashboard() {
         <div class="progress-track mt-4"><div class="progress-fill" style="width:${stats.hasData ? stats.score : 0}%"></div></div>
       </div>
 
-      <div class="glass-card p-5" data-card="streak">
-        <div class="flex items-center justify-between mb-2">
-          <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Consistency</p>
-          <i class="fa-solid fa-fire text-accent-4"></i>
+      <div class="flex flex-col gap-5">
+        <div class="glass-card p-5" data-card="streak">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Consistency</p>
+            <i class="fa-solid fa-fire text-accent-4"></i>
+          </div>
+          <p class="font-display font-extrabold text-white text-3xl">🔥 ${streakInfo.current}<span class="text-base text-slate-500"> day${streakInfo.current === 1 ? '' : 's'}</span></p>
+          <p class="text-[12px] text-slate-500 mt-1">Best streak: ${streakInfo.best} days</p>
+          <div class="flex gap-1.5 mt-3">
+            ${streakInfo.recent.map(statusForStreakDot).join('')}
+          </div>
+          <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">
+            A day counts with <span class="text-slate-300">all Top 3 done</span>, <span class="text-slate-300">score 60+</span> or <span class="text-slate-300">45+ focused minutes</span>.
+          </p>
         </div>
-        <p class="font-display font-extrabold text-white text-3xl">🔥 ${streakInfo.current}<span class="text-base text-slate-500"> day${streakInfo.current === 1 ? '' : 's'}</span></p>
-        <p class="text-[12px] text-slate-500 mt-1">Best streak: ${streakInfo.best} days</p>
-        <div class="flex gap-1.5 mt-3">
-          ${streakInfo.recent.map(statusForStreakDot).join('')}
+
+        <div class="glass-card p-5 discipline-dash-card ${discipline.unlocked ? 'is-unlocked' : ''}" data-card="discipline">
+          ${disciplineCardHtml(discipline)}
         </div>
-        <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">
-          A day counts with <span class="text-slate-300">all Top 3 done</span>, <span class="text-slate-300">score 60+</span> or <span class="text-slate-300">45+ focused minutes</span>.
-        </p>
       </div>
     </div>
 
@@ -221,12 +230,58 @@ export function renderDashboard() {
     </div>
   `
 
-  bindDashboard(section, { today, action })
+  bindDashboard(section, { today, action, discipline })
   drawWeekChart(week)
   if (window.CC?.refreshQuoteInline) window.CC.refreshQuoteInline()
 }
 
 /* --------------------------------------------------------------- sections */
+
+function disciplineCardHtml(d) {
+  const def = d.definition
+  if (d.unlocked) {
+    return `
+      <div class="discipline-header">
+        <span class="discipline-icon is-unlocked">${escapeHtml(def.icon)}</span>
+        <div>
+          <p class="discipline-name">${escapeHtml(def.name)}</p>
+          <p class="discipline-sub">${escapeHtml(def.subtitle)}</p>
+        </div>
+        <span class="chip chip-good ml-auto">UNLOCKED ✓</span>
+      </div>
+      <div class="mt-4">
+        <p class="text-[12px] text-slate-400">10+ perfect days achieved</p>
+        <div class="progress-track mt-2 !h-2"><div class="progress-fill discipline-fill" style="width:100%"></div></div>
+        <p class="text-[11px] text-slate-500 mt-2">Current streak: ${d.current} days · Best: ${d.best} days</p>
+        ${d.unlockedAt ? `<p class="text-[11px] text-slate-500 mt-1">Unlocked ${escapeHtml(formatUnlockDate(d.unlockedAt))}</p>` : ''}
+      </div>
+    `
+  }
+
+  const pct = Math.round((d.progress / d.total) * 100)
+  return `
+    <div class="discipline-header">
+      <span class="discipline-icon">${escapeHtml(def.lockedIcon)}</span>
+      <div>
+        <p class="discipline-name">${escapeHtml(def.name)}</p>
+        <p class="discipline-sub">${escapeHtml(def.subtitle)}</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <div class="flex items-center justify-between">
+        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Current Streak</p>
+        <p class="text-[12px] text-slate-400">${d.progress} / ${d.total} perfect days</p>
+      </div>
+      <p class="font-display font-extrabold text-white text-3xl mt-1">${d.current}<span class="text-base text-slate-500"> day${d.current === 1 ? '' : 's'}</span></p>
+      <div class="progress-track mt-3 !h-2"><div class="progress-fill discipline-fill" style="width:${pct}%"></div></div>
+      <div class="flex gap-1 mt-3">
+        ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? '#fbbf24' : 'rgba(255,255,255,0.08)'}" title="${day.dateKey} · ${day.perfect ? 'Perfect ✓' : 'Not perfect'}"></span>`).join('')}
+      </div>
+      <p class="text-[12px] text-slate-400 mt-3">${d.remaining === 0 ? 'Complete today to keep the streak!' : `${d.remaining} perfect day${d.remaining === 1 ? '' : 's'} to go`}</p>
+      <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">100% tasks + 100% timetable for 10 consecutive days. Zero-task days don't count.</p>
+    </div>
+  `
+}
 
 function scorePartsHtml(stats) {
   return stats.scoreParts
@@ -294,7 +349,7 @@ function taskLineHtml(task, today) {
 
 /* ---------------------------------------------------------------- binding */
 
-function bindDashboard(section, { today, action }) {
+function bindDashboard(section, { today, action, discipline }) {
   qsa(section, '[data-action]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const kind = btn.dataset.action
@@ -344,6 +399,10 @@ function bindDashboard(section, { today, action }) {
   })
   section.querySelector('[data-next-block]')?.addEventListener('click', () => window.CC.switchView('timetable'))
   section.querySelector('[data-focus-block]')?.addEventListener('click', () => window.CC.openFocusMode(undefined))
+
+  section.querySelector('[data-discipline-view]')?.addEventListener('click', () => {
+    window.CC?.switchView('settings')
+  })
 }
 
 function toggleTask(id) {

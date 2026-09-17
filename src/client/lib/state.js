@@ -7,7 +7,7 @@
    finds, migrates it forward and reports what happened.
 
    Migration path
-     v1 (original app) ──► v2 (this build)
+     v1 (original app) ──► v2 ──► v3 (discipline monster + titles)
    ------------------------------------------------------------------------- */
 
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_TIMETABLE, STATE_VERSION } from './defaults.js'
@@ -155,6 +155,17 @@ export function emptyState(ctx = makeContext()) {
     reminders: { sent: {} },
     settings: normalizeSettings({}),
     onboarding: { seen: false },
+    dailyProgress: {},
+    titles: {
+      disciplineMonster: {
+        unlocked: false,
+        unlockedAt: null,
+        unlockedAtTs: null,
+        seen: false,
+        bestStreak: 0,
+        currentStreak: 0,
+      },
+    },
     meta: { createdAt: ctx.now, updatedAt: ctx.now, migratedFrom: null, migrations: [] },
   }
   return state
@@ -179,6 +190,11 @@ export function migrateState(raw, ctx = makeContext()) {
     applied.push('migrateStateV1ToV2')
     version = 2
   }
+  if (version < 3) {
+    working = migrateStateV2ToV3(working, ctx)
+    applied.push('migrateStateV2ToV3')
+    version = 3
+  }
 
   const state = normalizeState(working, ctx, warnings)
   state.meta = {
@@ -186,7 +202,7 @@ export function migrateState(raw, ctx = makeContext()) {
     createdAt: Number.isFinite(working.meta?.createdAt) ? working.meta.createdAt : ctx.now,
     // keep the stored write time: loading is not a write
     updatedAt: Number.isFinite(working.meta?.updatedAt) ? working.meta.updatedAt : ctx.now,
-    migratedFrom: applied.length ? 'v1' : isObj(working.meta) ? working.meta.migratedFrom ?? null : null,
+    migratedFrom: applied.length ? `v${version}→v${STATE_VERSION}` : isObj(working.meta) ? working.meta.migratedFrom ?? null : null,
     migrations: [...asArray(working.meta?.migrations), ...applied],
   }
   state.version = STATE_VERSION
@@ -219,6 +235,41 @@ export function migrateStateV1ToV2(raw, ctx = makeContext()) {
   if (legacyKey) {
     // Security: the key must live in the Worker secret, never in the browser.
     next.meta = { ...(isObj(raw.meta) ? raw.meta : {}), removedBrowserApiKey: true }
+  }
+  return next
+}
+
+/**
+ * v2 → v3: adds dailyProgress snapshots and private titles collection
+ * for the Discipline Monster achievement system.
+ */
+export function migrateStateV2ToV3(raw, ctx = makeContext()) {
+  const next = { ...raw }
+  next.version = 3
+  if (!isObj(next.dailyProgress)) next.dailyProgress = {}
+  if (!isObj(next.titles)) {
+    next.titles = {
+      disciplineMonster: {
+        unlocked: false,
+        unlockedAt: null,
+        unlockedAtTs: null,
+        seen: false,
+        bestStreak: 0,
+        currentStreak: 0,
+      },
+    }
+  } else {
+    // Ensure disciplineMonster exists even if titles object was partially present
+    if (!isObj(next.titles.disciplineMonster)) {
+      next.titles.disciplineMonster = {
+        unlocked: false,
+        unlockedAt: null,
+        unlockedAtTs: null,
+        seen: false,
+        bestStreak: 0,
+        currentStreak: 0,
+      }
+    }
   }
   return next
 }
@@ -327,6 +378,48 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
 
   state.settings = normalizeSettings(raw.settings)
   state.onboarding = { ...DEFAULT_SETTINGS.onboarding, ...(isObj(raw.onboarding) ? raw.onboarding : isObj(raw.settings?.onboarding) ? raw.settings.onboarding : {}) }
+
+  // --- v3: dailyProgress snapshots (frozen historical truth) ---
+  state.dailyProgress = {}
+  for (const [key, value] of Object.entries(isObj(raw.dailyProgress) ? raw.dailyProgress : {})) {
+    if (!isValidKey(key)) continue
+    state.dailyProgress[key] = {
+      tasksPlanned: clampNumber(value?.tasksPlanned, 0, 10000, 0),
+      tasksCompleted: clampNumber(value?.tasksCompleted, 0, 10000, 0),
+      timetablePlanned: clampNumber(value?.timetablePlanned, 0, 10000, 0),
+      timetableCompleted: clampNumber(value?.timetableCompleted, 0, 10000, 0),
+      perfect: !!value?.perfect,
+      recordedAt: Number.isFinite(value?.recordedAt) ? value.recordedAt : ctx.now,
+    }
+  }
+
+  // --- v3: private titles ---
+  const rawTitles = isObj(raw.titles) ? raw.titles : {}
+  const dm = isObj(rawTitles.disciplineMonster) ? rawTitles.disciplineMonster : {}
+  state.titles = {
+    disciplineMonster: {
+      unlocked: !!dm.unlocked,
+      unlockedAt: typeof dm.unlockedAt === 'string' && isValidKey(dm.unlockedAt) ? dm.unlockedAt : dm.unlockedAt ? String(dm.unlockedAt).slice(0, 10) : null,
+      unlockedAtTs: Number.isFinite(dm.unlockedAtTs) ? dm.unlockedAtTs : dm.unlockedAt ? Date.parse(dm.unlockedAt) || null : null,
+      seen: !!dm.seen,
+      bestStreak: clampNumber(dm.bestStreak, 0, 10000, 0),
+      currentStreak: clampNumber(dm.currentStreak, 0, 10000, 0),
+    },
+  }
+  // Preserve any future titles generically (so adding new titles later doesn't wipe)
+  for (const [k, v] of Object.entries(rawTitles)) {
+    if (k === 'disciplineMonster') continue
+    if (!isObj(v)) continue
+    state.titles[k] = {
+      unlocked: !!v.unlocked,
+      unlockedAt: typeof v.unlockedAt === 'string' ? v.unlockedAt.slice(0, 10) : null,
+      unlockedAtTs: Number.isFinite(v.unlockedAtTs) ? v.unlockedAtTs : null,
+      seen: !!v.seen,
+      bestStreak: clampNumber(v.bestStreak, 0, 10000, 0),
+      currentStreak: clampNumber(v.currentStreak, 0, 10000, 0),
+    }
+  }
+
   return state
 }
 

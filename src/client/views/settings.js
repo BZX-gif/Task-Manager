@@ -1,5 +1,6 @@
 /* -------------------------------------------------------------------------
    SETTINGS — reminders, protected time, data backup/restore, AI status
+   Plus: Profile — My Private Titles (Discipline Monster)
    ------------------------------------------------------------------------- */
 
 import { BREAK_PRESETS, FOCUS_PRESETS, STATE_VERSION } from '../lib/defaults.js'
@@ -8,8 +9,9 @@ import { reminderSummary } from '../lib/reminders.js'
 import { describeBlock } from '../lib/protected.js'
 import { STORAGE_KEY, storageUsage, uid } from '../lib/state.js'
 import { closeModal, confirmDialog, copyText, escapeHtml, openModal, qsa, toast } from '../core/dom.js'
-import { commit, currentDayKey, getStatus, replaceState, state } from '../core/store.js'
+import { commit, currentDayKey, getStatus, replaceState, state, titlesInfo } from '../core/store.js'
 import { fieldRow } from './shared.js'
+import { formatUnlockDate } from '../lib/achievements.js'
 
 let statusLine = ''
 let statusTone = 'text-slate-400'
@@ -21,14 +23,71 @@ export function renderSettings() {
   const usage = storageUsage()
   const appStatus = getStatus()
   const reminders = settings.reminders
+  const titles = titlesInfo(new Date())
+  const dm = titles.disciplineMonster
 
   section.innerHTML = `
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="section-title">Settings</h2>
-        <p class="section-sub">Everything is stored locally in this browser. Schemas are versioned and migrate automatically.</p>
+        <h2 class="section-title">Profile & Settings</h2>
+        <p class="section-sub">Personal productivity command center for ${escapeHtml(settings.userName || 'you')} — everything stored locally, private, no social.</p>
       </div>
       <span class="chip">Schema v${STATE_VERSION}</span>
+    </div>
+
+    <!-- Profile / Personal -->
+    <div class="glass-card p-5 space-y-4">
+      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-user text-accent-2"></i>Profile</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="field-label">Your name</label>
+          <input class="input-field" data-setting="userName" value="${escapeHtml(settings.userName)}">
+        </div>
+        <div>
+          <label class="field-label">Week starts on</label>
+          <select class="input-field" data-setting="weekStart">
+            <option value="1" ${settings.weekStart === 1 ? 'selected' : ''}>Monday</option>
+            <option value="0" ${settings.weekStart === 0 ? 'selected' : ''}>Sunday</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Day ends at</label>
+          <input type="time" class="input-field" data-setting="dayEnd" value="${settings.dayEnd}">
+        </div>
+      </div>
+      <div class="divide-y divide-white/5">
+        ${fieldRow('Tasks', String(state.tasks.length))}
+        ${fieldRow('Focus sessions', String(state.focus.sessions.length))}
+        ${fieldRow('Tracked days', String(Object.keys(state.completionLog || {}).length))}
+        ${fieldRow('Perfect days', String(dm.streakInfo.totalPerfect))}
+        ${fieldRow('Best perfect streak', `${dm.best} days`)}
+        ${fieldRow('Storage used', `${usage.kb} kB`, `key: ${STORAGE_KEY}`)}
+        ${fieldRow('Last migration', appStatus.migrated ? `Upgraded on this load (${appStatus.applied?.join(', ') || 'v→v'})` : 'Not needed')}
+      </div>
+    </div>
+
+    <!-- MY TITLES — Private -->
+    <div class="glass-card p-5 space-y-5">
+      <div class="flex items-center justify-between gap-3">
+        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-crown text-accent-4"></i>MY TITLES</h3>
+        <span class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Private · Local only</span>
+      </div>
+
+      <div class="title-grid">
+        ${titleCardHtml(dm)}
+      </div>
+
+      <div class="border-t border-white/5 pt-5">
+        <h4 class="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-3">Locked Titles — Coming Soon</h4>
+        <div class="title-grid locked">
+          ${lockedFutureTitlesHtml()}
+        </div>
+      </div>
+
+      <p class="text-[11.5px] text-slate-500 leading-relaxed">
+        Titles are personal rewards stored only in your browser. No public profile, no leaderboard, no sharing.
+        <br>Future titles: Focus Beast, Consistency King, Task Slayer, Deep Work Beast, 30 Day Machine.
+      </p>
     </div>
 
     <!-- AI -->
@@ -165,29 +224,13 @@ export function renderSettings() {
     <!-- Day & data -->
     <div class="glass-card p-5 space-y-4">
       <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-database text-accent-3"></i>Data & Day</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label class="field-label">Week starts on</label>
-          <select class="input-field" data-setting="weekStart">
-            <option value="1" ${settings.weekStart === 1 ? 'selected' : ''}>Monday</option>
-            <option value="0" ${settings.weekStart === 0 ? 'selected' : ''}>Sunday</option>
-          </select>
-        </div>
-        <div>
-          <label class="field-label">Day ends at</label>
-          <input type="time" class="input-field" data-setting="dayEnd" value="${settings.dayEnd}">
-        </div>
-        <div>
-          <label class="field-label">Your name</label>
-          <input class="input-field" data-setting="userName" value="${escapeHtml(settings.userName)}">
-        </div>
-      </div>
       <div class="divide-y divide-white/5">
         ${fieldRow('Storage used', `${usage.kb} kB`, `key: ${STORAGE_KEY}`)}
         ${fieldRow('Tasks', String(state.tasks.length))}
         ${fieldRow('Focus sessions', String(state.focus.sessions.length))}
         ${fieldRow('Tracked days', String(Object.keys(state.completionLog || {}).length))}
-        ${fieldRow('Last migration', appStatus.migrated ? 'Upgraded on this load (v1 → v2)' : 'Not needed')}
+        ${fieldRow('Daily snapshots', String(Object.keys(state.dailyProgress || {}).length))}
+        ${fieldRow('Last migration', appStatus.migrated ? 'Upgraded on this load' : 'Not needed')}
       </div>
       <div class="flex flex-wrap gap-2.5">
         <button class="btn-ghost" data-action="export"><i class="fa-solid fa-download mr-1.5"></i>Export JSON</button>
@@ -197,20 +240,84 @@ export function renderSettings() {
         </label>
         <button class="btn-danger-ghost" data-action="reset"><i class="fa-solid fa-trash-can mr-1.5"></i>Reset all data</button>
       </div>
-      <p class="text-[12px] text-slate-500">Exports include tasks, timetable, focus history, priorities, reminders and settings. Import validates the file, keeps a backup of what you had, and never half-applies a broken file.</p>
+      <p class="text-[12px] text-slate-500">Exports include tasks, timetable, focus history, priorities, reminders, settings and your private titles. Import validates the file, keeps a backup of what you had, and never half-applies a broken file.</p>
     </div>
 
     <div class="glass-card p-5">
       <h3 class="section-title text-base flex items-center gap-2 mb-2"><i class="fa-solid fa-circle-info text-slate-400"></i>About</h3>
       <p class="text-[13px] text-slate-500 leading-relaxed">
-        Command Center v2 · Runs on Cloudflare Workers + Hono with a 100% local-first client.
+        Command Center v2.1 · Private titles + Discipline Monster · Runs on Cloudflare Workers + Hono with a 100% local-first client.
         Focus sessions, priorities, recurring tasks, reminders, weekly review and analytics all work offline;
-        only the AI assistant needs the internet.
+        only the AI assistant needs the internet. No backend, no database, no social features — ₹0 cost.
       </p>
     </div>
   `
 
   bindSettings(section)
+}
+
+function titleCardHtml(d) {
+  const def = d.definition
+  if (d.unlocked) {
+    return `
+      <div class="title-card is-unlocked">
+        <div class="title-card-glow" aria-hidden="true"></div>
+        <div class="title-card-top">
+          <span class="title-card-icon is-unlocked">${escapeHtml(def.icon)}</span>
+          <span class="chip chip-good">UNLOCKED ✓</span>
+        </div>
+        <h4 class="title-card-name">${escapeHtml(def.name)}</h4>
+        <p class="title-card-sub">${escapeHtml(def.subtitle)}</p>
+        <div class="title-card-meta">
+          <p class="text-[12px] text-slate-300">10 consecutive Perfect Days</p>
+          <p class="text-[11px] text-slate-500 mt-1">Current: ${d.current} · Best: ${d.best} days</p>
+          ${d.unlockedAt ? `<p class="text-[11px] text-amber-300 mt-2"><i class="fa-solid fa-calendar-check mr-1"></i>Unlocked ${escapeHtml(formatUnlockDate(d.unlockedAt))}</p>` : ''}
+        </div>
+        <div class="progress-track mt-4 !h-2"><div class="progress-fill discipline-fill" style="width:100%"></div></div>
+      </div>
+    `
+  }
+
+  const pct = Math.round((d.progress / d.total) * 100)
+  return `
+    <div class="title-card is-locked">
+      <div class="title-card-top">
+        <span class="title-card-icon">${escapeHtml(def.lockedIcon)}</span>
+        <span class="chip">${d.progress} / ${d.total}</span>
+      </div>
+      <h4 class="title-card-name">${escapeHtml(def.name)}</h4>
+      <p class="title-card-sub">${escapeHtml(def.subtitle)}</p>
+      <div class="title-card-meta">
+        <p class="text-[12px] text-slate-400">${d.progress} / ${d.total} PERFECT DAYS</p>
+        <div class="progress-track mt-2 !h-2"><div class="progress-fill discipline-fill" style="width:${pct}%"></div></div>
+        <p class="text-[11px] text-slate-500 mt-2">${d.remaining} day${d.remaining === 1 ? '' : 's'} to go · Current streak ${d.current}</p>
+        <div class="flex gap-1 mt-3">
+          ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? '#fbbf24' : 'rgba(255,255,255,0.08)'}" title="${day.dateKey}"></span>`).join('')}
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function lockedFutureTitlesHtml() {
+  const future = [
+    { icon: '🎯', name: 'FOCUS BEAST', sub: 'DEEP WORK MASTER' },
+    { icon: '👑', name: 'CONSISTENCY KING', sub: '30 DAY STREAK' },
+    { icon: '⚔️', name: 'TASK SLAYER', sub: '100 TASKS CRUSHED' },
+    { icon: '🧠', name: 'DEEP WORK BEAST', sub: '50 HOURS FOCUSED' },
+    { icon: '🤖', name: '30 DAY MACHINE', sub: 'MONTH OF DISCIPLINE' },
+  ]
+  return future.map(f => `
+    <div class="title-card is-locked is-future">
+      <div class="title-card-top">
+        <span class="title-card-icon">${escapeHtml(f.icon)}</span>
+        <span class="chip">LOCKED</span>
+      </div>
+      <h4 class="title-card-name">${escapeHtml(f.name)}</h4>
+      <p class="title-card-sub">${escapeHtml(f.sub)}</p>
+      <p class="text-[11px] text-slate-600 mt-3">Coming soon</p>
+    </div>
+  `).join('')
 }
 
 function bindSettings(section) {

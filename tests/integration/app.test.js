@@ -130,7 +130,7 @@ test('the app boots and renders the dashboard', async () => {
   assert.match(window.document.getElementById('greeting-text').textContent, /Kulshresth/)
   const seeded = state()
   assert.ok(seeded.timetable.length >= 10, 'the default timetable is present')
-  assert.equal(seeded.version, 2)
+  assert.equal(seeded.version, 3)
 })
 
 test('the daily score card explains its own formula', async () => {
