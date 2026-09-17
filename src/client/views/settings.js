@@ -37,7 +37,7 @@ export function renderSettings() {
 
     <!-- Profile / Personal -->
     <div class="glass-card p-5 space-y-4">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-user text-accent-2"></i>Profile</h3>
+      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-user text-slate-400" aria-hidden="true"></i>Profile</h3>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label class="field-label">Your name</label>
@@ -69,8 +69,8 @@ export function renderSettings() {
     <!-- MY TITLES — Private -->
     <div class="glass-card p-5 space-y-5">
       <div class="flex items-center justify-between gap-3">
-        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-crown text-accent-4"></i>MY TITLES</h3>
-        <span class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Private · Local only</span>
+        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-crown text-accent-4" aria-hidden="true"></i>MY TITLES</h3>
+        <span class="section-eyebrow">Private · Local only</span>
       </div>
 
       <div class="title-grid">
@@ -92,7 +92,7 @@ export function renderSettings() {
 
     <!-- AI -->
     <div class="glass-card p-5 space-y-3">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-shield-halved text-accent"></i>Gemini Assistant</h3>
+      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-shield-halved text-emerald-400" aria-hidden="true"></i>Gemini Assistant</h3>
       <p class="text-[13px] text-slate-400">The assistant runs through your Cloudflare Worker (<code class="text-accent-2">/api/ai</code>). The API key is a Worker secret and never reaches the browser — nothing is stored in this page.</p>
       <div class="flex flex-wrap items-center gap-3">
         <button class="btn-ghost" data-action="test-ai"><i class="fa-solid fa-plug mr-1.5"></i>Test connection</button>
@@ -103,7 +103,7 @@ export function renderSettings() {
 
     <!-- Focus -->
     <div class="glass-card p-5 space-y-4">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-stopwatch text-accent-2"></i>Focus Mode</h3>
+      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-stopwatch text-slate-400" aria-hidden="true"></i>Focus Mode</h3>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label class="field-label">Default session</label>
@@ -131,7 +131,7 @@ export function renderSettings() {
 
     <!-- Reminders -->
     <div class="glass-card p-5 space-y-4">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-bell text-accent-3"></i>Reminders</h3>
+      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-bell text-slate-400" aria-hidden="true"></i>Reminders</h3>
       <label class="flex items-center gap-3 text-[13.5px] text-slate-200">
         <input type="checkbox" data-setting="reminders.enabled" ${reminders.enabled ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
         Enable reminders
@@ -176,7 +176,7 @@ export function renderSettings() {
     <!-- Protected time -->
     <div class="glass-card p-5 space-y-4">
       <div class="flex items-center justify-between gap-3">
-        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-moon text-accent-2"></i>Protected Time</h3>
+        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-moon text-slate-400" aria-hidden="true"></i>Protected Time</h3>
         <button class="btn-ghost !py-1.5 !text-xs" data-action="add-protected"><i class="fa-solid fa-plus mr-1.5"></i>Add window</button>
       </div>
       <p class="text-[13px] text-slate-400">Sleep, meals or any window you do not want scheduled into. Recovery plans skip these windows and the timetable warns about overlaps. This is purely a scheduling feature.</p>
@@ -203,7 +203,7 @@ export function renderSettings() {
     <!-- Categories -->
     <div class="glass-card p-5 space-y-4">
       <div class="flex items-center justify-between gap-3">
-        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-tags text-accent-4"></i>Categories</h3>
+        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-tags text-slate-400" aria-hidden="true"></i>Categories</h3>
         <button class="btn-ghost !py-1.5 !text-xs" data-action="add-category"><i class="fa-solid fa-plus mr-1.5"></i>Add category</button>
       </div>
       <div class="space-y-2.5">
@@ -223,7 +223,7 @@ export function renderSettings() {
 
     <!-- Day & data -->
     <div class="glass-card p-5 space-y-4">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-database text-accent-3"></i>Data & Day</h3>
+      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-database text-slate-400" aria-hidden="true"></i>Data & Day</h3>
       <div class="divide-y divide-white/5">
         ${fieldRow('Storage used', `${usage.kb} kB`, `key: ${STORAGE_KEY}`)}
         ${fieldRow('Tasks', String(state.tasks.length))}
@@ -246,7 +246,7 @@ export function renderSettings() {
     <div class="glass-card p-5">
       <h3 class="section-title text-base flex items-center gap-2 mb-2"><i class="fa-solid fa-circle-info text-slate-400"></i>About</h3>
       <p class="text-[13px] text-slate-500 leading-relaxed">
-        Command Center v2.1 · Private titles + Discipline Monster · Runs on Cloudflare Workers + Hono with a 100% local-first client.
+        Command Center v2.3 · Private titles + Discipline Monster · Runs on Cloudflare Workers + Hono with a 100% local-first client.
         Focus sessions, priorities, recurring tasks, reminders, weekly review and analytics all work offline;
         only the AI assistant needs the internet. No backend, no database, no social features — ₹0 cost.
       </p>
@@ -261,10 +261,9 @@ function titleCardHtml(d) {
   if (d.unlocked) {
     return `
       <div class="title-card is-unlocked">
-        <div class="title-card-glow" aria-hidden="true"></div>
         <div class="title-card-top">
           <span class="title-card-icon is-unlocked">${escapeHtml(def.icon)}</span>
-          <span class="chip chip-good">UNLOCKED ✓</span>
+          <span class="chip chip-warn">UNLOCKED ✓</span>
         </div>
         <h4 class="title-card-name">${escapeHtml(def.name)}</h4>
         <p class="title-card-sub">${escapeHtml(def.subtitle)}</p>
@@ -282,7 +281,7 @@ function titleCardHtml(d) {
   return `
     <div class="title-card is-locked">
       <div class="title-card-top">
-        <span class="title-card-icon">${escapeHtml(def.lockedIcon)}</span>
+        <span class="title-card-icon" aria-hidden="true">${escapeHtml(def.lockedIcon)}</span>
         <span class="chip">${d.progress} / ${d.total}</span>
       </div>
       <h4 class="title-card-name">${escapeHtml(def.name)}</h4>
@@ -292,7 +291,7 @@ function titleCardHtml(d) {
         <div class="progress-track mt-2 !h-2"><div class="progress-fill discipline-fill" style="width:${pct}%"></div></div>
         <p class="text-[11px] text-slate-500 mt-2">${d.remaining} day${d.remaining === 1 ? '' : 's'} to go · Current streak ${d.current}</p>
         <div class="flex gap-1 mt-3">
-          ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? '#fbbf24' : 'rgba(255,255,255,0.08)'}" title="${day.dateKey}"></span>`).join('')}
+          ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? 'var(--color-warning)' : 'rgba(255,255,255,0.07)'}" title="${day.dateKey}"></span>`).join('')}
         </div>
       </div>
     </div>
@@ -520,7 +519,7 @@ export function openCategoryModal() {
       </div>
       <div>
         <label class="field-label" for="category-color">Colour</label>
-        <input type="color" id="category-color" value="#7c5cff" class="w-12 h-10 rounded-lg border-none bg-transparent cursor-pointer">
+        <input type="color" id="category-color" value="#5b93e6" class="w-12 h-10 rounded-lg border-none bg-transparent cursor-pointer">
       </div>
       <div class="flex gap-3 pt-1">
         <button type="button" class="btn-ghost flex-1" data-modal-close>Cancel</button>

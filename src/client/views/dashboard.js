@@ -1,7 +1,8 @@
 /* -------------------------------------------------------------------------
    DASHBOARD — "open the app, know what to do"
-   Order: Daily Score + streak + focus, then Top 3 & Do This Now, then the
-   live timetable position, then trends.
+   Hierarchy (v2.3): TODAY (hero) → WHAT MATTERS (score, Top 3, next move)
+   → PROGRESS (live schedule position) → SUPPORTING (trends, quote).
+   Every number here comes from statsFor / streak / top3 — no invented data.
    ------------------------------------------------------------------------- */
 
 import { formatDuration, minutesOfDay, nowMinutes as nowMinutesOf, weekdayShort } from '../lib/dates.js'
@@ -9,7 +10,7 @@ import { describeScoreFormula } from '../lib/score.js'
 import { top3Candidates, top3Stats, TOP3_LIMIT } from '../lib/top3.js'
 import { selectNextAction } from '../lib/nextaction.js'
 import { overdueTasks } from '../lib/score.js'
-import { PRIORITY_COLORS, PRIORITY_ORDER } from '../lib/defaults.js'
+import { PRIORITY_ORDER } from '../lib/defaults.js'
 import { drawChart } from '../core/charts.js'
 import { escapeHtml, hint, qsa, toast } from '../core/dom.js'
 import { commit, currentDayKey, rollSeriesForward, state, statsFor, titlesInfo } from '../core/store.js'
@@ -37,49 +38,49 @@ export function renderDashboard() {
     .filter((t) => t.date === today && !t.done)
     .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
   const week = weekTrend(now)
+  const hero = heroCopy({ stats, overdue, openToday, top3, next })
 
   section.innerHTML = `
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 class="section-title">Dashboard</h2>
-        <p class="section-sub">${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })} · ${state.timetable.length} scheduled blocks · ${openToday.length} open task${openToday.length === 1 ? '' : 's'}</p>
-      </div>
-      <div class="flex flex-wrap gap-2">
+    <!-- TODAY -->
+    <header class="dash-hero">
+      <p class="dash-hero-date">${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+      <h2 class="dash-hero-title">${escapeHtml(hero.title)}</h2>
+      <p class="dash-hero-sub">${escapeHtml(hero.sub)}</p>
+      <div class="dash-hero-actions">
         <button class="btn-ghost" data-action="recover"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Recover My Day</button>
         <button class="btn-ghost" data-action="review"><i class="fa-solid fa-clipboard-list mr-1.5"></i>Weekly Review</button>
       </div>
-    </div>
+    </header>
 
-    <!-- Score · Streak · Discipline -->
+    <!-- WHAT MATTERS: the score is the single dominant number -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <div class="glass-card p-5 lg:col-span-2" data-card="score">
-        <div class="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Today's Score ${hint(describeScoreFormula().join(' · '))}</p>
-            <p class="font-display font-extrabold text-white text-4xl leading-none mt-1">
-              ${stats.hasData ? stats.score : '–'}<span class="text-lg text-slate-500">/100</span>
-            </p>
-          </div>
-          <div class="text-right">
+      <div class="glass-card card-featured p-5 sm:p-6 lg:col-span-2" data-card="score">
+        <div class="flex items-start justify-between gap-3">
+          <p class="section-eyebrow">Today's Score ${hint(describeScoreFormula().join(' · '))}</p>
+          <div class="flex flex-col items-end gap-1.5">
             ${stats.hasData
               ? `<span class="chip ${stats.onTrack ? 'chip-good' : 'chip-warn'}">${stats.onTrack ? 'On track' : `Behind pace (${stats.pace})`}</span>`
               : '<span class="chip">No data yet</span>'}
-            <p class="text-[11px] text-slate-500 mt-2">${stats.overdueCount ? `${stats.overdueCount} overdue task${stats.overdueCount > 1 ? 's' : ''}` : 'Nothing overdue'}</p>
+            <p class="text-[11px] text-slate-500">${stats.overdueCount ? `${stats.overdueCount} overdue task${stats.overdueCount > 1 ? 's' : ''}` : 'Nothing overdue'}</p>
           </div>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4" data-score-parts>
+        <div class="flex items-baseline gap-2 mt-3">
+          <p class="score-hero-value">${stats.hasData ? stats.score : '–'}</p>
+          <p class="score-hero-max">/100</p>
+        </div>
+        <div class="progress-track mt-3"><div class="progress-fill" style="width:${stats.hasData ? stats.score : 0}%"></div></div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5" data-score-parts>
           ${scorePartsHtml(stats)}
         </div>
-        <div class="progress-track mt-4"><div class="progress-fill" style="width:${stats.hasData ? stats.score : 0}%"></div></div>
       </div>
 
-      <div class="flex flex-col gap-5">
-        <div class="glass-card p-5" data-card="streak">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Consistency</p>
-            <i class="fa-solid fa-fire text-accent-4"></i>
+      <div class="flex flex-col gap-5 min-w-0">
+        <div class="glass-card card-supporting p-5" data-card="streak">
+          <div class="flex items-center justify-between mb-1.5">
+            <p class="section-eyebrow">Consistency</p>
+            <i class="fa-solid fa-fire text-accent-4" aria-hidden="true"></i>
           </div>
-          <p class="font-display font-extrabold text-white text-3xl">🔥 ${streakInfo.current}<span class="text-base text-slate-500"> day${streakInfo.current === 1 ? '' : 's'}</span></p>
+          <p class="streak-big">${streakInfo.current}<span class="streak-big-unit">day${streakInfo.current === 1 ? '' : 's'} in a row</span></p>
           <p class="text-[12px] text-slate-500 mt-1">Best streak: ${streakInfo.best} days</p>
           <div class="flex gap-1.5 mt-3">
             ${streakInfo.recent.map(statusForStreakDot).join('')}
@@ -89,18 +90,18 @@ export function renderDashboard() {
           </p>
         </div>
 
-        <div class="glass-card p-5 discipline-dash-card ${discipline.unlocked ? 'is-unlocked' : ''}" data-card="discipline">
+        <div class="glass-card discipline-dash-card p-5 ${discipline.unlocked ? 'is-unlocked' : ''}" data-card="discipline">
           ${disciplineCardHtml(discipline)}
         </div>
       </div>
     </div>
 
-    <!-- Top 3 + Do This Now -->
+    <!-- The plan: Top 3 + the single next move -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
       <div class="glass-card top3-card p-5" data-card="top3">
         <div class="flex items-center justify-between mb-1">
-          <h3 class="section-title text-base flex items-center gap-2"><span class="top3-badge">TODAY'S TOP 3</span></h3>
-          <span class="text-[11px] text-slate-500">${top3.done}/${top3.total} done</span>
+          <h3 class="section-title text-base flex items-center gap-2"><span class="top3-badge">Today's Top 3</span></h3>
+          <span class="text-[11px] text-slate-500 tabular">${top3.done}/${top3.total} done</span>
         </div>
         <p class="text-[12px] text-slate-500 mb-4">The three things that make today a win.</p>
         <div class="space-y-2.5" data-top3-list>
@@ -124,9 +125,9 @@ export function renderDashboard() {
       </div>
 
       <div class="glass-card now-card p-5" data-card="next-action">
-        <p class="text-[11px] uppercase tracking-[0.25em] font-bold text-accent-2 mb-2">Do this now</p>
-        <h3 class="font-display font-bold text-white text-xl leading-snug" data-next-title>${escapeHtml(action.title)}</h3>
-        <div class="flex flex-wrap items-center gap-2 mt-2 text-[12px] text-slate-400">
+        <p class="section-eyebrow" style="letter-spacing:0.22em">Do this now</p>
+        <h3 class="font-display font-bold text-white text-xl leading-snug mt-2" data-next-title>${escapeHtml(action.title)}</h3>
+        <div class="flex flex-wrap items-center gap-2 mt-2.5 text-[12px] text-slate-400">
           <span class="chip">${escapeHtml(action.reason)}</span>
           ${action.categoryId ? `<span class="chip">${escapeHtml(categoryName(action.categoryId))}</span>` : ''}
           ${action.minutes ? `<span class="chip"><i class="fa-regular fa-clock mr-1"></i>${formatDuration(action.minutes)}</span>` : ''}
@@ -144,42 +145,44 @@ export function renderDashboard() {
       </div>
     </div>
 
-    <!-- Right now / queue -->
+    <!-- PROGRESS: where the day actually is, right now -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <div class="glass-card p-5 lg:col-span-2">
-        <div class="flex items-center justify-between mb-4">
+      <div class="glass-card p-2 sm:p-3 lg:col-span-2">
+        <div class="flex items-center justify-between px-3 pt-2 pb-3 sm:px-2">
           <h3 class="section-title">Right Now</h3>
           <span class="text-[11px] text-slate-500">${now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>
         </div>
+        <div class="schedule">
         ${current
-          ? `<div class="tt-row active-now mb-3" style="--cat-color:${categoryColor(current.cat)}">
+          ? `<div class="tt-row active-now" style="--cat-color:${categoryColor(current.cat)}">
                <div class="tt-time">${escapeHtml(current.time)}</div>
                <div class="min-w-0">
                  <p class="tt-title truncate">${escapeHtml(current.title)}</p>
-                 <p class="text-[11px] text-slate-500">${escapeHtml(categoryName(current.cat))} · ${current.duration || 60} min · ${endsIn(current, now)} left</p>
+                 <p class="tt-meta">${escapeHtml(categoryName(current.cat))} · ${current.duration || 60} min · ${endsIn(current, now)} left</p>
                </div>
                <div class="flex items-center gap-2">
-                 <span class="dot bg-emerald-400 animate-pulse-slow" style="width:10px;height:10px"></span>
+                 <span class="live-label">LIVE</span>
                  <button class="icon-btn" data-focus-block="${escapeHtml(current.id)}" title="Focus on this block"><i class="fa-solid fa-stopwatch text-xs"></i></button>
                </div>
              </div>`
           : `<div class="empty-state !py-6"><i class="fa-regular fa-clock"></i><p class="text-sm">No block scheduled right now</p></div>`}
         ${next
-          ? `<p class="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-2 mt-4">Up Next</p>
+          ? `<p class="section-eyebrow px-4 pt-3 pb-1.5">Up Next</p>
              <div class="tt-row" style="--cat-color:${categoryColor(next.cat)}">
                <div class="tt-time">${escapeHtml(next.time)}</div>
-               <div class="min-w-0"><p class="tt-title truncate">${escapeHtml(next.title)}</p><p class="text-[11px] text-slate-500">${escapeHtml(categoryName(next.cat))} ${next.duration ? `· ${next.duration} min` : ''}</p></div>
-               <i class="fa-solid fa-arrow-right text-slate-600"></i>
+               <div class="min-w-0"><p class="tt-title truncate">${escapeHtml(next.title)}</p><p class="tt-meta">${escapeHtml(categoryName(next.cat))}${next.duration ? ` · ${next.duration} min` : ''}</p></div>
+               <i class="fa-solid fa-arrow-right" style="color:var(--color-text-faint)"></i>
              </div>`
           : ''}
+        </div>
       </div>
 
-      <div class="glass-card p-5">
-        <div class="flex items-center justify-between mb-4">
+      <div class="glass-card card-supporting p-5">
+        <div class="flex items-center justify-between mb-3">
           <h3 class="section-title text-base">Open Tasks</h3>
           <button class="icon-btn" data-action="new-task" title="Add task"><i class="fa-solid fa-plus"></i></button>
         </div>
-        <div class="space-y-2.5 max-h-[300px] overflow-y-auto scroll-thin pr-1">
+        <div class="space-y-1.5 max-h-[300px] overflow-y-auto scroll-thin pr-1">
           ${openToday.length
             ? openToday.slice(0, 8).map((t) => taskLineHtml(t, today)).join('')
             : `<div class="empty-state !py-8"><i class="fa-regular fa-square-check"></i><p class="text-sm">Nothing open for today</p><button class="btn-ghost mt-3 !text-xs" data-action="new-task">Add a task</button></div>`}
@@ -193,19 +196,19 @@ export function renderDashboard() {
       </div>
     </div>
 
-    <!-- Trends -->
+    <!-- SUPPORTING: trends -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <div class="glass-card p-5 lg:col-span-2">
+      <div class="glass-card card-supporting p-5 lg:col-span-2">
         <div class="flex items-center justify-between mb-4">
           <h3 class="section-title">Last 7 Days</h3>
           <div class="flex items-center gap-3 text-[11px] text-slate-500">
-            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#7c5cff"></span>Score</span>
-            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#22d3ee"></span>Focus min</span>
+            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#5b93e6"></span>Score</span>
+            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#57b28c"></span>Focus min</span>
           </div>
         </div>
         <div class="h-[220px]"><canvas id="dashWeekChart"></canvas></div>
       </div>
-      <div class="glass-card p-5">
+      <div class="glass-card card-supporting p-5">
         <h3 class="section-title text-base mb-4">Categories this week</h3>
         <div class="space-y-3">
           ${week.categories
@@ -215,15 +218,15 @@ export function renderDashboard() {
               <div class="flex items-center gap-2.5 mb-1.5">
                 <span class="legend-dot" style="background:${c.color}"></span>
                 <span class="text-sm text-slate-300 flex-1 truncate">${escapeHtml(c.name)}</span>
-                <span class="text-xs text-slate-500">${c.completionPct}%</span>
+                <span class="text-xs text-slate-500 tabular">${c.completionPct}%</span>
               </div>
-              <div class="progress-track !h-1.5"><div class="progress-fill" style="width:${c.completionPct}%"></div></div>
+              <div class="progress-track !h-1"><div class="progress-fill" style="width:${c.completionPct}%"></div></div>
             </div>`,
             )
             .join('')}
         </div>
         <div class="mt-5 pt-4 border-t border-white/5">
-          <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-2">Today's Quote</p>
+          <p class="section-eyebrow mb-2">Today's Quote</p>
           <p class="text-sm text-slate-300 italic leading-relaxed" id="dash-quote"></p>
         </div>
       </div>
@@ -235,14 +238,54 @@ export function renderDashboard() {
   if (window.CC?.refreshQuoteInline) window.CC.refreshQuoteInline()
 }
 
-/* --------------------------------------------------------------- sections */
+/* ------------------------------------------------------------------- hero */
+
+/**
+ * The headline is derived only from stats that already exist — never invented.
+ * One clear sentence about where the day stands, then the honest numbers.
+ */
+function heroCopy({ stats, overdue, openToday, top3, next }) {
+  let title
+  if (overdue.length) title = `${overdue.length} overdue — start with the oldest`
+  else if (openToday.length === 0 && stats.hasAnyActivity) title = 'Everything planned is done'
+  else if (top3.total > 0 && top3.done >= top3.total) title = 'Top 3 complete — finish strong'
+  else if (stats.hasData && stats.score >= 75) title = 'Strong day. Protect the pace.'
+  else if (stats.hasData && stats.score >= 45) title = 'Steady — keep the rhythm'
+  else if (stats.hasAnyActivity) title = 'Early yet — the next block decides the day'
+  else title = 'Today is still unwritten'
+
+  const parts = [
+    openToday.length === 0 ? 'no open tasks' : `${openToday.length} open task${openToday.length === 1 ? '' : 's'}`,
+    `${stats.focusedMinutes} min focused`,
+    `${stats.blocksDone}/${stats.blocksTotal} blocks done`,
+  ]
+  if (next) parts.push(`next up ${next.time}`)
+  return { title, sub: parts.join(' · ') }
+}
+
+/* ------------------------------------------------------------ score + cards */
+
+function scorePartsHtml(stats) {
+  return stats.scoreParts
+    .map((part) => {
+      const value = part.key === 'focus' ? formatDuration(stats.focusedMinutes) : part.detail
+      const percent = part.available ? Math.round(part.ratio * 100) : 0
+      return `
+        <div class="score-part ${part.available ? '' : 'opacity-45'}">
+          <p class="text-[10.5px] uppercase tracking-wider text-slate-500 font-semibold">${part.label}</p>
+          <p class="font-semibold text-slate-200 text-sm mt-0.5">${value}</p>
+          <div class="progress-track !h-1 mt-1.5"><div class="progress-fill" style="width:${percent}%"></div></div>
+        </div>`
+    })
+    .join('')
+}
 
 function disciplineCardHtml(d) {
   const def = d.definition
   if (d.unlocked) {
     return `
       <div class="discipline-header">
-        <span class="discipline-icon is-unlocked">${escapeHtml(def.icon)}</span>
+        <span class="discipline-icon is-unlocked" aria-hidden="true">${escapeHtml(def.icon)}</span>
         <div>
           <p class="discipline-name">${escapeHtml(def.name)}</p>
           <p class="discipline-sub">${escapeHtml(def.subtitle)}</p>
@@ -251,8 +294,8 @@ function disciplineCardHtml(d) {
       </div>
       <div class="mt-4">
         <p class="text-[12px] text-slate-400">10+ perfect days achieved</p>
-        <div class="progress-track mt-2 !h-2"><div class="progress-fill discipline-fill" style="width:100%"></div></div>
-        <p class="text-[11px] text-slate-500 mt-2">Current streak: ${d.current} days · Best: ${d.best} days</p>
+        <div class="progress-track !h-1 mt-2"><div class="progress-fill discipline-fill" style="width:100%"></div></div>
+        <p class="text-[11px] text-slate-500 mt-2 tabular">Current streak: ${d.current} days · Best: ${d.best} days</p>
         ${d.unlockedAt ? `<p class="text-[11px] text-slate-500 mt-1">Unlocked ${escapeHtml(formatUnlockDate(d.unlockedAt))}</p>` : ''}
       </div>
     `
@@ -261,21 +304,22 @@ function disciplineCardHtml(d) {
   const pct = Math.round((d.progress / d.total) * 100)
   return `
     <div class="discipline-header">
-      <span class="discipline-icon">${escapeHtml(def.lockedIcon)}</span>
+      <span class="discipline-icon" aria-hidden="true">${escapeHtml(def.lockedIcon)}</span>
       <div>
         <p class="discipline-name">${escapeHtml(def.name)}</p>
         <p class="discipline-sub">${escapeHtml(def.subtitle)}</p>
       </div>
+      <span class="discipline-ratio tabular" aria-hidden="true">${d.progress}<span>/${d.total}</span></span>
     </div>
     <div class="mt-4">
       <div class="flex items-center justify-between">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Current Streak</p>
-        <p class="text-[12px] text-slate-400">${d.progress} / ${d.total} perfect days</p>
+        <p class="section-eyebrow">Current Streak</p>
+        <p class="text-[11px] text-slate-400 tabular">${d.progress} / ${d.total} perfect days</p>
       </div>
-      <p class="font-display font-extrabold text-white text-3xl mt-1">${d.current}<span class="text-base text-slate-500"> day${d.current === 1 ? '' : 's'}</span></p>
-      <div class="progress-track mt-3 !h-2"><div class="progress-fill discipline-fill" style="width:${pct}%"></div></div>
-      <div class="flex gap-1 mt-3">
-        ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? '#fbbf24' : 'rgba(255,255,255,0.08)'}" title="${day.dateKey} · ${day.perfect ? 'Perfect ✓' : 'Not perfect'}"></span>`).join('')}
+      <p class="streak-big mt-1">${d.current}<span class="streak-big-unit">day${d.current === 1 ? '' : 's'}</span></p>
+      <div class="progress-track !h-1 mt-3"><div class="progress-fill discipline-fill" style="width:${pct}%"></div></div>
+      <div class="flex gap-1 mt-3" aria-hidden="true">
+        ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? 'var(--color-warning)' : 'rgba(255,255,255,0.07)'}" title="${day.dateKey} · ${day.perfect ? 'Perfect ✓' : 'Not perfect'}"></span>`).join('')}
       </div>
       <p class="text-[12px] text-slate-400 mt-3">${d.remaining === 0 ? 'Complete today to keep the streak!' : `${d.remaining} perfect day${d.remaining === 1 ? '' : 's'} to go`}</p>
       <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">100% tasks + 100% timetable for 10 consecutive days. Zero-task days don't count.</p>
@@ -283,24 +327,9 @@ function disciplineCardHtml(d) {
   `
 }
 
-function scorePartsHtml(stats) {
-  return stats.scoreParts
-    .map((part) => {
-      const value = part.key === 'focus' ? formatDuration(stats.focusedMinutes) : part.detail
-      const percent = part.available ? Math.round(part.ratio * 100) : 0
-      return `
-        <div class="score-part ${part.available ? '' : 'opacity-40'}">
-          <p class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">${part.label}</p>
-          <p class="font-display font-bold text-white text-lg">${value}</p>
-          <div class="progress-track !h-1 mt-1.5"><div class="progress-fill" style="width:${percent}%"></div></div>
-        </div>`
-    })
-    .join('')
-}
-
 function top3ListHtml(top3) {
   if (!top3.total) {
-    return `<div class="empty-state !py-6"><i class="fa-solid fa-ranking-star"></i><p class="text-sm">No priorities chosen yet</p><p class="text-[12px] text-slate-500">Pick the three tasks that define a good day.</p></div>`
+    return `<div class="empty-state !py-6"><i class="fa-solid fa-list-ol"></i><p class="text-sm">No priorities yet</p><p class="text-[12px] text-slate-500 mt-1">Pick the three tasks that define a good day.</p></div>`
   }
   return top3.items
     .map(({ task }, index) => {
@@ -312,11 +341,11 @@ function top3ListHtml(top3) {
         <span class="top3-index">${index + 1}</span>
         <button class="task-check ${task.done ? 'checked' : ''}" data-top3-toggle="${escapeHtml(task.id)}" aria-label="Toggle ${escapeHtml(task.title)}"><i class="fa-solid fa-check"></i></button>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-semibold text-slate-100 truncate">${escapeHtml(task.title)}</p>
+          <p class="text-sm font-semibold text-slate-100 truncate ${task.done ? 'line-through' : ''}">${escapeHtml(task.title)}</p>
           <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
             ${task.cat ? `<span>${escapeHtml(categoryName(task.cat))}</span>` : ''}
             <span><i class="fa-regular fa-clock mr-1"></i>${formatDuration(task.estimateMinutes || 30)}</span>
-            ${minutes ? `<span class="text-accent-2">${formatDuration(minutes)} focused</span>` : ''}
+            ${minutes ? `<span class="text-accent-2 tabular">${formatDuration(minutes)} focused</span>` : ''}
           </div>
         </div>
         <div class="flex items-center gap-1">
@@ -332,9 +361,8 @@ function top3ListHtml(top3) {
 function taskLineHtml(task, today) {
   const isOverdue = task.date && task.date < today && !task.done
   return `
-    <div class="flex items-center gap-2.5 ${task.done ? 'opacity-50' : ''}">
+    <div class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg ${task.done ? 'opacity-50' : ''}">
       <button class="task-check ${task.done ? 'checked' : ''}" data-task-toggle="${escapeHtml(task.id)}" aria-label="Toggle task"><i class="fa-solid fa-check"></i></button>
-      <span class="priority-dot" style="background:${PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium}"></span>
       <div class="flex-1 min-w-0">
         <p class="text-[13px] text-slate-200 truncate ${task.done ? 'line-through' : ''}">${escapeHtml(task.title)}</p>
         <p class="text-[11px] text-slate-500 truncate">
@@ -386,7 +414,7 @@ function bindDashboard(section, { today, action, discipline }) {
     }
     const result = window.CC.addTaskToTop3(id)
     if (!result.ok) toast(result.reason || 'Could not add to Top 3', 'error')
-    else toast('Added to today\'s Top 3', 'success')
+    else toast("Added to today's Top 3", 'success')
   })
 
   section.querySelector('[data-next-start]')?.addEventListener('click', () => {
@@ -491,20 +519,20 @@ function drawWeekChart(week) {
         {
           label: 'Score',
           data: week.rows.map((r) => r.score),
-          borderColor: '#7c5cff',
-          backgroundColor: 'rgba(124,92,255,0.18)',
+          borderColor: '#5b93e6',
+          backgroundColor: 'rgba(91,147,230,0.12)',
           fill: true,
-          tension: 0.4,
-          pointRadius: 3,
+          tension: 0.35,
+          pointRadius: 2.5,
           yAxisID: 'y',
         },
         {
           label: 'Focus minutes',
           data: week.rows.map((r) => r.focus),
-          borderColor: '#22d3ee',
+          borderColor: '#57b28c',
           borderDash: [4, 4],
-          tension: 0.4,
-          pointRadius: 2,
+          tension: 0.35,
+          pointRadius: 0,
           fill: false,
           yAxisID: 'y1',
         },
@@ -516,9 +544,9 @@ function drawWeekChart(week) {
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false } },
       scales: {
-        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7c8499' } },
-        y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#7c8499', callback: (v) => `${v}m` } },
-        x: { grid: { display: false }, ticks: { color: '#7c8499' } },
+        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#828b99' } },
+        y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#828b99', callback: (v) => `${v}m` } },
+        x: { grid: { display: false }, ticks: { color: '#828b99' } },
       },
     },
   })
@@ -531,7 +559,7 @@ function categoryName(id) {
 }
 
 function categoryColor(id) {
-  return state.categories.find((c) => c.id === id)?.color || '#7c5cff'
+  return state.categories.find((c) => c.id === id)?.color || '#5b93e6'
 }
 
 function endsIn(block, now) {

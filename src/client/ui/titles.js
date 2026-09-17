@@ -21,8 +21,7 @@ export function showTitleUnlockModal({ definition, streak }) {
 
   const body = `
     <div class="title-unlock-wrap" data-unlock-wrap>
-      <div class="title-unlock-glow" aria-hidden="true"></div>
-      <p class="title-unlock-eyebrow">✦ TITLE UNLOCKED ✦</p>
+      <p class="title-unlock-eyebrow">TITLE UNLOCKED</p>
       <div class="title-unlock-badge" aria-hidden="true">
         <span class="title-unlock-icon">${escapeHtml(title.icon)}</span>
       </div>

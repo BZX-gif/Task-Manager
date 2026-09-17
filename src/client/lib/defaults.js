@@ -6,9 +6,9 @@
 export const STATE_VERSION = 3
 
 export const DEFAULT_CATEGORIES = [
-  { id: 'body', name: 'Body & Recovery', color: '#34d399' },
-  { id: 'upsc', name: 'UPSC Core', color: '#3b82f6' },
-  { id: 'ssc', name: 'SSC · News · CA', color: '#f59e0b' },
+  { id: 'body', name: 'Body & Recovery', color: '#57b28c' },
+  { id: 'upsc', name: 'UPSC Core', color: '#5b93e6' },
+  { id: 'ssc', name: 'SSC · News · CA', color: '#cf9f5f' },
   { id: 'meals', name: 'Meals & Rest', color: '#94a3b8' },
 ]
 
@@ -97,4 +97,4 @@ export const MOTIVATIONAL_QUOTES = [
 ]
 
 export const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
-export const PRIORITY_COLORS = { high: '#fb7185', medium: '#fbbf24', low: '#60a5fa' }
+export const PRIORITY_COLORS = { high: '#d2797a', medium: '#cf9f5f', low: '#8b95a5' }

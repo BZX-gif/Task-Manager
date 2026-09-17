@@ -48,8 +48,8 @@ export function renderTasks() {
       </div>
     </div>
 
-    <div class="glass-card p-4 sm:p-5">
-      <div class="space-y-2.5" data-task-list>
+    <div class="glass-card p-1.5 sm:p-2">
+      <div class="task-list" data-task-list>
         ${list.length ? list.map((t) => taskRowHtml(t, today)).join('') : emptyStateForFilter()}
       </div>
     </div>
@@ -120,17 +120,17 @@ export function taskRowHtml(task, today) {
   )
   return `
     <div class="task-row ${task.done ? 'done' : ''} ${isOverdue ? 'is-overdue' : ''}" data-task-row="${escapeHtml(task.id)}">
-      <button class="task-check ${task.done ? 'checked' : ''}" data-task-toggle="${escapeHtml(task.id)}" aria-label="Toggle ${escapeHtml(task.title)}"><i class="fa-solid fa-check"></i></button>
-      <span class="priority-dot" style="background:${priorityColor(task.priority)}"></span>
+      <button class="task-check ${task.done ? 'checked' : ''}" data-task-toggle="${escapeHtml(task.id)}" aria-label="${task.done ? 'Mark as not done' : 'Mark as done'}: ${escapeHtml(task.title)}"><i class="fa-solid fa-check"></i></button>
+      <span class="priority-dot" style="background:${priorityColor(task.priority)}" title="${task.priority} priority"></span>
       <div class="flex-1 min-w-0">
         <p class="task-title text-sm font-semibold text-slate-100 truncate">${escapeHtml(task.title)}</p>
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-slate-500">
           ${task.cat ? `<span class="flex items-center gap-1"><span class="legend-dot" style="background:${categoryColor(task.cat)}"></span>${escapeHtml(categoryName(task.cat))}</span>` : ''}
           ${task.inbox ? '<span class="text-accent-2"><i class="fa-solid fa-inbox mr-1"></i>Inbox</span>' : ''}
-          ${task.date ? `<span class="${isOverdue ? 'text-accent-5' : ''}"><i class="fa-regular fa-calendar mr-1"></i>${isOverdue ? 'Overdue · ' : ''}${escapeHtml(task.date)}${task.time ? ` ${escapeHtml(task.time)}` : ''}</span>` : ''}
+          ${task.date ? `<span class="${isOverdue ? 'text-accent-5 font-semibold' : ''}"><i class="fa-regular fa-calendar mr-1"></i>${isOverdue ? 'Overdue · ' : ''}${escapeHtml(task.date)}${task.time ? ` ${escapeHtml(task.time)}` : ''}</span>` : ''}
           <span>${formatDuration(task.estimateMinutes || 30)}</span>
           ${task.recurrence ? `<span class="text-accent"><i class="fa-solid fa-arrows-rotate mr-1"></i>${escapeHtml(recurrenceLabel(task.recurrence))}</span>` : ''}
-          ${focused ? `<span class="text-accent-2">${formatDuration(focused)} focused</span>` : ''}
+          ${focused ? `<span class="text-accent-2 tabular">${formatDuration(focused)} focused</span>` : ''}
           ${inTop3 ? '<span class="top3-tag">Top 3</span>' : ''}
         </div>
       </div>

@@ -23,9 +23,9 @@ export const TITLE_DEFINITIONS = {
     lockedIcon: '🔒',
     requirement: 10,
     description: 'Complete 100% of planned tasks and timetable for 10 consecutive days',
-    color: '#fbbf24',
-    glow: 'rgba(251,191,36,0.28)',
-    gradient: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+    color: '#cf9f5f',
+    glow: 'rgba(207,159,95,0.22)',
+    gradient: 'linear-gradient(180deg, #cf9f5f, #b98a4e)',
   },
   // Future placeholders — not implemented yet, only shape for extensibility:
   // FOCUS_BEAST: { id: 'focus-beast', key: 'focusBeast', name: 'FOCUS BEAST', ... },

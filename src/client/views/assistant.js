@@ -21,13 +21,13 @@ export function renderAssistant() {
     <div class="glass-card flex flex-col h-[calc(100vh-190px)] min-h-[520px]">
       <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/5">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent-2 grid place-items-center shadow-glow">
-            <i class="fa-solid fa-robot text-white text-sm"></i>
+          <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--color-surface-elevated);border:1px solid var(--color-border-strong)">
+            <i class="fa-solid fa-robot text-sm" style="color:var(--color-accent-strong)" aria-hidden="true"></i>
           </div>
-          <div>
-            <p class="font-display font-bold text-white text-sm">Productivity Assistant</p>
-            <p class="text-[11px] text-slate-400">
-              <i class="fa-solid fa-shield-halved text-emerald-400 text-[9px] mr-1"></i>
+          <div class="min-w-0">
+            <p class="font-display font-bold text-white text-sm leading-tight">Productivity Assistant</p>
+            <p class="text-[11px] text-slate-500">
+              <i class="fa-solid fa-shield-halved text-emerald-400 text-[9px] mr-1" aria-hidden="true"></i>
               Runs through your Cloudflare Worker · key stays server-side
             </p>
           </div>
@@ -48,7 +48,7 @@ export function renderAssistant() {
         ${pending ? typingBubbleHtml() : ''}
       </div>
 
-      ${lastError ? `<div class="mx-5 mb-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-200 text-[12.5px] flex items-start gap-2.5"><i class="fa-solid fa-circle-exclamation mt-0.5"></i><span>${escapeHtml(lastError)}</span></div>` : ''}
+      ${lastError ? `<div class="mx-5 mb-3 p-3 rounded-lg text-[12.5px] flex items-start gap-2.5" style="background:var(--color-danger-soft);border:1px solid var(--color-danger-line);color:var(--color-danger-text)"><i class="fa-solid fa-circle-exclamation mt-0.5" aria-hidden="true"></i><span>${escapeHtml(lastError)}</span></div>` : ''}
 
       <div class="px-4 py-3.5 border-t border-white/5">
         <div class="flex items-end gap-2">

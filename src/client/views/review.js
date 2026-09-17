@@ -113,7 +113,7 @@ export function openWeeklyReview({ offset = 0 } = {}) {
       ? `<div class="glass-card p-4 mt-4">
            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-2">Missed tasks (${review.missedTasks.length})</p>
            <div class="space-y-1.5 text-[12.5px] text-slate-400">
-             ${review.missedTasks.map((t) => `<div class="flex items-center gap-2"><span class="priority-dot" style="background:#fb7185"></span><span class="flex-1 truncate">${escapeHtml(t.title)}</span><span class="text-slate-600">${escapeHtml(t.date)}</span></div>`).join('')}
+             ${review.missedTasks.map((t) => `<div class="flex items-center gap-2"><span class="priority-dot" style="background:#d2797a"></span><span class="flex-1 truncate">${escapeHtml(t.title)}</span><span class="text-slate-600">${escapeHtml(t.date)}</span></div>`).join('')}
            </div>
          </div>`
       : ''}

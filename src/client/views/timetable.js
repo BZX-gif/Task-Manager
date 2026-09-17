@@ -56,31 +56,31 @@ export function renderTimetable() {
          </div>`
       : ''}
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="glass-card p-4">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Blocks done</p>
-        <p class="text-2xl font-display font-extrabold text-white">${stats.blocksDone}<span class="text-base text-slate-500">/${stats.blocksTotal}</span></p>
+    <div class="schedule-summary">
+      <div>
+        <p class="sum-label">Blocks done</p>
+        <p class="sum-value">${stats.blocksDone}<span style="color:var(--color-text-muted);font-size:0.85rem">/${stats.blocksTotal}</span></p>
       </div>
-      <div class="glass-card p-4">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Adherence so far</p>
-        <p class="text-2xl font-display font-extrabold text-white">${Math.round(stats.adherence * 100)}%</p>
+      <div>
+        <p class="sum-label">Adherence so far</p>
+        <p class="sum-value">${Math.round(stats.adherence * 100)}%</p>
       </div>
-      <div class="glass-card p-4">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Planned today</p>
-        <p class="text-2xl font-display font-extrabold text-white">${formatDuration(stats.plannedMinutes)}</p>
+      <div>
+        <p class="sum-label">Planned today</p>
+        <p class="sum-value">${formatDuration(stats.plannedMinutes)}</p>
       </div>
-      <div class="glass-card p-4">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Focused today</p>
-        <p class="text-2xl font-display font-extrabold text-white">${formatDuration(stats.focusedMinutes)}</p>
+      <div>
+        <p class="sum-label">Focused today</p>
+        <p class="sum-value">${formatDuration(stats.focusedMinutes)}</p>
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 glass-card px-4 py-3">
-      ${state.categories.map((c) => `<span class="flex items-center gap-2 text-[13px] text-slate-400"><span class="legend-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</span>`).join('')}
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 px-1">
+      ${state.categories.map((c) => `<span class="flex items-center gap-2 text-[12.5px] text-slate-500"><span class="legend-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</span>`).join('')}
     </div>
 
-    <div class="glass-card p-4 sm:p-5">
-      <div class="space-y-2.5">
+    <div class="glass-card p-1.5 sm:p-2.5">
+      <div class="schedule">
         ${sorted.length
           ? sorted
               .filter((item) => showDone || !log.ttDone.includes(item.id))
@@ -90,7 +90,7 @@ export function renderTimetable() {
               icon: 'fa-regular fa-calendar',
               title: 'No timetable blocks yet',
               body: 'Add your daily structure — the dashboard and recovery planner use it.',
-              action: '<button class="btn-primary mt-2" data-action="add">Add your first block</button>',
+              action: '<button class="btn-primary mt-3" data-action="add">Add your first block</button>',
             })}
       </div>
     </div>
@@ -154,13 +154,13 @@ function blockRowHtml(item, log, nowMin) {
   const isNow = nowMin >= start && nowMin < start + duration
   const isPast = nowMin >= start + duration
   return `
-    <div class="tt-row ${isDone ? 'tt-done' : ''} ${isNow ? 'active-now' : ''}" style="--cat-color:${categoryColor(item.cat)}">
-      <button class="tt-time text-left" data-block-toggle="${escapeHtml(item.id)}" aria-label="Toggle ${escapeHtml(item.title)}">${escapeHtml(item.time)}</button>
+    <div class="tt-row ${isDone ? 'tt-done' : ''} ${isNow ? 'active-now' : ''}" style="--cat-color:${categoryColor(item.cat)}" ${isNow ? 'aria-current="true"' : ''}>
+      <button class="tt-time text-left" data-block-toggle="${escapeHtml(item.id)}" aria-label="${isDone ? 'Mark unfinished' : 'Mark complete'}: ${escapeHtml(item.title)} at ${escapeHtml(item.time)}">${escapeHtml(item.time)}</button>
       <div class="min-w-0" data-block-toggle="${escapeHtml(item.id)}">
         <p class="tt-title truncate">${escapeHtml(item.title)}</p>
-        <p class="text-[11px] text-slate-500">
+        <p class="tt-meta">
           ${escapeHtml(categoryName(item.cat))} · ${duration} min
-          ${isPast && !isDone ? ' · <span class="text-accent-5">missed</span>' : ''}
+          ${isPast && !isDone ? ' · <span class="text-accent-5 font-semibold">missed</span>' : ''}
           ${isNow ? ' · <span class="text-emerald-400 font-semibold">LIVE</span>' : ''}
         </p>
       </div>

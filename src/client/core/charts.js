@@ -6,7 +6,7 @@
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
-Chart.defaults.color = '#7c8499'
+Chart.defaults.color = '#828b99'
 Chart.defaults.font.family = "Manrope, ui-sans-serif, system-ui, sans-serif"
 Chart.defaults.animation = { duration: 320 }
 

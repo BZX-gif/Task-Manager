@@ -155,7 +155,7 @@ export function renderProgress() {
             .map(([, style]) => `<span class="flex items-center gap-1.5"><span class="heat-cell" style="background:${style.cell}"></span>${style.label}</span>`)
             .join('')}
         </div>
-        <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">Green days satisfied the streak rule. Purple days had real activity but not enough to count.</p>
+        <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">Green days satisfied the streak rule. Blue days had real activity but not enough to count.</p>
       </div>
     </div>
   `
@@ -176,10 +176,10 @@ export function renderProgress() {
 
 function statCard(label, value, sub) {
   return `
-    <div class="glass-card p-4">
-      <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">${label}</p>
-      <p class="text-2xl font-display font-extrabold text-white mt-0.5">${value}</p>
-      <p class="text-[11.5px] text-slate-500 mt-1">${sub}</p>
+    <div class="glass-card card-supporting p-4">
+      <p class="section-eyebrow">${label}</p>
+      <p class="stat-value">${value}</p>
+      <p class="stat-sub">${sub}</p>
     </div>`
 }
 
@@ -192,7 +192,7 @@ function drawTrendChart(rows) {
         {
           label: 'Score',
           data: rows.map((r) => r.score),
-          backgroundColor: rows.map((r) => (r.score >= 80 ? 'rgba(52,211,153,0.85)' : r.score >= 50 ? 'rgba(124,92,255,0.85)' : r.score > 0 ? 'rgba(251,191,36,0.8)' : 'rgba(255,255,255,0.07)')),
+          backgroundColor: rows.map((r) => (r.score >= 80 ? 'rgba(87,178,140,0.85)' : r.score >= 50 ? 'rgba(91,147,230,0.8)' : r.score > 0 ? 'rgba(207,159,95,0.75)' : 'rgba(255,255,255,0.06)')),
           borderRadius: 6,
           maxBarThickness: rows.length > 60 ? 6 : 26,
           yAxisID: 'y',
@@ -201,7 +201,7 @@ function drawTrendChart(rows) {
           type: 'line',
           label: 'Focus minutes',
           data: rows.map((r) => r.focusedMinutes),
-          borderColor: '#22d3ee',
+          borderColor: '#57b28c',
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.35,
@@ -214,8 +214,8 @@ function drawTrendChart(rows) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7c8499' } },
-        y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#7c8499', callback: (v) => `${v}m` } },
+        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#828b99' } },
+        y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#828b99', callback: (v) => `${v}m` } },
         x: { grid: { display: false }, ticks: { color: '#7c8499', maxRotation: 0, autoSkip: true } },
       },
     },
@@ -234,7 +234,7 @@ function drawCategoryChart(categories) {
         {
           data: withTime.map((c) => c.plannedMinutes),
           backgroundColor: withTime.map((c) => c.color),
-          borderColor: '#0a0e1a',
+          borderColor: '#141820',
           borderWidth: 3,
         },
       ],
@@ -243,7 +243,7 @@ function drawCategoryChart(categories) {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '68%',
-      plugins: { legend: { position: 'bottom', labels: { color: '#9aa3ba', boxWidth: 10, font: { size: 11 }, padding: 10 } } },
+      plugins: { legend: { position: 'bottom', labels: { color: '#c2c8d2', boxWidth: 10, font: { size: 11 }, padding: 10 } } },
     },
   })
 }
@@ -257,7 +257,7 @@ function drawFocusChart(rows) {
         {
           label: 'Focused minutes',
           data: rows.map((r) => r.focusedMinutes),
-          backgroundColor: 'rgba(34,211,238,0.7)',
+          backgroundColor: 'rgba(91,147,230,0.55)',
           borderRadius: 6,
           maxBarThickness: rows.length > 60 ? 6 : 24,
         },
@@ -268,7 +268,7 @@ function drawFocusChart(rows) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { min: 0, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7c8499', callback: (v) => `${v}m` } },
+        y: { min: 0, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#828b99', callback: (v) => `${v}m` } },
         x: { grid: { display: false }, ticks: { color: '#7c8499', autoSkip: true, maxRotation: 0 } },
       },
     },

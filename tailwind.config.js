@@ -3,17 +3,15 @@
  * loaded from https://cdn.tailwindcss.com — that removes the production console
  * warning and makes the utility CSS part of the offline PWA shell.
  *
- * The theme below mirrors the previous runtime `tailwind.config` that used to
- * live inline in the HTML shell, so the visual design is unchanged.
+ * v2.3: the utility palette is remapped onto the design-system tokens in
+ * style.css (calm blue accent, semantic success/warning/danger, no pure
+ * black/white, no glow shadows, no decorative animations). Views use these
+ * utilities; the tokens stay the single source of truth.
  */
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
-  content: [
-    './src/index.tsx',
-    './src/shell.js',
-    './src/client/**/*.{js,ts}',
-  ],
+  content: ['./src/index.tsx', './src/shell.ts', './src/client/**/*.{js,ts}'],
   theme: {
     extend: {
       fontFamily: {
@@ -21,21 +19,26 @@ export default {
         body: ['Manrope', 'sans-serif'],
       },
       colors: {
-        base: { 950: '#05070d', 900: '#0a0e1a', 850: '#0e1424', 800: '#131a2e', 700: '#1b2440' },
-        accent: { DEFAULT: '#7c5cff', 2: '#22d3ee', 3: '#34d399', 4: '#fbbf24', 5: '#fb7185' },
+        base: { 950: '#0b0d11', 900: '#0f1217', 850: '#141820', 800: '#191e27', 700: '#1e242f' },
+        accent: { DEFAULT: '#5b93e6', 2: '#7ba7ea', 3: '#57b28c', 4: '#cf9f5f', 5: '#d2797a' },
+        /* Neutrals used as text in the views map onto the ink ramp. */
+        slate: {
+          100: '#eceef2',
+          200: '#c2c8d2',
+          300: '#aab3c0',
+          400: '#828b99',
+          500: '#6b7484',
+          600: '#565e6c',
+        },
+        /* Semantic utility names used by the views, kept meaning-true. */
+        emerald: { 400: '#57b28c' },
+        amber: { 200: '#e0c193', 300: '#d8ad70', 400: '#cf9f5f' },
+        rose: { 200: '#e8b4b5', 400: '#d2797a', 500: '#c25e60' },
+        violet: { 500: '#5b93e6' },
+        white: '#eceef2',
       },
       boxShadow: {
-        glow: '0 0 0 1px rgba(124,92,255,0.15), 0 8px 30px -6px rgba(124,92,255,0.35)',
-        card: '0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 40px -20px rgba(0,0,0,0.6)',
-      },
-      animation: {
-        float: 'float 6s ease-in-out infinite',
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        shimmer: 'shimmer 2.5s linear infinite',
-      },
-      keyframes: {
-        float: { '0%,100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-8px)' } },
-        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+        card: '0 1px 0 rgba(255,255,255,0.02) inset, 0 10px 28px -18px rgba(0,0,0,0.55)',
       },
     },
   },

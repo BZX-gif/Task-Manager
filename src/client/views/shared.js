@@ -13,7 +13,7 @@ export function categoryName(id, fallback = 'Uncategorised') {
 }
 
 export function categoryColor(id) {
-  return state.categories.find((c) => c.id === id)?.color || '#7c5cff'
+  return state.categories.find((c) => c.id === id)?.color || '#5b93e6'
 }
 
 export function priorityColor(priority) {

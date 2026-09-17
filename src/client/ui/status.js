@@ -19,9 +19,9 @@ export const STREAK_RULE_TEXT = [
 ]
 
 export const STATUS_STYLES = {
-  success: { dot: 'rgba(52,211,153,0.95)', cell: 'rgba(52,211,153,0.8)', label: 'Counted', text: 'text-emerald-400' },
-  progress: { dot: 'rgba(251,191,36,0.9)', cell: 'rgba(124,92,255,0.45)', label: 'Partial credit', text: 'text-amber-300' },
-  rest: { dot: 'rgba(255,255,255,0.12)', cell: 'rgba(255,255,255,0.06)', label: 'No activity', text: 'text-slate-500' },
+  success: { dot: 'rgba(87,178,140,0.95)', cell: 'rgba(87,178,140,0.75)', label: 'Counted', text: 'text-emerald-400' },
+  progress: { dot: 'rgba(207,159,95,0.9)', cell: 'rgba(91,147,230,0.45)', label: 'Partial credit', text: 'text-accent' },
+  rest: { dot: 'rgba(255,255,255,0.12)', cell: 'rgba(255,255,255,0.05)', label: 'No activity', text: 'text-slate-500' },
   upcoming: { dot: 'rgba(255,255,255,0.06)', cell: 'rgba(255,255,255,0.03)', label: 'Upcoming', text: 'text-slate-600' },
 }
 
