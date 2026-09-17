@@ -155,7 +155,7 @@ export function renderProgress() {
             .map(([, style]) => `<span class="flex items-center gap-1.5"><span class="heat-cell" style="background:${style.cell}"></span>${style.label}</span>`)
             .join('')}
         </div>
-        <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">Green days satisfied the streak rule. Purple days had real activity but not enough to count.</p>
+        <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">Green days satisfied the streak rule. Amber days had real activity but not enough to count.</p>
       </div>
     </div>
   `
@@ -192,7 +192,7 @@ function drawTrendChart(rows) {
         {
           label: 'Score',
           data: rows.map((r) => r.score),
-          backgroundColor: rows.map((r) => (r.score >= 80 ? 'rgba(52,211,153,0.85)' : r.score >= 50 ? 'rgba(124,92,255,0.85)' : r.score > 0 ? 'rgba(251,191,36,0.8)' : 'rgba(255,255,255,0.07)')),
+          backgroundColor: rows.map((r) => (r.score >= 80 ? 'rgba(87,178,140,0.85)' : r.score >= 50 ? 'rgba(91,147,230,0.85)' : r.score > 0 ? 'rgba(207,159,95,0.8)' : 'rgba(255,255,255,0.07)')),
           borderRadius: 6,
           maxBarThickness: rows.length > 60 ? 6 : 26,
           yAxisID: 'y',
@@ -201,7 +201,7 @@ function drawTrendChart(rows) {
           type: 'line',
           label: 'Focus minutes',
           data: rows.map((r) => r.focusedMinutes),
-          borderColor: '#22d3ee',
+          borderColor: '#5b93e6',
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.35,

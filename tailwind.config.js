@@ -4,14 +4,14 @@
  * warning and makes the utility CSS part of the offline PWA shell.
  *
  * The theme below mirrors the previous runtime `tailwind.config` that used to
- * live inline in the HTML shell, so the visual design is unchanged.
+ * live inline in the HTML shell, using the restrained v2.3 palette.
  */
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
   content: [
     './src/index.tsx',
-    './src/shell.js',
+    './src/shell.ts',
     './src/client/**/*.{js,ts}',
   ],
   theme: {
@@ -21,22 +21,15 @@ export default {
         body: ['Manrope', 'sans-serif'],
       },
       colors: {
-        base: { 950: '#05070d', 900: '#0a0e1a', 850: '#0e1424', 800: '#131a2e', 700: '#1b2440' },
-        accent: { DEFAULT: '#7c5cff', 2: '#22d3ee', 3: '#34d399', 4: '#fbbf24', 5: '#fb7185' },
+        base: { 950: '#0b0d11', 900: '#0f1217', 850: '#141820', 800: '#191e27', 700: '#1e242f' },
+        accent: { DEFAULT: '#5b93e6', 2: '#5b93e6', 3: '#57b28c', 4: '#cf9f5f', 5: '#d2797a' },
+        white: '#eceef2',
+        slate: { 100: '#eceef2', 200: '#eceef2', 300: '#c2c8d2', 400: '#a0a8b5', 500: '#828b99', 600: '#828b99' },
+        emerald: { 300: '#57b28c', 400: '#57b28c' },
+        amber: { 300: '#cf9f5f', 400: '#cf9f5f' },
+        violet: { 500: '#5b93e6' },
       },
-      boxShadow: {
-        glow: '0 0 0 1px rgba(124,92,255,0.15), 0 8px 30px -6px rgba(124,92,255,0.35)',
-        card: '0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 40px -20px rgba(0,0,0,0.6)',
-      },
-      animation: {
-        float: 'float 6s ease-in-out infinite',
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        shimmer: 'shimmer 2.5s linear infinite',
-      },
-      keyframes: {
-        float: { '0%,100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-8px)' } },
-        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
-      },
+
     },
   },
   plugins: [],

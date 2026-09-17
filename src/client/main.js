@@ -20,7 +20,7 @@ import { openWeeklyReview } from './views/review.js'
 import { openRecoveryModal } from './views/recovery.js'
 import { handleTitlesUnlocked } from './ui/titles.js'
 
-const APP_VERSION = '2.1'
+const APP_VERSION = '2.3'
 
 function refreshAll() {
   refreshStreakWidget()

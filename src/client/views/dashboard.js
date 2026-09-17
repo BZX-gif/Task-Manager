@@ -39,64 +39,18 @@ export function renderDashboard() {
   const week = weekTrend(now)
 
   section.innerHTML = `
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 class="section-title">Dashboard</h2>
-        <p class="section-sub">${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })} · ${state.timetable.length} scheduled blocks · ${openToday.length} open task${openToday.length === 1 ? '' : 's'}</p>
-      </div>
-      <div class="flex flex-wrap gap-2">
+    <div class="today-hero">
+      <p class="today-eyebrow">Today · ${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+      <h2 class="today-headline">${stats.hasData && stats.score === 100 ? 'A day to be proud of.' : openToday.length ? `${openToday.length} open task${openToday.length === 1 ? '' : 's'}. One clear next step.` : 'Make room for what matters.'}</h2>
+      <p class="today-subline">${state.timetable.length} scheduled blocks · ${top3.done} of ${top3.total} priorities complete. ${stats.onTrack ? 'You’re on track. Keep your attention here.' : 'Choose your next action, then give it your attention.'}</p>
+      <div class="today-actions flex flex-wrap gap-2">
         <button class="btn-ghost" data-action="recover"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Recover My Day</button>
         <button class="btn-ghost" data-action="review"><i class="fa-solid fa-clipboard-list mr-1.5"></i>Weekly Review</button>
       </div>
     </div>
 
-    <!-- Score · Streak · Discipline -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <div class="glass-card p-5 lg:col-span-2" data-card="score">
-        <div class="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Today's Score ${hint(describeScoreFormula().join(' · '))}</p>
-            <p class="font-display font-extrabold text-white text-4xl leading-none mt-1">
-              ${stats.hasData ? stats.score : '–'}<span class="text-lg text-slate-500">/100</span>
-            </p>
-          </div>
-          <div class="text-right">
-            ${stats.hasData
-              ? `<span class="chip ${stats.onTrack ? 'chip-good' : 'chip-warn'}">${stats.onTrack ? 'On track' : `Behind pace (${stats.pace})`}</span>`
-              : '<span class="chip">No data yet</span>'}
-            <p class="text-[11px] text-slate-500 mt-2">${stats.overdueCount ? `${stats.overdueCount} overdue task${stats.overdueCount > 1 ? 's' : ''}` : 'Nothing overdue'}</p>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4" data-score-parts>
-          ${scorePartsHtml(stats)}
-        </div>
-        <div class="progress-track mt-4"><div class="progress-fill" style="width:${stats.hasData ? stats.score : 0}%"></div></div>
-      </div>
-
-      <div class="flex flex-col gap-5">
-        <div class="glass-card p-5" data-card="streak">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Consistency</p>
-            <i class="fa-solid fa-fire text-accent-4"></i>
-          </div>
-          <p class="font-display font-extrabold text-white text-3xl">🔥 ${streakInfo.current}<span class="text-base text-slate-500"> day${streakInfo.current === 1 ? '' : 's'}</span></p>
-          <p class="text-[12px] text-slate-500 mt-1">Best streak: ${streakInfo.best} days</p>
-          <div class="flex gap-1.5 mt-3">
-            ${streakInfo.recent.map(statusForStreakDot).join('')}
-          </div>
-          <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">
-            A day counts with <span class="text-slate-300">all Top 3 done</span>, <span class="text-slate-300">score 60+</span> or <span class="text-slate-300">45+ focused minutes</span>.
-          </p>
-        </div>
-
-        <div class="glass-card p-5 discipline-dash-card ${discipline.unlocked ? 'is-unlocked' : ''}" data-card="discipline">
-          ${disciplineCardHtml(discipline)}
-        </div>
-      </div>
-    </div>
-
     <!-- Top 3 + Do This Now -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="dashboard-priorities grid grid-cols-1 lg:grid-cols-2 gap-5">
       <div class="glass-card top3-card p-5" data-card="top3">
         <div class="flex items-center justify-between mb-1">
           <h3 class="section-title text-base flex items-center gap-2"><span class="top3-badge">TODAY'S TOP 3</span></h3>
@@ -141,6 +95,52 @@ export function renderDashboard() {
             : `<button class="btn-ghost" data-action="new-task"><i class="fa-solid fa-plus mr-1.5"></i>Plan something</button>`}
         </div>
         <p class="text-[11.5px] text-slate-500 mt-4">Picked automatically: Top 3 → running block → overdue → priority → next block.</p>
+      </div>
+    </div>
+
+    <!-- Progress · Consistency · Achievement -->
+    <div class="dashboard-progress">
+      <div class="glass-card p-5" data-card="score">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Today's Score ${hint(describeScoreFormula().join(' · '))}</p>
+            <p class="score-number">
+              ${stats.hasData ? stats.score : '–'}<span class="text-lg text-slate-500">/100</span>
+            </p>
+          </div>
+          <div class="text-right">
+            ${stats.hasData
+              ? `<span class="chip ${stats.onTrack ? 'chip-good' : 'chip-warn'}">${stats.onTrack ? 'On track' : `Behind pace (${stats.pace})`}</span>`
+              : '<span class="chip">No data yet</span>'}
+            <p class="text-[11px] text-slate-500 mt-2">${stats.overdueCount ? `${stats.overdueCount} overdue task${stats.overdueCount > 1 ? 's' : ''}` : 'Nothing overdue'}</p>
+          </div>
+        </div>
+        <div class="progress-track mt-4"><div class="progress-fill" style="width:${stats.hasData ? stats.score : 0}%"></div></div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4" data-score-parts>
+          ${scorePartsHtml(stats)}
+        </div>
+
+      </div>
+
+      <div class="dashboard-support">
+        <div class="glass-card p-5" data-card="streak">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Consistency</p>
+            <i class="fa-solid fa-fire text-accent-4"></i>
+          </div>
+          <p class="font-display font-extrabold text-white text-3xl">${streakInfo.current}<span class="text-base text-slate-500"> day${streakInfo.current === 1 ? '' : 's'}</span></p>
+          <p class="text-[12px] text-slate-500 mt-1">Best streak: ${streakInfo.best} days</p>
+          <div class="flex gap-1.5 mt-3">
+            ${streakInfo.recent.map(statusForStreakDot).join('')}
+          </div>
+          <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">
+            A day counts with <span class="text-slate-300">all Top 3 done</span>, <span class="text-slate-300">score 60+</span> or <span class="text-slate-300">45+ focused minutes</span>.
+          </p>
+        </div>
+
+        <div class="glass-card p-5 discipline-dash-card ${discipline.unlocked ? 'is-unlocked' : ''}" data-card="discipline">
+          ${disciplineCardHtml(discipline)}
+        </div>
       </div>
     </div>
 
@@ -199,8 +199,8 @@ export function renderDashboard() {
         <div class="flex items-center justify-between mb-4">
           <h3 class="section-title">Last 7 Days</h3>
           <div class="flex items-center gap-3 text-[11px] text-slate-500">
-            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#7c5cff"></span>Score</span>
-            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#22d3ee"></span>Focus min</span>
+            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#5b93e6"></span>Score</span>
+            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#57b28c"></span>Focus min</span>
           </div>
         </div>
         <div class="h-[220px]"><canvas id="dashWeekChart"></canvas></div>
@@ -242,7 +242,7 @@ function disciplineCardHtml(d) {
   if (d.unlocked) {
     return `
       <div class="discipline-header">
-        <span class="discipline-icon is-unlocked">${escapeHtml(def.icon)}</span>
+        <span class="discipline-icon is-unlocked"><i class="fa-solid fa-award" aria-hidden="true"></i></span>
         <div>
           <p class="discipline-name">${escapeHtml(def.name)}</p>
           <p class="discipline-sub">${escapeHtml(def.subtitle)}</p>
@@ -261,7 +261,7 @@ function disciplineCardHtml(d) {
   const pct = Math.round((d.progress / d.total) * 100)
   return `
     <div class="discipline-header">
-      <span class="discipline-icon">${escapeHtml(def.lockedIcon)}</span>
+      <span class="discipline-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
       <div>
         <p class="discipline-name">${escapeHtml(def.name)}</p>
         <p class="discipline-sub">${escapeHtml(def.subtitle)}</p>
@@ -491,8 +491,8 @@ function drawWeekChart(week) {
         {
           label: 'Score',
           data: week.rows.map((r) => r.score),
-          borderColor: '#7c5cff',
-          backgroundColor: 'rgba(124,92,255,0.18)',
+          borderColor: '#5b93e6',
+          backgroundColor: 'rgba(91,147,230,0.08)',
           fill: true,
           tension: 0.4,
           pointRadius: 3,
@@ -501,7 +501,7 @@ function drawWeekChart(week) {
         {
           label: 'Focus minutes',
           data: week.rows.map((r) => r.focus),
-          borderColor: '#22d3ee',
+          borderColor: '#57b28c',
           borderDash: [4, 4],
           tension: 0.4,
           pointRadius: 2,
@@ -531,7 +531,7 @@ function categoryName(id) {
 }
 
 function categoryColor(id) {
-  return state.categories.find((c) => c.id === id)?.color || '#7c5cff'
+  return state.categories.find((c) => c.id === id)?.color || '#5b93e6'
 }
 
 function endsIn(block, now) {

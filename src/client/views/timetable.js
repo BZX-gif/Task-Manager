@@ -56,7 +56,7 @@ export function renderTimetable() {
          </div>`
       : ''}
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="schedule-summary grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="glass-card p-4">
         <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Blocks done</p>
         <p class="text-2xl font-display font-extrabold text-white">${stats.blocksDone}<span class="text-base text-slate-500">/${stats.blocksTotal}</span></p>
@@ -75,12 +75,12 @@ export function renderTimetable() {
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 glass-card px-4 py-3">
+    <div class="schedule-legend flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
       ${state.categories.map((c) => `<span class="flex items-center gap-2 text-[13px] text-slate-400"><span class="legend-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</span>`).join('')}
     </div>
 
-    <div class="glass-card p-4 sm:p-5">
-      <div class="space-y-2.5">
+    <div class="schedule-list">
+      <div>
         ${sorted.length
           ? sorted
               .filter((item) => showDone || !log.ttDone.includes(item.id))
