@@ -92,14 +92,63 @@ export function toast(message, type = 'info', options = {}) {
     node.appendChild(button)
   }
   container.appendChild(node)
+  let dismissed = false
   const dismiss = () => {
-    node.style.opacity = '0'
-    node.style.transform = 'translateX(30px)'
-    node.style.transition = 'all .25s ease'
-    setTimeout(() => node.remove(), 260)
+    if (dismissed) return
+    dismissed = true
+    node.classList.add('is-exiting')
+    setTimeout(() => node.remove(), EXIT_MS)
   }
+  attachSwipeToDismiss(node, dismiss)
   if (timeout) setTimeout(dismiss, timeout)
   return { dismiss }
+}
+
+/** Duration of the CSS exit animations (keep in sync with --motion-normal). */
+const EXIT_MS = 200
+
+/**
+ * Pointer-driven swipe-to-dismiss for touch toasts. The finger moves the node
+ * directly (no animation loop, no dependency); releasing past the threshold
+ * hands off to the CSS exit animation.
+ */
+function attachSwipeToDismiss(node, dismiss) {
+  if (typeof window === 'undefined' || !window.PointerEvent) return
+  let startX = 0
+  let dx = 0
+  let dragging = false
+  node.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse') return
+    dragging = true
+    startX = event.clientX
+    dx = 0
+    node.classList.add('is-dragging')
+    try {
+      node.setPointerCapture(event.pointerId)
+    } catch {
+      /* capture is best-effort */
+    }
+  })
+  node.addEventListener('pointermove', (event) => {
+    if (!dragging) return
+    dx = event.clientX - startX
+    if (dx < 0) dx = 0
+    node.style.transform = `translate3d(${dx}px, 0, 0)`
+    node.style.opacity = String(Math.max(0, 1 - dx / 220))
+  })
+  const end = () => {
+    if (!dragging) return
+    dragging = false
+    node.classList.remove('is-dragging')
+    node.style.transform = ''
+    node.style.opacity = ''
+    if (dx > 80) {
+      node.classList.add('is-swiped')
+      setTimeout(() => node.remove(), EXIT_MS)
+    }
+  }
+  node.addEventListener('pointerup', end)
+  node.addEventListener('pointercancel', end)
 }
 
 /* ------------------------------------------------------------------ modals */
@@ -147,9 +196,44 @@ export function openModal({ title, body, footer = '', size = '', onMount, onClos
 
 let activeModalOnClose = null
 
+/**
+ * Clone the open overlay into a non-queryable ghost layer and let CSS play the
+ * `.is-exiting` animation there. No data-* hooks survive the clone, so nothing
+ * can match `[data-modal-box]` after `closeModal()` returns.
+ */
+function playModalExit(root) {
+  const overlay = root.querySelector('[data-modal-backdrop]')
+  if (!overlay || typeof overlay.cloneNode !== 'function') return
+  const ghost = /** @type {any} */ (overlay.cloneNode(true))
+  ghost.removeAttribute('data-modal-backdrop')
+  ghost.querySelectorAll('[data-modal-box], [data-modal-body], [data-modal-footer], [data-modal-close]').forEach((node) => {
+    node.removeAttribute('data-modal-box')
+    node.removeAttribute('data-modal-body')
+    node.removeAttribute('data-modal-footer')
+    node.removeAttribute('data-modal-close')
+  })
+  // Strip identity so the ghost is invisible to queries, a11y and duplicate ids.
+  ghost.removeAttribute('id')
+  ghost.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'))
+  ghost.querySelectorAll('[role]').forEach((node) => node.removeAttribute('role'))
+  ghost.setAttribute('aria-hidden', 'true')
+  ghost.style.pointerEvents = 'none'
+  ghost.classList.add('is-exiting')
+  const layer = document.body
+  if (!layer) return
+  layer.appendChild(ghost)
+  setTimeout(() => ghost.remove(), EXIT_MS)
+}
+
 export function closeModal() {
   const root = el('modal-root')
-  if (root) root.innerHTML = ''
+  if (root) {
+    // The modal leaves the queryable tree immediately (tests and callers may
+    // assert on it synchronously); the exit animation plays on a detached
+    // clone parked in a sibling layer, so behaviour never becomes async.
+    playModalExit(root)
+    root.innerHTML = ''
+  }
   const previous = /** @type {any} */ (lastFocus)
   if (previous && typeof previous.focus === 'function' && document.contains(previous)) previous.focus()
   lastFocus = null

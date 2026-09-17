@@ -2,7 +2,7 @@
  * App shell HTML. Kept as a plain string so the Worker can stream it instantly
  * and so the dom-based integration tests can reuse it.
  */
-export const APP_VERSION = '2.1'
+export const APP_VERSION = '2.2'
 export const USER_NAME = 'Kulshresth'
 
 export function renderShell(): string {

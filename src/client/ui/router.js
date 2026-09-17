@@ -25,6 +25,15 @@ const RENDERERS = {
 let currentView = 'dashboard'
 let refreshTimer = null
 
+/** Restart the CSS `viewEnter` animation without touching layout or JS timers. */
+function replayViewEntrance(section) {
+  if (!section || !section.style) return
+  section.style.animation = 'none'
+  // Reading a layout value flushes the removal so the animation can re-trigger.
+  void section.offsetWidth
+  section.style.animation = ''
+}
+
 export function getCurrentView() {
   return currentView
 }
@@ -45,6 +54,9 @@ export function switchView(view) {
   const nav = el('mobile-nav')
   if (nav) nav.classList.add('hidden')
   renderCurrentView()
+  // The view swap above is synchronous; CSS owns the entrance. Re-showing a
+  // section that was already visible needs the animation restarted by hand.
+  replayViewEntrance(el(`view-${view}`))
   try {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch {

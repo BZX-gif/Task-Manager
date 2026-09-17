@@ -1272,3 +1272,435 @@ header {
   .title-unlock-wrap { transform: none !important; }
 }
 
+/* ==========================================================================
+   v2.2 — "BUTTER SMOOTH"
+   One motion language for the whole command center. Everything below is
+   presentation only: tokens, easing, entrance/exit choreography and touch
+   ergonomics. No business logic, no JS animation loops, no new dependencies.
+   ========================================================================== */
+
+/* ---------- 1. Design tokens ---------- */
+:root {
+  /* The single easing curve the product moves on. */
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Motion scale — press, hover, entrance, ambient. */
+  --motion-fast: 120ms;
+  --motion-normal: 200ms;
+  --motion-slow: 320ms;
+  --motion-slower: 380ms;
+
+  /* Radius scale. */
+  --radius-xs: 0.45rem;
+  --radius-sm: 0.65rem;
+  --radius-md: 0.85rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-pill: 999px;
+
+  /* Glass system. */
+  --glass-bg: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018));
+  --glass-bg-soft: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.012));
+  --glass-bg-solid: linear-gradient(180deg, #131a2e, #0e1424);
+  --glass-border: rgba(255,255,255,0.06);
+  --glass-border-strong: rgba(255,255,255,0.12);
+  --glass-blur: blur(16px) saturate(1.12);
+  --glass-blur-sm: blur(10px) saturate(1.08);
+  --glass-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 8px 32px -12px rgba(0,0,0,0.7);
+  --glass-shadow-lift: 0 1px 0 rgba(255,255,255,0.06) inset, 0 14px 42px -14px rgba(0,0,0,0.75);
+
+  /* Spacing rhythm. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+
+  /* Touch ergonomics. */
+  --touch-min: 2.5rem;
+}
+@media (max-width: 640px) {
+  :root { --touch-min: 2.75rem; }
+}
+
+/* Numeric stability: values that change must never shift layout. */
+.tabular,
+.focus-clock,
+.focus-ended-time,
+.fz-count,
+.focus-launch-minutes,
+#live-clock,
+#streak-count,
+#focus-mini-time,
+#active-timer-chip-text,
+.tt-time,
+.title-card-meta,
+.discipline-name,
+.data-table td,
+.score-part,
+.top3-index {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ---------- 2. View transitions (CSS only) ---------- */
+/* The router swaps `hidden` synchronously; display:none -> block replays this. */
+@keyframes viewEnter {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: none; }
+}
+.view-section:not(.hidden) {
+  animation: viewEnter var(--motion-slower) var(--ease-smooth) both;
+}
+
+/* ---------- 3. Navigation ---------- */
+.nav-item {
+  transition:
+    background var(--motion-normal) var(--ease-smooth),
+    color var(--motion-normal) var(--ease-smooth),
+    transform var(--motion-fast) var(--ease-smooth),
+    box-shadow var(--motion-normal) var(--ease-smooth);
+  min-height: var(--touch-min);
+}
+.nav-item:hover { transform: translate3d(1px, 0, 0); }
+.nav-item:active { transform: scale(0.98); }
+.nav-item:focus-visible { outline: 2px solid rgba(124,92,255,0.75); outline-offset: 2px; }
+
+.nav-pill {
+  transition:
+    background var(--motion-normal) var(--ease-smooth),
+    color var(--motion-normal) var(--ease-smooth),
+    transform var(--motion-fast) var(--ease-smooth),
+    border-color var(--motion-normal) var(--ease-smooth);
+  min-height: var(--touch-min);
+}
+.nav-pill:active { transform: scale(0.98); }
+
+/* Mobile nav: reveal without layout jump or horizontal overflow. */
+#mobile-nav {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+}
+#mobile-nav::-webkit-scrollbar { display: none; }
+#mobile-nav:not(.hidden) {
+  animation: viewEnter var(--motion-slow) var(--ease-smooth) both;
+}
+
+/* ---------- 4. Glass system ---------- */
+.glass-card {
+  border-color: var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition:
+    transform var(--motion-normal) var(--ease-smooth),
+    box-shadow var(--motion-normal) var(--ease-smooth),
+    border-color var(--motion-normal) var(--ease-smooth);
+}
+/* Static cards stay calm; only explicitly interactive glass lifts. */
+.glass-card:hover { transform: none; }
+.glass-card.is-interactive:hover,
+a.glass-card:hover,
+button.glass-card:hover {
+  transform: translate3d(0, -1px, 0);
+  border-color: var(--glass-border-strong);
+  box-shadow: var(--glass-shadow-lift);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-card,
+  .title-card,
+  .modal-box { background: var(--glass-bg-solid); }
+}
+
+/* ---------- 5. Buttons ---------- */
+.btn-primary,
+.btn-ghost,
+.btn-danger,
+.btn-danger-ghost,
+.preset-btn,
+.segmented button,
+.day-toggle,
+.toast-action {
+  transition:
+    filter var(--motion-fast) var(--ease-smooth),
+    background var(--motion-normal) var(--ease-smooth),
+    border-color var(--motion-normal) var(--ease-smooth),
+    color var(--motion-normal) var(--ease-smooth),
+    transform var(--motion-fast) var(--ease-smooth),
+    box-shadow var(--motion-normal) var(--ease-smooth);
+}
+.btn-primary,
+.btn-ghost,
+.btn-danger {
+  min-height: var(--touch-min);
+}
+.btn-primary:hover,
+.btn-danger:hover { transform: translate3d(0, -0.5px, 0); }
+.btn-primary:active,
+.btn-ghost:active,
+.btn-danger:active,
+.btn-danger-ghost:active,
+.preset-btn:active,
+.segmented button:active,
+.day-toggle:active { transform: scale(0.98); }
+
+.icon-btn {
+  transition:
+    background var(--motion-normal) var(--ease-smooth),
+    color var(--motion-normal) var(--ease-smooth),
+    border-color var(--motion-normal) var(--ease-smooth),
+    transform var(--motion-fast) var(--ease-smooth);
+}
+.icon-btn:active { transform: scale(0.93); }
+
+button:disabled,
+button:disabled:hover,
+button:disabled:active {
+  transform: none;
+  filter: grayscale(0.25);
+  box-shadow: none;
+}
+
+/* ---------- 6. Inputs ---------- */
+.input-field, select.input-field, textarea.input-field {
+  border-radius: var(--radius-sm);
+  transition:
+    border-color var(--motion-normal) var(--ease-smooth),
+    background var(--motion-normal) var(--ease-smooth),
+    box-shadow var(--motion-normal) var(--ease-smooth);
+}
+.input-field:hover:not(:focus) { border-color: rgba(255,255,255,0.16); }
+.input-field:focus,
+select.input-field:focus,
+textarea.input-field:focus {
+  box-shadow: 0 0 0 3px rgba(124,92,255,0.16);
+}
+
+/* ---------- 7. Progress ---------- */
+.progress-fill,
+.focus-energy-fill {
+  transition:
+    width var(--motion-slower) var(--ease-smooth),
+    background var(--motion-slow) var(--ease-smooth),
+    box-shadow var(--motion-slow) var(--ease-smooth);
+}
+
+/* ---------- 8. Tasks: immediate, satisfying feedback ---------- */
+.task-check {
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: var(--radius-xs);
+  transition:
+    background var(--motion-normal) var(--ease-smooth),
+    border-color var(--motion-normal) var(--ease-smooth),
+    transform var(--motion-fast) var(--ease-smooth);
+}
+.task-check:hover { transform: scale(1.04); border-color: rgba(255,255,255,0.32); }
+.task-check:active { transform: scale(0.92); }
+.task-check i {
+  transition:
+    opacity var(--motion-fast) var(--ease-smooth),
+    transform var(--motion-normal) var(--ease-smooth);
+}
+/* A small spring on commit — transform only, so no layout jump. */
+.task-check.checked i { transform: scale(1.05); }
+
+.task-row {
+  border-radius: var(--radius-lg);
+  backdrop-filter: var(--glass-blur-sm);
+  -webkit-backdrop-filter: var(--glass-blur-sm);
+  transition:
+    background var(--motion-normal) var(--ease-smooth),
+    border-color var(--motion-normal) var(--ease-smooth),
+    opacity var(--motion-normal) var(--ease-smooth),
+    box-shadow var(--motion-normal) var(--ease-smooth);
+}
+
+/* ---------- 9. Timetable ---------- */
+.tt-row {
+  border-radius: var(--radius-lg);
+  transition:
+    background var(--motion-normal) var(--ease-smooth),
+    border-color var(--motion-normal) var(--ease-smooth),
+    opacity var(--motion-normal) var(--ease-smooth),
+    box-shadow var(--motion-normal) var(--ease-smooth),
+    transform var(--motion-fast) var(--ease-smooth);
+}
+.tt-row:hover { transform: translate3d(2px, 0, 0); }
+.tt-row:active { transform: scale(0.99); }
+
+/* ---------- 10. Focus Mission (presentation only) ---------- */
+.focus-clock { transition: opacity var(--motion-slow) var(--ease-smooth), text-shadow var(--motion-slower) var(--ease-smooth); }
+.fz-milestone-chip {
+  transition:
+    opacity var(--motion-slower) var(--ease-smooth),
+    transform var(--motion-slower) var(--ease-smooth);
+}
+/* Calmer ambient drift, inside the 14–22s band. */
+.fz-orb-1 { animation-duration: 18s; }
+.fz-orb-2 { animation-duration: 22s; }
+.fz-orb-3 { animation-duration: 20s; }
+.focus-exit {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  transition: background var(--motion-normal) var(--ease-smooth), transform var(--motion-fast) var(--ease-smooth);
+}
+.focus-exit:active { transform: scale(0.93); }
+
+/* ---------- 11. Modals ---------- */
+.modal-overlay {
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 40%, rgba(12,16,32,0.35), transparent 70%),
+    rgba(0,0,0,0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: overlayIn var(--motion-slow) var(--ease-smooth) both;
+}
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-box {
+  border-radius: var(--radius-2xl);
+  animation: modalIn var(--motion-slower) var(--ease-smooth) both;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.modal-overlay.is-exiting { animation: overlayOut var(--motion-normal) var(--ease-exit) both; }
+.modal-overlay.is-exiting .modal-box { animation: modalOut var(--motion-normal) var(--ease-exit) both; }
+@keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes modalOut {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.98); }
+}
+
+/* ---------- 12. Toasts ---------- */
+#toast-container {
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  right: max(1.25rem, env(safe-area-inset-right));
+  pointer-events: none;
+}
+#toast-container > * { pointer-events: auto; }
+.toast {
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-solid);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  animation: toastEnter var(--motion-slower) var(--ease-smooth) both;
+  touch-action: pan-y;
+  will-change: transform, opacity;
+}
+@keyframes toastEnter {
+  from { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.toast.is-exiting { animation: toastExit var(--motion-normal) var(--ease-exit) both; }
+@keyframes toastExit {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.97); }
+}
+/* Swipe-to-dismiss: the pointer drives transform directly, no animation loop. */
+.toast.is-dragging { animation: none; transition: none; user-select: none; }
+.toast.is-swiped { animation: toastSwipeOut var(--motion-normal) var(--ease-exit) both; }
+@keyframes toastSwipeOut {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translate3d(120%, 0, 0); }
+}
+
+/* ---------- 13. Loading & empty states ---------- */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translate3d(-100%, 0, 0);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  animation: skeletonSweep 1.6s var(--ease-smooth) infinite;
+}
+@keyframes skeletonSweep {
+  from { transform: translate3d(-100%, 0, 0); }
+  to { transform: translate3d(100%, 0, 0); }
+}
+.empty-state {
+  animation: viewEnter var(--motion-slower) var(--ease-smooth) both;
+}
+.empty-state i { transition: opacity var(--motion-slow) var(--ease-smooth); }
+
+/* ---------- 14. Titles / Discipline Monster (presentation only) ---------- */
+.title-card {
+  border-radius: var(--radius-xl);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition:
+    transform var(--motion-normal) var(--ease-smooth),
+    border-color var(--motion-normal) var(--ease-smooth),
+    box-shadow var(--motion-normal) var(--ease-smooth);
+}
+.title-card:hover { transform: translate3d(0, -1px, 0); }
+.discipline-dash-card { transition: border-color var(--motion-normal) var(--ease-smooth), box-shadow var(--motion-normal) var(--ease-smooth); }
+.title-unlock-wrap {
+  transition:
+    opacity var(--motion-slower) var(--ease-smooth),
+    transform var(--motion-slower) var(--ease-smooth);
+}
+
+/* ---------- 15. Typography rhythm ---------- */
+.section-title { letter-spacing: -0.015em; line-height: 1.25; }
+.section-sub { line-height: 1.5; }
+.field-label { line-height: 1.4; }
+
+/* ---------- 16. Responsive / mobile ergonomics ---------- */
+@media (max-width: 640px) {
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger,
+  .icon-btn,
+  .nav-item,
+  .nav-pill { min-height: var(--touch-min); }
+  .icon-btn { min-width: var(--touch-min); }
+  #toast-container {
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+  }
+  .task-check { width: 1.5rem; height: 1.5rem; }
+  /* Entrance motion must never create a horizontal scrollbar. */
+  body, #app { overflow-x: hidden; }
+}
+
+/* ---------- 17. Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .view-section:not(.hidden),
+  .empty-state,
+  .modal-box,
+  .modal-overlay,
+  .toast,
+  #mobile-nav:not(.hidden) { animation: none !important; }
+  .skeleton::after { animation: none !important; }
+  .nav-item:hover,
+  .nav-item:active,
+  .tt-row:hover,
+  .tt-row:active,
+  .task-check:hover,
+  .task-check:active,
+  .btn-primary:hover,
+  .btn-danger:hover,
+  .glass-card.is-interactive:hover,
+  .title-card:hover { transform: none !important; }
+}
