@@ -3,41 +3,49 @@
    Dashboard, Daily Score, streak, weekly review and category analytics all
    read from here, so every surface shows the same truth.
 
-   Day plans: `state.dayPlans["YYYY-MM-DD"]` keeps a snapshot of the timetable
-   as it looked on that day (id, time, title, duration, category). Historical
-   planned-time analytics therefore stay correct even after the timetable is
-   edited. Legacy days (before this version) are derived from the completion
-   log + current timetable ids.
+   Day plans: `state.dayPlans[missionId]["YYYY-MM-DD"]` keeps a snapshot of that
+   mission's timetable as it looked on that day (id, time, title, duration,
+   category). Snapshots are strictly per mission — SSC, RAS and UPSC never
+   share a day plan. Historical planned-time analytics therefore stay correct
+   even after a timetable is edited. Legacy pre-v5 days (`dayPlans[date]`)
+   are preserved under the UPSC mission and derived from the completion log +
+   current timetable ids when no snapshot exists.
    ------------------------------------------------------------------------- */
 
 import { dateKey, minutesOfDay, nowMinutes as nowMinutesOf } from './dates.js'
+import { activeMissionId, timetableFor } from './missions.js'
 import { buildScoreInput, computeDailyScore, focusedMinutesOn, overdueTasks } from './score.js'
 import { sessionTotals } from './focus.js'
 import { top3Stats } from './top3.js'
 
-/** Snapshot the current timetable for `dateKey` (idempotent). */
+/** Snapshot the active mission's timetable for `dateKey` (idempotent). */
 export function materializeDayPlan(state, dateKey) {
   if (!state.dayPlans) state.dayPlans = {}
-  const snapshot = (state.timetable || []).map((b) => ({
+  const missionId = activeMissionId(state)
+  const bucket = state.dayPlans[missionId] ?? (state.dayPlans[missionId] = {})
+  const snapshot = timetableFor(state, missionId).map((b) => ({
     id: b.id,
     time: b.time,
     title: b.title,
     duration: b.duration || 60,
     cat: b.cat || null,
   }))
-  const changed = JSON.stringify(state.dayPlans[dateKey] || null) !== JSON.stringify(snapshot)
-  if (changed) state.dayPlans[dateKey] = snapshot
+  const changed = JSON.stringify(bucket[dateKey] || null) !== JSON.stringify(snapshot)
+  if (changed) bucket[dateKey] = snapshot
   return changed
 }
 
 /**
- * The timetable that applied on a given day.
- * Falls back to the current timetable (+ completion log) for legacy days.
+ * The timetable that applied on a given day for one mission (default: active).
+ * Falls back to that mission's live timetable (+ completion log) for legacy
+ * days. Snapshots are stored per mission — one mission's day plan is never
+ * reused as another's.
  */
-export function dayPlanFor(state, dateKey) {
-  const snap = state.dayPlans?.[dateKey]
+export function dayPlanFor(state, dateKey, missionId = null) {
+  const id = missionId || activeMissionId(state)
+  const snap = state.dayPlans?.[id]?.[dateKey]
   if (Array.isArray(snap) && snap.length) return snap
-  return (state.timetable || []).map((b) => ({ id: b.id, time: b.time, title: b.title, duration: b.duration || 60, cat: b.cat || null }))
+  return timetableFor(state, id).map((b) => ({ id: b.id, time: b.time, title: b.title, duration: b.duration || 60, cat: b.cat || null }))
 }
 
 /**

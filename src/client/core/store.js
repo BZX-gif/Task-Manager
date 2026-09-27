@@ -57,7 +57,10 @@ export function initStore({ now = new Date() } = {}) {
   if (created.length) state.tasks.push(...created)
   pruneTop3(state)
   state.reminders.sent = pruneSentLog(state.reminders.sent, today, 14)
-  state.dayPlans = trimMap(state.dayPlans, 400)
+  // v5: day plans are nested per mission — trim each mission's history
+  for (const id of Object.keys(state.dayPlans || {})) {
+    state.dayPlans[id] = trimMap(state.dayPlans[id] || {}, 400)
+  }
   syncScoreHistory(today, now)
 
   // v3: discipline monster — full backfill + title evaluation
@@ -190,7 +193,10 @@ export function streak(nowDate = new Date()) {
 export function syncScoreHistory(today = currentDayKey(), nowDate = new Date()) {
   if (!state.scoreHistory) state.scoreHistory = {}
   const cutoff = addDays(today, -400)
-  const keys = new Set(Object.keys(state.dayPlans || {}).filter((k) => k < today && k >= cutoff))
+  const dayPlanDates = Object.values(state.dayPlans || {}).flatMap((bucket) =>
+    bucket && typeof bucket === 'object' ? Object.keys(bucket) : [],
+  )
+  const keys = new Set(dayPlanDates.filter((k) => k < today && k >= cutoff))
   for (const key of Object.keys(state.completionLog || {})) if (key < today && key >= cutoff) keys.add(key)
   for (const task of state.tasks) if (task.date && task.date < today && task.date >= cutoff) keys.add(task.date)
 

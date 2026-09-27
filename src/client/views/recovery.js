@@ -3,6 +3,8 @@
    ------------------------------------------------------------------------- */
 
 import { formatDuration, minutesOfDay } from '../lib/dates.js'
+import { dayPlanFor } from '../lib/daystats.js'
+import { activeMission, timetableSlot } from '../lib/missions.js'
 import { applyRecovery, planRecovery, undoRecovery } from '../lib/recovery.js'
 import { closeModal, escapeHtml, openModal, toast } from '../core/dom.js'
 import { commit, currentDayKey, minutesNow, state } from '../core/store.js'
@@ -10,8 +12,11 @@ import { commit, currentDayKey, minutesNow, state } from '../core/store.js'
 export function openRecoveryModal({ nowMinutes = minutesNow() } = {}) {
   const today = currentDayKey()
   const log = state.completionLog[today] || { ttDone: [] }
+  const mission = activeMission(state.missions)
+  // v5: recovery only ever reshuffles the active mission's day plan — its
+  // timetable/snapshot, never another mission's schedule
   const plan = planRecovery({
-    timetable: state.timetable,
+    timetable: dayPlanFor(state, today),
     ttDone: log.ttDone,
     nowMinutes,
     dayEndMinutes: minutesOfDay(state.settings.dayEnd || '23:30'),
@@ -20,6 +25,7 @@ export function openRecoveryModal({ nowMinutes = minutesNow() } = {}) {
   })
 
   const body = `
+    <p class="text-[12px] text-slate-400 mb-4"><i class="fa-solid fa-flag mr-1.5 text-accent-2"></i>Rescheduling the <span class="text-slate-200 font-semibold">${escapeHtml(mission.exam)} ${mission.year}</span> timetable — other missions keep their schedules.</p>
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
       ${tile('Missed', formatDuration(plan.missedMinutes), `${plan.missed.length} block${plan.missed.length === 1 ? '' : 's'}`)}
       ${tile('Free time left', formatDuration(plan.availableMinutes), plan.protectedMinutes ? `${formatDuration(plan.protectedMinutes)} protected` : 'no protected time')}
@@ -97,7 +103,7 @@ export function openRecoveryModal({ nowMinutes = minutesNow() } = {}) {
       box.querySelector('[data-apply]')?.addEventListener('click', () => {
         let snapshot = []
         commit((s) => {
-          snapshot = applyRecovery(s.timetable, plan.proposals)
+          snapshot = applyRecovery(timetableSlot(s), plan.proposals)
         })
         closeModal()
         toast(`${plan.proposals.length} block${plan.proposals.length === 1 ? '' : 's'} rescheduled`, 'success', {
@@ -106,7 +112,7 @@ export function openRecoveryModal({ nowMinutes = minutesNow() } = {}) {
             label: 'Undo',
             onClick: () => {
               commit((s) => {
-                undoRecovery(s.timetable, snapshot)
+                undoRecovery(timetableSlot(s), snapshot)
               })
               toast('Schedule restored', 'info')
             },

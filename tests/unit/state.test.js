@@ -67,9 +67,9 @@ test('migrateState normalises junk values instead of throwing', () => {
     completionLog: { 'not-a-date': {} },
     top3: { '2026-09-15': ['ghost'] },
   })
-  assert.equal(state.categories.length, 4, 'falls back to the default categories')
-  assert.equal(state.timetable[0].time, '09:00', 'invalid times fall back')
-  assert.equal(state.timetable[0].duration, 60)
+  assert.equal(state.categories.length, 5, 'falls back to the default categories (incl. RAS Core)')
+  assert.equal(state.timetables.upsc_cse_2028[0].time, '09:00', 'invalid times fall back')
+  assert.equal(state.timetables.upsc_cse_2028[0].duration, 60)
   assert.equal(state.tasks.length, 2)
   assert.equal(state.tasks[0].title, 'Untitled task')
   assert.deepEqual(state.top3, {}, 'ids of missing tasks are dropped')
@@ -101,7 +101,9 @@ test('normalizeSettings keeps the Reminders and Focus sections intact', () => {
 test('emptyState is complete and versioned', () => {
   const state = emptyState(makeContext({ now: 5, id: () => 'z' }))
   assert.equal(state.version, STATE_VERSION)
-  assert.ok(state.timetable.length > 0)
+  assert.ok(state.timetables.ssc_cgl_2027.length > 0, 'the active mission starts with the default routine')
+  assert.ok(state.timetables.ras_2028.length > 0)
+  assert.ok(state.timetables.upsc_cse_2028.length > 0)
   assert.deepEqual(state.tasks, [])
   assert.deepEqual(state.focus, { active: null, sessions: [] })
   assert.equal(state.meta.createdAt, 5)

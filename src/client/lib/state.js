@@ -8,12 +8,13 @@
 
    Migration path
      v1 (original app) ──► v2 ──► v3 (discipline monster + titles)
+       ──► v4 (mission roadmap) ──► v5 (per-mission timetables)
    ------------------------------------------------------------------------- */
 
-import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_TIMETABLE, STATE_VERSION } from './defaults.js'
+import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_TIMETABLE, STATE_VERSION, starterTimetableFor } from './defaults.js'
 import { isValidKey, minutesOfDay } from './dates.js'
 import { normalizeRecurrence } from './recurrence.js'
-import { normalizeMissions } from './missions.js'
+import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
 
 /** Legacy key kept for backward compatibility with existing installs. */
 export const STORAGE_KEY = 'kcc_state_v1'
@@ -144,11 +145,17 @@ export function normalizeSettings(raw) {
 
 /** A brand-new state for a first-time user. */
 export function emptyState(ctx = makeContext()) {
+  const missions = normalizeMissions(null)
+  /** Independent exam-oriented starter routine per mission. */
+  const timetables = {}
+  for (const id of Object.keys(missions.definitions)) {
+    timetables[id] = ensureIds(starterTimetableFor(id), ctx).map((item) => normalizeTimetableItem(item, ctx))
+  }
   const state = {
     version: STATE_VERSION,
-    missions: normalizeMissions(null),
+    missions,
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
-    timetable: ensureIds(DEFAULT_TIMETABLE, ctx).map((item) => normalizeTimetableItem(item, ctx)),
+    timetables,
     tasks: [],
     top3: {},
     completionLog: {},
@@ -200,6 +207,11 @@ export function migrateState(raw, ctx = makeContext()) {
     version = 3
   }
   if (version < 4) { working = { ...working, version: 4 }; applied.push('migrateStateV3ToV4'); version = 4 }
+  if (version < 5) {
+    working = migrateStateV4ToV5(working, ctx)
+    applied.push('migrateStateV4ToV5')
+    version = 5
+  }
 
   const state = normalizeState(working, ctx, warnings)
   state.meta = {
@@ -279,6 +291,35 @@ export function migrateStateV2ToV3(raw, ctx = makeContext()) {
   return next
 }
 
+/**
+ * v4 → v5: independent per-mission timetables (SSC / RAS / UPSC).
+ * The legacy single timetable is preserved as the UPSC mission's schedule
+ * (block ids intact); SSC and RAS start from their own exam-oriented routine
+ * so nothing the user had is lost and nothing is shared between missions.
+ * Pre-v5 day-plan snapshots described that same legacy schedule, so they are
+ * preserved under the UPSC mission rather than deleted.
+ */
+export function migrateStateV4ToV5(raw, ctx = makeContext()) {
+  const next = { ...raw }
+  next.version = 5
+  const missions = normalizeMissions(raw.missions)
+  const seed = (id) => ensureIds(starterTimetableFor(id), ctx).map((item) => normalizeTimetableItem(item, ctx))
+  const timetables = {}
+  for (const id of Object.keys(missions.definitions)) timetables[id] = seed(id)
+  if (Array.isArray(raw.timetable)) timetables[LEGACY_TIMETABLE_MISSION_ID] = raw.timetable
+  next.timetables = timetables
+  delete next.timetable
+
+  if (isObj(raw.dayPlans)) {
+    const legacyDays = {}
+    for (const [key, value] of Object.entries(raw.dayPlans)) {
+      if (isValidKey(key)) legacyDays[key] = value
+    }
+    next.dayPlans = { [LEGACY_TIMETABLE_MISSION_ID]: legacyDays }
+  }
+  return next
+}
+
 /** Shape-safe normalisation used for every load/import. */
 export function normalizeState(raw, ctx = makeContext(), warnings = []) {
   const state = emptyState(ctx)
@@ -286,16 +327,34 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
     .map((c) => normalizeCategory(c))
     .filter((c, index, all) => all.findIndex((x) => x.id === c.id) === index)
   if (!state.categories.length) state.categories = DEFAULT_CATEGORIES.map((c) => ({ ...c }))
+  // additive: every shipped default category exists (mission starter blocks reference them)
+  {
+    const have = new Set(state.categories.map((c) => c.id))
+    for (const c of DEFAULT_CATEGORIES) if (!have.has(c.id)) state.categories.push({ ...c })
+  }
   state.missions = normalizeMissions(raw.missions)
   const catIds = new Set(state.categories.map((c) => c.id))
 
-  state.timetable = asArray(raw.timetable).map((item) => normalizeTimetableItem(item, ctx))
-  if (!state.timetable.length && asArray(raw.timetable).length === 0 && !raw.timetable) {
-    state.timetable = ensureIds(DEFAULT_TIMETABLE, ctx).map((item) => normalizeTimetableItem(item, ctx))
+  // --- v5: independent per-mission timetables ---
+  const rawTimetables = isObj(raw.timetables) ? raw.timetables : null
+  const hasLegacyTimetable = Array.isArray(raw.timetable)
+  state.timetables = {}
+  for (const id of Object.keys(state.missions.definitions)) {
+    let source
+    if (rawTimetables && Array.isArray(rawTimetables[id])) {
+      source = rawTimetables[id] // explicit per-mission list (an empty list is honoured)
+    } else if (hasLegacyTimetable && id === LEGACY_TIMETABLE_MISSION_ID) {
+      source = raw.timetable // pre-v5 flat timetable → preserved as the UPSC schedule
+    } else if (!hasLegacyTimetable && !rawTimetables) {
+      source = ensureIds(starterTimetableFor(id), ctx) // nothing stored yet → exam-oriented starter
+    } else {
+      source = [] // a mission missing from an existing v5 map starts clean
+    }
+    state.timetables[id] = source.map((item) => normalizeTimetableItem(item, ctx))
+    state.timetables[id].forEach((item) => {
+      if (item.cat && !catIds.has(item.cat)) item.cat = null
+    })
   }
-  state.timetable.forEach((item) => {
-    if (item.cat && !catIds.has(item.cat)) item.cat = null
-  })
 
   const rawTasks = asArray(raw.tasks)
   state.tasks = rawTasks.map((task) => normalizeTask(task, ctx))
@@ -326,10 +385,12 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
     }
   }
 
-  state.dayPlans = {}
-  for (const [key, plan] of Object.entries(isObj(raw.dayPlans) ? raw.dayPlans : {})) {
-    if (!isValidKey(key || '')) continue
-    const items = asArray(plan)
+  // --- v5: day-plan snapshots are per mission and never shared across missions ---
+  // Accepted shapes: nested `dayPlans[missionId][date]` (v5) and the legacy flat
+  // `dayPlans[date]` (pre-v5), which described the legacy schedule and is
+  // therefore preserved under the UPSC mission instead of being deleted.
+  const normalizePlanItems = (plan) =>
+    asArray(plan)
       .filter((item) => isObj(item))
       .map((item) => ({
         id: String(item.id || ctx.uid()),
@@ -338,7 +399,26 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
         duration: clampNumber(item.duration, 5, 600, 60),
         cat: item.cat ? String(item.cat) : null,
       }))
-    if (items.length) state.dayPlans[key] = items
+  state.dayPlans = {}
+  for (const [key, value] of Object.entries(isObj(raw.dayPlans) ? raw.dayPlans : {})) {
+    if (isValidKey(key)) {
+      const items = normalizePlanItems(value)
+      if (items.length) {
+        const legacyBucket = state.dayPlans[LEGACY_TIMETABLE_MISSION_ID] ?? (state.dayPlans[LEGACY_TIMETABLE_MISSION_ID] = {})
+        if (!legacyBucket[key]) legacyBucket[key] = items
+      }
+    } else if (isObj(value)) {
+      // nested per-mission bucket — kept for known and future missions
+      const bucket = state.dayPlans[key] ?? (state.dayPlans[key] = {})
+      for (const [day, plan] of Object.entries(value)) {
+        if (!isValidKey(day)) continue
+        const items = normalizePlanItems(plan)
+        if (items.length) bucket[day] = items // nested entries win over legacy ones
+      }
+    }
+  }
+  for (const id of Object.keys(state.missions.definitions)) {
+    if (!state.dayPlans[id]) state.dayPlans[id] = {}
   }
 
   const active = isObj(raw.focus?.active) ? raw.focus.active : null

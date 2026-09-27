@@ -9,8 +9,12 @@ export function makeCtx({ now = Date.UTC(2026, 8, 15, 12) } = {}) {
 export function baseState(overrides = {}) {
   const ctx = makeCtx()
   const state = emptyState(ctx)
-  state.timetable = []
-  return normalizeState({ ...state, ...overrides }, ctx)
+  const { timetable, ...rest } = overrides
+  // v5: per-mission timetables — a `timetable` override seeds the active
+  // mission's schedule (the shape every existing test works with).
+  state.timetables = { ssc_cgl_2027: [], ras_2028: [], upsc_cse_2028: [] }
+  if (Array.isArray(timetable)) state.timetables.ssc_cgl_2027 = timetable
+  return normalizeState({ ...state, ...rest }, ctx)
 }
 
 /** Build 4 one-hour blocks from 09:00 */

@@ -3,6 +3,7 @@
    ------------------------------------------------------------------------- */
 
 import { formatDuration, minutesOfDay, toHHMM } from '../lib/dates.js'
+import { activeMission, activeTimetable, timetableSlot } from '../lib/missions.js'
 import { protectedConflicts } from '../lib/protected.js'
 import { computeDueReminders } from '../lib/reminders.js'
 import { closeModal, confirmDialog, escapeHtml, openModal, qsa, toast } from '../core/dom.js'
@@ -19,16 +20,19 @@ export function renderTimetable() {
   const today = currentDayKey(now)
   const log = state.completionLog[today] || { ttDone: [] }
   const nowMin = minutesNow(now)
-  const sorted = [...state.timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
-  const conflicts = protectedConflicts(state.timetable, state.settings.protectedTime || [], today)
+  const mission = activeMission(state.missions)
+  // v5: every edit and every number on this screen is scoped to the active mission
+  const timetable = activeTimetable(state)
+  const sorted = [...timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const conflicts = protectedConflicts(timetable, state.settings.protectedTime || [], today)
   const stats = statsFor(today, { now })
   const upcomingReminder = computeDueReminders({ state, todayKey: today, nowMinutes: nowMin, now, maxPerRun: 1 })[0] || null
 
   section.innerHTML = `
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="section-title">Daily Timetable</h2>
-        <p class="section-sub">${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })} · tap a block to mark it complete</p>
+        <h2 class="section-title">Daily Timetable <span class="chip ml-2 align-middle">${escapeHtml(mission.exam)} ${mission.year}</span></h2>
+        <p class="section-sub">${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })} · ${escapeHtml(mission.exam)} schedule · tap a block to mark it complete</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <button class="btn-ghost" data-action="recover"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Recover My Day</button>
@@ -88,8 +92,8 @@ export function renderTimetable() {
               .join('')
           : emptyState({
               icon: 'fa-regular fa-calendar',
-              title: 'No timetable blocks yet',
-              body: 'Add your daily structure — the dashboard and recovery planner use it.',
+              title: `No ${escapeHtml(mission.exam)} blocks yet`,
+              body: `Add your ${escapeHtml(mission.exam)} daily structure — the dashboard, reminders and recovery planner use this mission's timetable.`,
               action: '<button class="btn-primary mt-2" data-action="add">Add your first block</button>',
             })}
       </div>
@@ -124,17 +128,19 @@ export function renderTimetable() {
   qsa(section, '[data-block-delete]').forEach((btn) =>
     btn.addEventListener('click', async (event) => {
       event.stopPropagation()
-      const block = state.timetable.find((b) => b.id === btn.dataset.blockDelete)
+      const block = activeTimetable(state).find((b) => b.id === btn.dataset.blockDelete)
       if (!block) return
       const ok = await confirmDialog({
         title: 'Delete this block?',
-        message: `“${block.title}” at ${block.time} will be removed from your daily timetable.`,
+        message: `“${block.title}” at ${block.time} will be removed from the ${activeMission(state.missions).exam} timetable.`,
         confirmText: 'Delete',
         danger: true,
       })
       if (!ok) return
       commit((s) => {
-        s.timetable = s.timetable.filter((b) => b.id !== block.id)
+        const list = timetableSlot(s)
+        const index = list.findIndex((b) => b.id === block.id)
+        if (index !== -1) list.splice(index, 1)
       })
       toast('Block deleted', 'info')
     }),
@@ -176,7 +182,7 @@ function blockRowHtml(item, log, nowMin) {
 export function toggleBlock(id) {
   const today = currentDayKey()
   const stats = statsFor(today)
-  const block = state.timetable.find((b) => b.id === id)
+  const block = activeTimetable(state).find((b) => b.id === id)
   let nowDone = false
   commit((s) => {
     if (!s.completionLog[today]) s.completionLog[today] = { ttDone: [], taskDone: [] }
@@ -212,9 +218,11 @@ async function resetToday() {
 }
 
 export function openBlockModal(id = null) {
-  const block = id ? state.timetable.find((b) => b.id === id) : null
+  const mission = activeMission(state.missions)
+  const block = id ? activeTimetable(state).find((b) => b.id === id) : null
   const body = `
     <form id="block-form" class="space-y-4">
+      <p class="text-[12px] text-slate-400 -mt-1"><i class="fa-solid fa-flag mr-1.5 text-accent-2"></i>Saved to the <span class="text-slate-200 font-semibold">${escapeHtml(mission.exam)} ${mission.year}</span> timetable — every mission keeps its own schedule.</p>
       <div>
         <label class="field-label" for="block-title">Title</label>
         <input required class="input-field" id="block-title" name="title" placeholder="e.g. Deep study block" value="${block ? escapeHtml(block.title) : ''}">
@@ -258,11 +266,12 @@ export function openBlockModal(id = null) {
           currentDayKey(),
         )
         commit((s) => {
+          const list = timetableSlot(s)
           if (block) {
-            const target = s.timetable.find((b) => b.id === block.id)
+            const target = list.find((b) => b.id === block.id)
             Object.assign(target, { title, time, duration, cat })
           } else {
-            s.timetable.push({ id: `${title.slice(0, 3).replace(/\W/g, '')}${Date.now().toString(36)}`, title, time, duration, cat })
+            list.push({ id: `${title.slice(0, 3).replace(/\W/g, '')}${Date.now().toString(36)}`, title, time, duration, cat })
           }
         })
         closeModal()
@@ -277,7 +286,7 @@ export function openBlockModal(id = null) {
 
 function nextFreeTime() {
   const nowMin = minutesNow()
-  const sorted = [...state.timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const sorted = [...activeTimetable(state)].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
   for (let i = 0; i < sorted.length; i++) {
     const start = minutesOfDay(sorted[i].time)
     const end = start + (sorted[i].duration || 60)
