@@ -13,6 +13,7 @@
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_TIMETABLE, STATE_VERSION } from './defaults.js'
 import { isValidKey, minutesOfDay } from './dates.js'
 import { normalizeRecurrence } from './recurrence.js'
+import { normalizeMissions } from './missions.js'
 
 /** Legacy key kept for backward compatibility with existing installs. */
 export const STORAGE_KEY = 'kcc_state_v1'
@@ -61,6 +62,7 @@ export function normalizeTimetableItem(item, ctx) {
     title: String(item?.title || 'Untitled block').slice(0, 160),
     duration: clampNumber(item?.duration, 5, 600, 60),
     cat: item?.cat ? String(item.cat) : null,
+    ...(item?.missionId ? { missionId: String(item.missionId) } : {}),
   }
 }
 
@@ -83,6 +85,7 @@ export function normalizeTask(task, ctx) {
     completedAt: Number.isFinite(task?.completedAt) ? task.completedAt : null,
     recurrence,
     seriesId,
+    ...(task?.missionId ? { missionId: String(task.missionId) } : {}),
     occurrenceDate: isValidKey(task?.occurrenceDate) ? task.occurrenceDate : seriesId ? date : null,
   }
 }
@@ -143,6 +146,7 @@ export function normalizeSettings(raw) {
 export function emptyState(ctx = makeContext()) {
   const state = {
     version: STATE_VERSION,
+    missions: normalizeMissions(null),
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
     timetable: ensureIds(DEFAULT_TIMETABLE, ctx).map((item) => normalizeTimetableItem(item, ctx)),
     tasks: [],
@@ -195,6 +199,7 @@ export function migrateState(raw, ctx = makeContext()) {
     applied.push('migrateStateV2ToV3')
     version = 3
   }
+  if (version < 4) { working = { ...working, version: 4 }; applied.push('migrateStateV3ToV4'); version = 4 }
 
   const state = normalizeState(working, ctx, warnings)
   state.meta = {
@@ -281,6 +286,7 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
     .map((c) => normalizeCategory(c))
     .filter((c, index, all) => all.findIndex((x) => x.id === c.id) === index)
   if (!state.categories.length) state.categories = DEFAULT_CATEGORIES.map((c) => ({ ...c }))
+  state.missions = normalizeMissions(raw.missions)
   const catIds = new Set(state.categories.map((c) => c.id))
 
   state.timetable = asArray(raw.timetable).map((item) => normalizeTimetableItem(item, ctx))
