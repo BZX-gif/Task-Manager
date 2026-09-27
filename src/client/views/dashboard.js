@@ -19,7 +19,7 @@ import { openTaskModal } from './tasks.js'
 import { openWeeklyReview } from './review.js'
 import { openRecoveryModal } from './recovery.js'
 import { formatUnlockDate } from '../lib/achievements.js'
-import { activeMission } from '../lib/missions.js'
+import { activeMission, activeTimetable } from '../lib/missions.js'
 
 export function renderDashboard() {
   const section = document.getElementById('view-dashboard')
@@ -32,7 +32,8 @@ export function renderDashboard() {
   const discipline = titles.disciplineMonster
   const activeId = state.missions?.activeMissionId
   const missionTasks = state.tasks.filter((item) => !item.missionId || item.missionId === activeId)
-  const missionState = { ...state, tasks: missionTasks, timetable: state.timetable.filter((item) => !item.missionId || item.missionId === activeId) }
+  // v5: each mission has its own timetable — the dashboard follows the active one.
+  const missionState = { ...state, tasks: missionTasks, timetable: activeTimetable(state) }
   const action = currentAction(now, today, missionState)
   const top3 = top3Stats(missionState, today)
   const overdue = overdueTasks(missionState, today)
@@ -59,7 +60,7 @@ export function renderDashboard() {
     <div class="today-hero">
       <p class="today-eyebrow">Today · ${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
       <h2 class="today-headline">${stats.hasData && stats.score === 100 ? 'A day to be proud of.' : openToday.length ? `${openToday.length} open task${openToday.length === 1 ? '' : 's'}. One clear next step.` : 'Make room for what matters.'}</h2>
-      <p class="today-subline">${state.timetable.length} scheduled blocks · ${top3.done} of ${top3.total} priorities complete. ${stats.onTrack ? 'You’re on track. Keep your attention here.' : 'Choose your next action, then give it your attention.'}</p>
+      <p class="today-subline">${missionState.timetable.length} scheduled blocks · ${top3.done} of ${top3.total} priorities complete. ${stats.onTrack ? 'You’re on track. Keep your attention here.' : 'Choose your next action, then give it your attention.'}</p>
       <div class="today-actions flex flex-wrap gap-2">
         <button class="btn-ghost" data-action="recover"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Recover My Day</button>
         <button class="btn-ghost" data-action="review"><i class="fa-solid fa-clipboard-list mr-1.5"></i>Weekly Review</button>
@@ -485,10 +486,10 @@ function weekTrend(now) {
     focusTotal += stats.focusedMinutes
     rows.push({ key, label: weekdayShort(date.getDay()), score: stats.score, focus: stats.focusedMinutes })
   }
-  const categories = [...new Set(state.timetable.map((b) => b.cat).filter(Boolean))]
+  const categories = [...new Set(activeTimetable(state).map((b) => b.cat).filter(Boolean))]
   const categoryRows = (state.categories.length ? state.categories : [])
     .map((cat) => {
-      const blocks = state.timetable.filter((b) => b.cat === cat.id)
+      const blocks = activeTimetable(state).filter((b) => b.cat === cat.id)
       let planned = 0
       let done = 0
       for (const row of rows) {

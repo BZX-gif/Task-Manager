@@ -11,6 +11,7 @@ import {
   evaluateTitles,
 } from '../../src/client/lib/achievements.js'
 import { emptyState, makeContext } from '../../src/client/lib/state.js'
+import { activeTimetable } from '../../src/client/lib/missions.js'
 
 function makeState(overrides = {}) {
   const ctx = makeContext({ now: Date.now(), id: (() => { let i = 0; return () => `id-${i++}` })() })
@@ -42,10 +43,11 @@ function addTask(state, date, done = true) {
 
 function setTimetableDone(state, dateKeyValue, allDone = true) {
   if (!state.completionLog[dateKeyValue]) state.completionLog[dateKeyValue] = { ttDone: [], taskDone: [] }
+  const timetable = activeTimetable(state)
   if (allDone) {
-    state.completionLog[dateKeyValue].ttDone = state.timetable.map((b) => b.id)
+    state.completionLog[dateKeyValue].ttDone = timetable.map((b) => b.id)
   } else {
-    state.completionLog[dateKeyValue].ttDone = state.timetable.slice(0, Math.floor(state.timetable.length / 2)).map((b) => b.id)
+    state.completionLog[dateKeyValue].ttDone = timetable.slice(0, Math.floor(timetable.length / 2)).map((b) => b.id)
   }
 }
 
@@ -162,7 +164,7 @@ test('Zero tasks does not count as perfect', () => {
 test('Zero timetable commitments does not count', () => {
   const today = '2026-09-15'
   const state = makeState()
-  state.timetable = [] // no blocks
+  state.timetables.ssc_cgl_2027 = [] // no blocks in the active mission's timetable
   addTask(state, today, true)
   const now = new Date(`${today}T12:00:00`)
   const prog = computeLiveDayProgress(state, today, today, now)

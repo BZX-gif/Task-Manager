@@ -14,6 +14,7 @@
    ------------------------------------------------------------------------- */
 
 import { addDays, minutesOfDay, toHHMM } from './dates.js'
+import { activeTimetable } from './missions.js'
 import { protectionAt } from './protected.js'
 
 export const DEFAULT_BEFORE_MINUTES = 10
@@ -42,9 +43,9 @@ export function computeDueReminders({ state, todayKey, nowMinutes, now = new Dat
   const ttDone = Array.isArray(log.ttDone) ? log.ttDone : []
   const due = []
 
-  // 1 — timetable blocks about to start
+  // 1 — timetable blocks about to start (active mission's timetable only)
   if (settings.timetable !== false) {
-    for (const block of state.timetable || []) {
+    for (const block of activeTimetable(state)) {
       const start = minutesOfDay(block.time)
       const delta = start - nowMinutes
       if (delta > 0 && delta <= before && !ttDone.includes(block.id)) {

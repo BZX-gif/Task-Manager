@@ -11,14 +11,15 @@
    ------------------------------------------------------------------------- */
 
 import { dateKey, minutesOfDay, nowMinutes as nowMinutesOf } from './dates.js'
+import { activeTimetable } from './missions.js'
 import { buildScoreInput, computeDailyScore, focusedMinutesOn, overdueTasks } from './score.js'
 import { sessionTotals } from './focus.js'
 import { top3Stats } from './top3.js'
 
-/** Snapshot the current timetable for `dateKey` (idempotent). */
+/** Snapshot the active mission's timetable for `dateKey` (idempotent). */
 export function materializeDayPlan(state, dateKey) {
   if (!state.dayPlans) state.dayPlans = {}
-  const snapshot = (state.timetable || []).map((b) => ({
+  const snapshot = activeTimetable(state).map((b) => ({
     id: b.id,
     time: b.time,
     title: b.title,
@@ -32,12 +33,12 @@ export function materializeDayPlan(state, dateKey) {
 
 /**
  * The timetable that applied on a given day.
- * Falls back to the current timetable (+ completion log) for legacy days.
+ * Falls back to the active mission's timetable (+ completion log) for legacy days.
  */
 export function dayPlanFor(state, dateKey) {
   const snap = state.dayPlans?.[dateKey]
   if (Array.isArray(snap) && snap.length) return snap
-  return (state.timetable || []).map((b) => ({ id: b.id, time: b.time, title: b.title, duration: b.duration || 60, cat: b.cat || null }))
+  return activeTimetable(state).map((b) => ({ id: b.id, time: b.time, title: b.title, duration: b.duration || 60, cat: b.cat || null }))
 }
 
 /**

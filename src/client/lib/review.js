@@ -18,6 +18,7 @@
 import { formatDuration, minutesOfDay, weekDates, weekdayName, weekdayOf } from './dates.js'
 import { rangeDayStats } from './daystats.js'
 import { categoryInsights, focusTimeOfDay, plannedLoadByDay, strongestAndWeakest } from './insights.js'
+import { activeTimetable } from './missions.js'
 import { STREAK_RULE } from './streak.js'
 
 /** The week (Mon–Sun by default) containing `dateKey`. */
@@ -39,7 +40,7 @@ function averageScore(stats, todayKey) {
 }
 
 function timetableHasBuffer(state, minGap = 15) {
-  const sorted = [...(state.timetable || [])].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const sorted = [...activeTimetable(state)].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
   for (let i = 1; i < sorted.length; i++) {
     const prevEnd = minutesOfDay(sorted[i - 1].time) + (sorted[i - 1].duration || 60)
     const gap = minutesOfDay(sorted[i].time) - prevEnd

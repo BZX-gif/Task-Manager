@@ -129,8 +129,8 @@ test('the app boots and renders the dashboard', async () => {
   assert.ok($('#view-dashboard').innerHTML.length > 500, 'dashboard rendered content')
   assert.match(window.document.getElementById('greeting-text').textContent, /Kulshresth/)
   const seeded = state()
-  assert.ok(seeded.timetable.length >= 10, 'the default timetable is present')
-  assert.equal(seeded.version, 4)
+  assert.ok(seeded.timetables.ssc_cgl_2027.length >= 10, "the active mission's default timetable is present")
+  assert.equal(seeded.version, 5)
 })
 
 test('the daily score card explains its own formula', async () => {
@@ -296,18 +296,18 @@ test('weekly review modal renders real numbers and recommendations', async () =>
 })
 
 test('recover my day proposes a plan without touching the timetable', async () => {
-  const before = JSON.stringify(state().timetable)
+  const before = JSON.stringify(state().timetables.ssc_cgl_2027)
   window.CC.openRecoveryModal({ nowMinutes: 14 * 60 })
   await settle()
   const modal = $('[data-modal-box]')
   assert.match(modal.textContent, /Recover My Day/)
   assert.match(modal.textContent, /(Missed|Free time left)/)
-  assert.equal(JSON.stringify(state().timetable), before, 'nothing applied until the user confirms')
+  assert.equal(JSON.stringify(state().timetables.ssc_cgl_2027), before, 'nothing applied until the user confirms')
   const apply = $('[data-apply]')
   if (apply && !apply.disabled) {
     click(apply)
     await settle()
-    assert.notEqual(JSON.stringify(state().timetable), before, 'applying reschedules missed blocks')
+    assert.notEqual(JSON.stringify(state().timetables.ssc_cgl_2027), before, 'applying reschedules missed blocks')
   }
   window.CC.closeModal()
 })

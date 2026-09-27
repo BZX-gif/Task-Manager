@@ -8,6 +8,7 @@ import { buildExport, describeImport, exportFilename, validateImport } from '../
 import { reminderSummary } from '../lib/reminders.js'
 import { describeBlock } from '../lib/protected.js'
 import { STORAGE_KEY, storageUsage, uid } from '../lib/state.js'
+import { allTimetableBlocks } from '../lib/missions.js'
 import { closeModal, confirmDialog, copyText, escapeHtml, openModal, qsa, toast } from '../core/dom.js'
 import { commit, currentDayKey, getStatus, replaceState, state, titlesInfo } from '../core/store.js'
 import { fieldRow } from './shared.js'
@@ -213,7 +214,7 @@ export function renderSettings() {
           <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
             <input type="color" value="${escapeHtml(cat.color)}" class="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer" data-category-color="${escapeHtml(cat.id)}" aria-label="Colour for ${escapeHtml(cat.name)}">
             <input class="input-field flex-1 !py-1.5" value="${escapeHtml(cat.name)}" data-category-name="${escapeHtml(cat.id)}" aria-label="Name for ${escapeHtml(cat.name)}">
-            <span class="text-xs text-slate-500 whitespace-nowrap">${state.timetable.filter((t) => t.cat === cat.id).length} blocks</span>
+            <span class="text-xs text-slate-500 whitespace-nowrap">${allTimetableBlocks(state).filter((t) => t.cat === cat.id).length} blocks</span>
             <button class="icon-btn" data-category-delete="${escapeHtml(cat.id)}" title="Delete category"><i class="fa-solid fa-trash text-xs"></i></button>
           </div>`,
           )
@@ -377,7 +378,7 @@ function bindSettings(section) {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.categoryDelete
       const cat = state.categories.find((c) => c.id === id)
-      const used = state.timetable.filter((b) => b.cat === id).length + state.tasks.filter((t) => t.cat === id).length
+      const used = allTimetableBlocks(state).filter((b) => b.cat === id).length + state.tasks.filter((t) => t.cat === id).length
       const ok = await confirmDialog({
         title: `Delete “${cat?.name || id}”?`,
         message: used ? `${used} item${used === 1 ? '' : 's'} use this category — they become uncategorised.` : 'This category is unused.',
@@ -387,7 +388,7 @@ function bindSettings(section) {
       if (!ok) return
       commit((s) => {
         s.categories = s.categories.filter((c) => c.id !== id)
-        s.timetable.forEach((b) => {
+        allTimetableBlocks(s).forEach((b) => {
           if (b.cat === id) b.cat = null
         })
         s.tasks.forEach((t) => {
@@ -617,7 +618,7 @@ export async function resetAllData() {
   const second = await confirmDialog({
     title: 'Really delete everything?',
     message: 'Export a backup first if you might need this data. Type nothing — just confirm to wipe.',
-    details: `${state.tasks.length} tasks · ${state.timetable.length} blocks · ${state.focus.sessions.length} focus sessions`,
+    details: `${state.tasks.length} tasks · ${allTimetableBlocks(state).length} blocks · ${state.focus.sessions.length} focus sessions`,
     confirmText: 'Delete everything',
     danger: true,
   })

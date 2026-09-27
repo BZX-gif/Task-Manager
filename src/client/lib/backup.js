@@ -11,6 +11,7 @@
    ------------------------------------------------------------------------- */
 
 import { migrateState, normalizeState, makeContext, uid as defaultUid } from './state.js'
+import { allTimetableBlocks } from './missions.js'
 import { STATE_VERSION } from './defaults.js'
 
 export const BACKUP_KIND = 'command-center-backup'
@@ -27,7 +28,7 @@ export function buildExport(state, { now = Date.now(), app = "Kulshresth's Comma
     exportedAt: new Date(now).toISOString(),
     counts: {
       tasks: data.tasks?.length ?? 0,
-      timetable: data.timetable?.length ?? 0,
+      timetable: allTimetableBlocks(data).length,
       focusSessions: data.focus?.sessions?.length ?? 0,
       days: Object.keys(data.completionLog || {}).length,
     },
@@ -74,7 +75,7 @@ export function validateImport(payload, { now = Date.now(), id = defaultUid } = 
     warnings.push('Legacy backup detected (raw state file) — it will be migrated to the current schema.')
   }
 
-  const hasAnything = ['tasks', 'timetable', 'completionLog', 'focus', 'categories', 'settings'].some((key) => key in data)
+  const hasAnything = ['tasks', 'timetable', 'timetables', 'completionLog', 'focus', 'categories', 'settings'].some((key) => key in data)
   if (!hasAnything) {
     return { ok: false, errors: ['This JSON has no Command Center data (no tasks, timetable or history found).'], warnings, state: null, summary: null, sourceVersion }
   }
@@ -97,7 +98,7 @@ export function validateImport(payload, { now = Date.now(), id = defaultUid } = 
 
   // sanity checks on required collections
   if (!Array.isArray(state.tasks)) errors.push('`tasks` is not a list.')
-  if (!Array.isArray(state.timetable)) errors.push('`timetable` is not a list.')
+  if (!state.timetables || typeof state.timetables !== 'object') errors.push('`timetables` is not a map of mission schedules.')
   if (errors.length) return { ok: false, errors, warnings, state: null, summary: null, sourceVersion }
 
   const normalized = normalizeState(state, ctx, warnings)
@@ -114,7 +115,7 @@ export function validateImport(payload, { now = Date.now(), id = defaultUid } = 
     sourceVersion,
     summary: {
       categories: normalized.categories.length,
-      timetable: normalized.timetable.length,
+      timetable: allTimetableBlocks(normalized).length,
       tasks: normalized.tasks.length,
       openTasks: normalized.tasks.filter((t) => !t.done).length,
       recurring: normalized.tasks.filter((t) => t.recurrence).length,

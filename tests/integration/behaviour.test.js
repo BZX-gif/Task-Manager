@@ -81,12 +81,12 @@ test('a legacy v1 payload boots into v2 with every record intact', async () => {
     await settle(120)
     const state = window.CC.getState()
 
-    assert.equal(state.version, 4)
+    assert.equal(state.version, 5)
     assert.equal(state.tasks.length >= 2, true, 'tasks preserved')
     assert.ok(state.tasks.some((t) => t.title === 'Revise Polity' && t.done === true))
-    assert.equal(state.timetable.length, 1)
-    assert.equal(state.timetable[0].title, 'Deep study')
-    assert.ok(state.timetable[0].id, 'timetable blocks received ids')
+    assert.equal(state.timetables.upsc_cse_2028.length, 1, 'the legacy timetable is preserved as the UPSC schedule')
+    assert.equal(state.timetables.upsc_cse_2028[0].title, 'Deep study')
+    assert.ok(state.timetables.upsc_cse_2028[0].id, 'timetable blocks received ids')
     assert.equal(state.completionLog['2026-09-10'].taskDone.join(','), 't1')
     assert.equal(state.settings.geminiApiKey, undefined, 'the browser API key is gone')
     assert.ok(state.focus && Array.isArray(state.focus.sessions), 'new collections exist')
@@ -106,7 +106,7 @@ test('a legacy v1 payload boots into v2 with every record intact', async () => {
 test('an unreadable payload is rescued, reported and never silently dropped', async () => {
   const { window, errors, toasts, $ } = await boot({ seed: '{not json' })
   try {
-    assert.ok(window.CC.getState().timetable.length > 0, 'falls back to defaults')
+    assert.ok(window.CC.getState().timetables.ssc_cgl_2027.length > 0, 'falls back to defaults')
     assert.equal(window.localStorage.getItem('kcc_backup_unreadable'), '{not json', 'a copy is parked under a rescue key')
     assert.ok(toasts.some((t) => /could not be read/i.test(t)), `the user is told (${toasts.join(' | ')})`)
     assert.equal($('#view-dashboard').innerHTML.length > 100, true)
@@ -194,7 +194,7 @@ test('reminders fire once, and only for what is due', async () => {
     const soon = new Date(Date.now() + 5 * 60_000)
     const time = `${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`
     state.settings.reminders = { ...state.settings.reminders, enabled: true, beforeMinutes: 10, top3NudgeAt: '' }
-    state.timetable = [
+    state.timetables.ssc_cgl_2027 = [
       { id: 'soon', time, title: 'Geography revision', duration: 60, cat: 'upsc' },
       { id: 'later', time: '23:45', title: 'Late block', duration: 10, cat: 'upsc' },
     ]
@@ -229,7 +229,7 @@ test('protected time blocks are honoured by the recovery planner', async () => {
     state.settings.protectedTime = [{ id: 'sleep', label: 'Sleep', start: '23:00', end: '06:00', days: [] }]
     state.settings.dayEnd = '23:30'
     const today = window.CC.todayKey()
-    state.timetable = [
+    state.timetables.ssc_cgl_2027 = [
       { id: 'b1', time: '08:00', title: 'Missed block 1', duration: 60, cat: 'upsc' },
       { id: 'b2', time: '09:00', title: 'Missed block 2', duration: 60, cat: 'upsc' },
     ]
@@ -245,7 +245,7 @@ test('protected time blocks are honoured by the recovery planner', async () => {
     window.CC.closeModal()
 
     // timetable conflict warning
-    state.timetable.push({ id: 'late', time: '23:15', title: 'Late night block', duration: 30, cat: 'upsc' })
+    state.timetables.ssc_cgl_2027.push({ id: 'late', time: '23:15', title: 'Late night block', duration: 30, cat: 'upsc' })
     window.CC.switchView('timetable')
     await settle(60)
     const view = window.document.querySelector('#view-timetable').textContent

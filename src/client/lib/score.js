@@ -23,6 +23,7 @@
    ------------------------------------------------------------------------- */
 
 import { minutesOfDay, nowMinutes as nowMinutesOf } from './dates.js'
+import { activeTimetable } from './missions.js'
 
 export const SCORE_WEIGHTS = {
   tasks: 30,
@@ -179,7 +180,7 @@ export function buildScoreInput(state, dateKey, todayKey, now = new Date()) {
     top3Ids,
     focusedMinutes,
     focusTargetMinutes: state.settings?.focus?.targetMinutes ?? 180,
-    blocks: (state.timetable || []).map((b) => ({
+    blocks: activeTimetable(state).map((b) => ({
       id: b.id,
       done: log.ttDone.includes(b.id),
       start: minutesOfDay(b.time),

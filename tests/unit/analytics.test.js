@@ -66,7 +66,7 @@ test('day plans snapshot the timetable so history stays correct', () => {
   const ctx = makeCtx()
   materializeDayPlan(state, TODAY)
   assert.equal(state.dayPlans[TODAY].length, 3)
-  state.timetable = [{ id: 'x', time: '08:00', title: 'New plan', duration: 30, cat: 'upsc' }]
+  state.timetables.ssc_cgl_2027 = [{ id: 'x', time: '08:00', title: 'New plan', duration: 30, cat: 'upsc' }]
   assert.equal(dayPlanFor(state, TODAY).length, 3, 'snapshot wins for the recorded day')
   assert.equal(dayPlanFor(state, '2026-09-28').length, 1, 'unknown days use the live timetable')
   assert.ok(ctx)
