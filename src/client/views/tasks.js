@@ -344,6 +344,7 @@ function submitTask(box, existing) {
         completedAt: null,
         recurrence,
         seriesId: recurrence ? newId : null,
+        missionId: s.missions?.activeMissionId || 'ssc_cgl_2027',
         occurrenceDate: recurrence ? date || today : null,
       })
     }

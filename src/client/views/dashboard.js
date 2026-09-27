@@ -19,6 +19,7 @@ import { openTaskModal } from './tasks.js'
 import { openWeeklyReview } from './review.js'
 import { openRecoveryModal } from './recovery.js'
 import { formatUnlockDate } from '../lib/achievements.js'
+import { activeMission } from '../lib/missions.js'
 
 export function renderDashboard() {
   const section = document.getElementById('view-dashboard')
@@ -29,16 +30,32 @@ export function renderDashboard() {
   const streakInfo = window.CC?.streakInfo?.() || { current: 0, best: 0, recent: [] }
   const titles = titlesInfo(now)
   const discipline = titles.disciplineMonster
-  const action = currentAction(now, today)
-  const top3 = top3Stats(state, today)
-  const overdue = overdueTasks(state, today)
-  const { current, next } = currentBlocks(now)
-  const openToday = state.tasks
+  const activeId = state.missions?.activeMissionId
+  const missionTasks = state.tasks.filter((item) => !item.missionId || item.missionId === activeId)
+  const missionState = { ...state, tasks: missionTasks, timetable: state.timetable.filter((item) => !item.missionId || item.missionId === activeId) }
+  const action = currentAction(now, today, missionState)
+  const top3 = top3Stats(missionState, today)
+  const overdue = overdueTasks(missionState, today)
+  const { current, next } = currentBlocks(now, missionState)
+  const openToday = missionTasks
     .filter((t) => t.date === today && !t.done)
     .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
   const week = weekTrend(now)
 
+  const mission = activeMission(state.missions)
+  const missionOptions = Object.values(state.missions.definitions)
   section.innerHTML = `
+    <section class="glass-card p-5 mb-5 mission-command" aria-label="Current mission and roadmap">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div><p class="text-[11px] uppercase tracking-[.22em] font-bold text-accent-2">Current mission</p>
+          <h2 class="font-display text-2xl font-extrabold text-white mt-1">${escapeHtml(mission.exam)} ${mission.year}</h2>
+          <p class="text-sm text-slate-300 mt-1">${escapeHtml(mission.targetRole)} · ${escapeHtml(mission.target)}</p></div>
+        <label class="field-label sm:min-w-56">Switch mission<select class="input-field mt-2 w-full" data-mission-switch aria-label="Current mission">${missionOptions.map((m) => `<option value="${escapeHtml(m.id)}" ${m.id === mission.id ? 'selected' : ''}>${escapeHtml(m.exam)} ${m.year}</option>`).join('')}</select></label>
+      </div>
+      <div class="mt-5 pt-4 border-t border-white/5"><p class="text-[11px] uppercase tracking-[.2em] font-bold text-slate-500 mb-3">My roadmap</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">${missionOptions.map((m) => `<div class="rounded-xl border p-3 ${m.id === mission.id ? 'border-amber-400/50 bg-amber-400/5' : 'border-white/5 bg-white/[.02]'}"><p class="text-xs ${m.id === mission.id ? 'text-amber-300' : 'text-slate-500'}">${m.id === mission.id ? '● ACTIVE' : '○'} · ${m.year}</p><p class="font-semibold text-white mt-1">${escapeHtml(m.exam)}</p><p class="text-xs text-slate-400 mt-1">${escapeHtml(m.targetRole)} · ${escapeHtml(m.target)}</p></div>`).join('')}</div>
+      </div>
+    </section>
     <div class="today-hero">
       <p class="today-eyebrow">Today · ${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
       <h2 class="today-headline">${stats.hasData && stats.score === 100 ? 'A day to be proud of.' : openToday.length ? `${openToday.length} open task${openToday.length === 1 ? '' : 's'}. One clear next step.` : 'Make room for what matters.'}</h2>
@@ -350,6 +367,11 @@ function taskLineHtml(task, today) {
 /* ---------------------------------------------------------------- binding */
 
 function bindDashboard(section, { today, action, discipline }) {
+  section.querySelector('[data-mission-switch]')?.addEventListener('change', (event) => {
+    const missionId = event.target.value
+    commit((s) => { s.missions.activeMissionId = missionId; for (const m of Object.values(s.missions.definitions)) m.status = m.id === missionId ? 'active' : 'future' })
+    renderDashboard()
+  })
   qsa(section, '[data-action]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const kind = btn.dataset.action
@@ -422,9 +444,9 @@ function toggleTask(id) {
 
 /* ------------------------------------------------------------- live pieces */
 
-function currentBlocks(now) {
+function currentBlocks(now, scope = state) {
   const nowMin = nowMinutesOf(now)
-  const sorted = [...state.timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const sorted = [...scope.timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
   const log = state.completionLog[currentDayKey(now)] || { ttDone: [] }
   let current = null
   let next = null
@@ -437,12 +459,12 @@ function currentBlocks(now) {
   return { current, next }
 }
 
-function currentAction(now, today) {
+function currentAction(now, today, scope = state) {
   const nowMin = nowMinutesOf(now)
   const log = state.completionLog[today] || { ttDone: [] }
   return selectNextAction({
-    tasks: state.tasks,
-    timetable: state.timetable,
+    tasks: scope.tasks,
+    timetable: scope.timetable,
     ttDone: log.ttDone,
     top3Ids: state.top3?.[today] || [],
     todayKey: today,

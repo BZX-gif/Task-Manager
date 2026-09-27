@@ -28,20 +28,24 @@ export function buildAiContext(state, options = {}) {
   const todayKey = options.todayKey || dateKey()
   const now = options.now || new Date()
   const maxChars = options.maxChars || MAX_CONTEXT_CHARS
-  const stats = dayStats(state, todayKey, { todayKey, now })
-  const top3 = top3Stats(state, todayKey)
-  const today = (state.tasks || []).filter((t) => t.date === todayKey)
-  const overdue = overdueTasks(state, todayKey)
+  const mission = state.missions?.definitions?.[state.missions?.activeMissionId]
+  const activeId = state.missions?.activeMissionId
+  const inMission = (item) => !item.missionId || item.missionId === activeId
+  const scopedState = { ...state, tasks: (state.tasks || []).filter(inMission), timetable: (state.timetable || []).filter(inMission) }
+  const stats = dayStats(scopedState, todayKey, { todayKey, now })
+  const top3 = top3Stats(scopedState, todayKey)
+  const today = scopedState.tasks.filter((t) => t.date === todayKey)
+  const overdue = overdueTasks(scopedState, todayKey)
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  const blocks = [...(state.timetable || [])].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const blocks = [...scopedState.timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
   const log = state.completionLog?.[todayKey] || { ttDone: [] }
   const currentBlock = blocks.find((b) => nowMin >= minutesOfDay(b.time) && nowMin < minutesOfDay(b.time) + (b.duration || 60))
   const nextBlock = blocks.find((b) => minutesOfDay(b.time) > nowMin)
 
   const next = selectNextAction({
-    tasks: state.tasks || [],
-    timetable: state.timetable || [],
+    tasks: scopedState.tasks,
+    timetable: scopedState.timetable,
     ttDone: log.ttDone || [],
     top3Ids: state.top3?.[todayKey] || [],
     todayKey,
@@ -61,6 +65,7 @@ export function buildAiContext(state, options = {}) {
   }
 
   const lines = [
+    ...(mission ? [`ACTIVE MISSION: ${mission.exam} ${mission.year} → ${mission.targetRole} → ${mission.target}. Do not recommend other roadmap missions unless explicitly asked.`] : []),
     `Date: ${todayKey} (${weekdayName(new Date(`${todayKey}T12:00:00`).getDay())}), time ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
     `Daily score: ${stats.hasData ? `${stats.score}/100` : 'not enough data yet'} (pace ${stats.pace})`,
     `Top 3 (${top3.done}/${top3.total}): ${top3.items.map((i) => `${i.task.title}${i.task.done ? ' ✓' : ''}`).join('; ') || 'none chosen'}`,
