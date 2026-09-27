@@ -11,8 +11,8 @@
    ------------------------------------------------------------------------- */
 
 import { addDays, dateKey, formatDuration, minutesOfDay, weekdayName } from './dates.js'
-import { dayStats } from './daystats.js'
-import { activeTimetable } from './missions.js'
+import { dayPlanFor, dayStats } from './daystats.js'
+import { activeMissionId } from './missions.js'
 import { overdueTasks } from './score.js'
 import { selectNextAction } from './nextaction.js'
 import { top3Stats } from './top3.js'
@@ -30,10 +30,11 @@ export function buildAiContext(state, options = {}) {
   const now = options.now || new Date()
   const maxChars = options.maxChars || MAX_CONTEXT_CHARS
   const mission = state.missions?.definitions?.[state.missions?.activeMissionId]
-  const activeId = state.missions?.activeMissionId
+  const activeId = activeMissionId(state)
   const inMission = (item) => !item.missionId || item.missionId === activeId
-  // v5: the active mission has its own timetable — the assistant only sees it.
-  const scopedState = { ...state, tasks: (state.tasks || []).filter(inMission), timetable: activeTimetable(state) }
+  // v5: the assistant only ever sees the active mission's day plan (snapshot
+  // for today, that mission's timetable otherwise) — never another mission's.
+  const scopedState = { ...state, tasks: (state.tasks || []).filter(inMission), timetable: dayPlanFor(state, todayKey) }
   const stats = dayStats(scopedState, todayKey, { todayKey, now })
   const top3 = top3Stats(scopedState, todayKey)
   const today = scopedState.tasks.filter((t) => t.date === todayKey)
@@ -124,7 +125,7 @@ export function buildCommandPrompt(id, { task = null } = {}) {
 /** Where to find the first free slot for a task (used by the planner hints). */
 export function nextFreeSlot(state, todayKey, now = new Date(), durationMinutes = 30) {
   const nowMin = now.getHours() * 60 + now.getMinutes()
-  const blocks = [...activeTimetable(state)].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const blocks = [...dayPlanFor(state, todayKey)].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
   let cursor = nowMin + 5
   for (const block of blocks) {
     const start = minutesOfDay(block.time)

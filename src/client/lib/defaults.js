@@ -9,10 +9,16 @@ export const DEFAULT_CATEGORIES = [
   { id: 'body', name: 'Body & Recovery', color: '#34d399' },
   { id: 'upsc', name: 'UPSC Core', color: '#3b82f6' },
   { id: 'ssc', name: 'SSC · News · CA', color: '#f59e0b' },
+  { id: 'ras', name: 'RAS Core', color: '#c084fc' },
   { id: 'meals', name: 'Meals & Rest', color: '#94a3b8' },
 ]
 
-/** ids are generated at load time (see store.ensureIds) */
+/**
+ * The original pre-v5 schedule — the user's historical UPSC-oriented day.
+ * ids are generated at load time (see store.ensureIds).
+ * Preserved verbatim as the UPSC CSE 2028 mission's timetable: never replace
+ * or restyle these blocks, they are real historical schedule data.
+ */
 export const DEFAULT_TIMETABLE = [
   { time: '05:00', title: 'Wake up · 500ml water · no phone', cat: 'body', duration: 15 },
   { time: '05:15', title: 'WORKOUT — 45 min (Mon/Wed/Fri strength · Tue/Thu/Sat cardio)', cat: 'body', duration: 45 },
@@ -32,6 +38,70 @@ export const DEFAULT_TIMETABLE = [
   { time: '22:30', title: 'Walk out / stretch 10 min · plan tomorrow\'s 3 tasks', cat: 'body', duration: 30 },
   { time: '23:00', title: 'SLEEP — non-negotiable 6h minimum', cat: 'body', duration: 360 },
 ]
+
+/**
+ * v5 starter timetables. `DEFAULT_TIMETABLE` above is the UPSC-era day and is
+ * reused verbatim for the UPSC CSE mission. SSC and RAS get genuinely
+ * exam-oriented starter days (still fully editable in the timetable screen):
+ * the same realistic routine skeleton — wake, workout, meals, recovery — with
+ * study blocks that match what each exam actually demands.
+ */
+export const SSC_STARTER_TIMETABLE = [
+  { time: '05:00', title: 'Wake up · 500ml water · no phone', cat: 'body', duration: 15 },
+  { time: '05:15', title: 'WORKOUT — 45 min (Mon/Wed/Fri strength · Tue/Thu/Sat cardio)', cat: 'body', duration: 45 },
+  { time: '06:00', title: 'Cold-ish shower + high-protein breakfast', cat: 'meals', duration: 30 },
+  { time: '06:30', title: 'QUANTITATIVE APTITUDE — hardest topic first (2h)', cat: 'ssc', duration: 120 },
+  { time: '08:30', title: 'Calculation practice — speed maths drill (30 min)', cat: 'ssc', duration: 30 },
+  { time: '09:00', title: 'REASONING — topic drill + shortcuts (75 min)', cat: 'ssc', duration: 75 },
+  { time: '10:15', title: 'Break — light snack + 10-min walk', cat: 'meals', duration: 15 },
+  { time: '10:30', title: 'ENGLISH — Grammar, Vocabulary & Reading Comprehension (75 min)', cat: 'ssc', duration: 75 },
+  { time: '11:45', title: 'STATIC GK / GS — Polity · History · Geography · Science (75 min)', cat: 'ssc', duration: 75 },
+  { time: '13:00', title: 'Lunch (light!) + 20-min power nap', cat: 'meals', duration: 60 },
+  { time: '14:00', title: 'PYQ PRACTICE — previous-year questions, timed (90 min)', cat: 'ssc', duration: 90 },
+  { time: '15:30', title: 'Tea + 15-min walk (snack: sprouts/peanuts)', cat: 'meals', duration: 30 },
+  { time: '16:00', title: 'SECTIONAL / MOCK PRACTICE — timed test + analysis (105 min)', cat: 'ssc', duration: 105 },
+  { time: '17:45', title: 'REVISION — error log & weak areas (60 min)', cat: 'ssc', duration: 60 },
+  { time: '18:45', title: 'Current affairs — daily news + CA notes (45 min)', cat: 'ssc', duration: 45 },
+  { time: '19:30', title: 'Dinner — lightest meal, high protein', cat: 'meals', duration: 45 },
+  { time: '20:15', title: 'Formula recap + flashcards (45 min)', cat: 'ssc', duration: 45 },
+  { time: '21:00', title: 'Walk out / stretch 10 min · plan tomorrow\'s 3 tasks', cat: 'body', duration: 30 },
+  { time: '21:45', title: 'Wind-down — no phone, tomorrow\'s material ready', cat: 'body', duration: 30 },
+  { time: '22:30', title: 'SLEEP — non-negotiable 6h minimum', cat: 'body', duration: 390 },
+]
+
+export const RAS_STARTER_TIMETABLE = [
+  { time: '05:00', title: 'Wake up · 500ml water · no phone', cat: 'body', duration: 15 },
+  { time: '05:15', title: 'WORKOUT — 45 min (strength · cardio mix)', cat: 'body', duration: 45 },
+  { time: '06:00', title: 'Cold-ish shower + high-protein breakfast', cat: 'meals', duration: 30 },
+  { time: '06:30', title: 'RAJASTHAN GK — History · Culture · Art & Heritage (2h)', cat: 'ras', duration: 120 },
+  { time: '08:30', title: 'RAJASTHAN GEOGRAPHY — land, rivers, climate, agriculture (75 min)', cat: 'ras', duration: 75 },
+  { time: '09:45', title: 'Break — light snack + 10-min walk', cat: 'meals', duration: 15 },
+  { time: '10:00', title: 'POLITY — Indian Constitution + Rajasthan polity (75 min)', cat: 'ras', duration: 75 },
+  { time: '11:15', title: 'GENERAL SCIENCE — Physics · Chemistry · Biology basics (60 min)', cat: 'ras', duration: 60 },
+  { time: '12:15', title: 'Lunch (light!) + 20-min power nap', cat: 'meals', duration: 60 },
+  { time: '13:15', title: 'QUANTITATIVE APTITUDE + REASONING — prelims drill (75 min)', cat: 'ras', duration: 75 },
+  { time: '14:30', title: 'PYQ PRACTICE — RPSC previous-year papers, timed (75 min)', cat: 'ras', duration: 75 },
+  { time: '15:45', title: 'Tea + 15-min walk (snack: sprouts/peanuts)', cat: 'meals', duration: 30 },
+  { time: '16:15', title: 'MOCK / SECTIONAL TEST — timed paper + analysis (90 min)', cat: 'ras', duration: 90 },
+  { time: '17:45', title: 'ANSWER WRITING — mains-style answers (60 min)', cat: 'ras', duration: 60 },
+  { time: '18:45', title: 'REVISION — Rajasthan notes recap + error log (45 min)', cat: 'ras', duration: 45 },
+  { time: '19:30', title: 'Dinner — lightest meal, high protein', cat: 'meals', duration: 45 },
+  { time: '20:15', title: 'Rajasthan current affairs — news, schemes & government policies (45 min)', cat: 'ras', duration: 45 },
+  { time: '21:00', title: 'English / Hindi comprehension + vocabulary (30 min)', cat: 'ras', duration: 30 },
+  { time: '21:45', title: 'Walk out / stretch 10 min · plan tomorrow\'s 3 tasks', cat: 'body', duration: 30 },
+  { time: '22:30', title: 'SLEEP — non-negotiable 6h minimum', cat: 'body', duration: 390 },
+]
+
+/** Which starter day each mission begins (and migrates) with. */
+export const MISSION_STARTER_TIMETABLES = {
+  ssc_cgl_2027: SSC_STARTER_TIMETABLE,
+  ras_2028: RAS_STARTER_TIMETABLE,
+  upsc_cse_2028: DEFAULT_TIMETABLE,
+}
+
+export function starterTimetableFor(missionId) {
+  return MISSION_STARTER_TIMETABLES[missionId] || DEFAULT_TIMETABLE
+}
 
 export const DEFAULT_SETTINGS = {
   theme: 'dark',

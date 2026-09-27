@@ -3,7 +3,8 @@
    ------------------------------------------------------------------------- */
 
 import { formatDuration, minutesOfDay } from '../lib/dates.js'
-import { activeMission, activeTimetable, timetableSlot } from '../lib/missions.js'
+import { dayPlanFor } from '../lib/daystats.js'
+import { activeMission, timetableSlot } from '../lib/missions.js'
 import { applyRecovery, planRecovery, undoRecovery } from '../lib/recovery.js'
 import { closeModal, escapeHtml, openModal, toast } from '../core/dom.js'
 import { commit, currentDayKey, minutesNow, state } from '../core/store.js'
@@ -12,9 +13,10 @@ export function openRecoveryModal({ nowMinutes = minutesNow() } = {}) {
   const today = currentDayKey()
   const log = state.completionLog[today] || { ttDone: [] }
   const mission = activeMission(state.missions)
-  // v5: recovery only ever reshuffles the active mission's timetable
+  // v5: recovery only ever reshuffles the active mission's day plan — its
+  // timetable/snapshot, never another mission's schedule
   const plan = planRecovery({
-    timetable: activeTimetable(state),
+    timetable: dayPlanFor(state, today),
     ttDone: log.ttDone,
     nowMinutes,
     dayEndMinutes: minutesOfDay(state.settings.dayEnd || '23:30'),

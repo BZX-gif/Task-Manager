@@ -67,7 +67,7 @@ test('migrateState normalises junk values instead of throwing', () => {
     completionLog: { 'not-a-date': {} },
     top3: { '2026-09-15': ['ghost'] },
   })
-  assert.equal(state.categories.length, 4, 'falls back to the default categories')
+  assert.equal(state.categories.length, 5, 'falls back to the default categories (incl. RAS Core)')
   assert.equal(state.timetables.upsc_cse_2028[0].time, '09:00', 'invalid times fall back')
   assert.equal(state.timetables.upsc_cse_2028[0].duration, 60)
   assert.equal(state.tasks.length, 2)
