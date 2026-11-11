@@ -25,7 +25,7 @@ export function openQuickCapture({ inbox = false, prefill = '' } = {}) {
         <input class="input-field !text-[15px]" id="capture-title" placeholder="What needs doing?" value="${escapeHtml(prefill)}" autocomplete="off">
       </div>
       <div class="flex flex-wrap gap-1.5" data-capture-dates>
-        <button type="button" class="preset-btn preset-active" data-date="${today}">Today</button>
+        <button type="button" class="preset-btn ${inbox ? '' : 'preset-active'}" data-date="${today}">Today</button>
         <button type="button" class="preset-btn" data-date="${addDays(today, 1)}">Tomorrow</button>
         <button type="button" class="preset-btn" data-date="custom">Pick a date…</button>
         <button type="button" class="preset-btn ${inbox ? 'preset-active' : ''}" data-date="inbox">Inbox (no date)</button>

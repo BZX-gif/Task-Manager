@@ -102,7 +102,7 @@ window.CC = {
 function bindKeyboard() {
   document.addEventListener('keydown', (event) => {
     const target = event.target
-    const typing = target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    const typing = target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)
 
     // Ctrl/⌘ + K — quick capture anywhere
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
