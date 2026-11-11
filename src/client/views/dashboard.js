@@ -49,29 +49,28 @@ export function renderDashboard() {
   const missionOptions = Object.values(state.missions.definitions)
   section.innerHTML = `
     <div class="dashboard-heading">
-      <div><p class="workspace-kicker"><span></span> YOUR PERSONAL WORKSPACE</p><h2>Overview<span class="heading-period">.</span></h2><p>A little progress, every single day.</p></div>
+      <div><p class="workspace-kicker"><span></span> YOUR PERSONAL WORKSPACE</p><h2>Today, at a glance<span class="heading-period">.</span></h2><p>Everything you need to move forward, in one place.</p></div>
       <div class="dashboard-date"><i class="fa-regular fa-calendar" aria-hidden="true"></i> ${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</div>
     </div>
 
     <div class="today-hero">
       <div class="hero-content">
-        <p class="today-eyebrow"><span class="live-indicator"></span> YOUR SPACE TO FOCUS</p>
-        <h2 class="today-headline">Make room for<br /><span>what matters.</span></h2>
+        <p class="today-eyebrow"><span class="live-indicator"></span> A LITTLE MORE INTENTIONAL, EVERY DAY</p>
+        <h2 class="today-headline">Make space for<br /><span>what matters.</span></h2>
         <p class="today-subline">${stats.hasData && stats.score === 100 ? 'A day to be proud of. Take a moment to appreciate how far you’ve come.' : 'A clearer mind starts with a little direction. Let’s make today count, one step at a time.'}</p>
         <div class="today-actions flex flex-wrap gap-2">
           <button class="btn-primary hero-primary" data-action="new-task"><i class="fa-solid fa-plus mr-1.5"></i> Add a task</button>
-          <button class="hero-link" data-action="review">View weekly review <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+          <button class="hero-link" data-action="focus"><i class="fa-solid fa-play" aria-hidden="true"></i> Start a focus session</button>
         </div>
       </div>
-      <div class="hero-art" aria-hidden="true"><div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><div class="hero-orb"><div class="orb-shine"></div></div><span class="hero-spark spark-one">✳</span><span class="hero-spark spark-two">✦</span></div>
       <div class="hero-bottom"><span><i class="fa-solid fa-crosshairs" aria-hidden="true"></i> CURRENT MISSION <strong>${escapeHtml(mission.exam)} ${mission.year}</strong></span><span class="hero-bottom-right">YOUR JOURNEY, YOUR PACE <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i></span></div>
     </div>
 
     <div class="overview-stats" aria-label="Today's overview">
-      <div class="overview-stat"><span class="stat-icon stat-icon-purple"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span><div><p>OPEN TASKS</p><strong>${openToday.length}</strong><small> to do today</small></div></div>
-      <div class="overview-stat"><span class="stat-icon stat-icon-blue"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i></span><div><p>SCHEDULED</p><strong>${missionState.timetable.length}</strong><small> blocks planned</small></div></div>
-      <div class="overview-stat"><span class="stat-icon stat-icon-peach"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span><div><p>PRIORITIES</p><strong>${top3.done}<span> / ${top3.total}</span></strong><small> completed</small></div></div>
-      <div class="overview-stat"><span class="stat-icon stat-icon-green"><i class="fa-solid fa-fire" aria-hidden="true"></i></span><div><p>DAY STREAK</p><strong>${streakInfo.current}</strong><small> days in a row</small></div></div>
+      <button class="overview-stat" data-action="view-tasks"><span class="stat-icon stat-icon-purple"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Open tasks</span><strong>${openToday.length}</strong><small>to do today</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
+      <button class="overview-stat" data-action="view-timetable"><span class="stat-icon stat-icon-blue"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Scheduled</span><strong>${missionState.timetable.length}</strong><small>blocks planned</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
+      <button class="overview-stat" data-action="view-tasks"><span class="stat-icon stat-icon-peach"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Priorities</span><strong>${top3.done}<span> / ${top3.total}</span></strong><small>completed</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
+      <button class="overview-stat" data-action="view-progress"><span class="stat-icon stat-icon-green"><i class="fa-solid fa-fire" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Day streak</span><strong>${streakInfo.current}</strong><small>days in a row</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
     </div>
 
     <div class="dashboard-section-heading"><div><p>THE DAY AHEAD</p><h3>Make today yours</h3></div><button class="section-text-button" data-action="recover">Recover my day <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
@@ -93,7 +92,7 @@ export function renderDashboard() {
                <div class="flex flex-col sm:flex-row gap-2">
                  <select class="input-field flex-1" data-top3-picker>
                    <option value="">Choose an open task…</option>
-                   ${top3Candidates(state, today, { overdueIds: overdue.map((t) => t.id) })
+                   ${top3Candidates(missionState, today, { overdueIds: overdue.map((t) => t.id) })
                      .map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`)
                      .join('')}
                  </select>
@@ -133,7 +132,7 @@ export function renderDashboard() {
       </div>
     </details>
 
-    <div class="dashboard-section-heading"><div><p>YOUR MOMENTUM</p><h3>Progress, in perspective</h3></div></div>
+    <div class="dashboard-section-heading"><div><p>YOUR MOMENTUM</p><h3>Progress, in perspective</h3></div><button class="section-text-button" data-action="review">Weekly review <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
     <!-- Progress · Consistency · Achievement -->
     <div class="dashboard-progress">
       <div class="glass-card p-5" data-card="score">
@@ -398,6 +397,10 @@ function bindDashboard(section, { today, action, discipline }) {
       if (kind === 'new-task') openTaskModal()
       else if (kind === 'review') openWeeklyReview()
       else if (kind === 'recover') openRecoveryModal()
+      else if (kind === 'focus') window.CC.openFocusMode(undefined)
+      else if (kind === 'view-tasks') window.CC.switchView('tasks')
+      else if (kind === 'view-timetable') window.CC.switchView('timetable')
+      else if (kind === 'view-progress') window.CC.switchView('progress')
     })
   })
 

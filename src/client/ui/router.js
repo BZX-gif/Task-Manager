@@ -52,6 +52,12 @@ export function switchView(view) {
     btn.setAttribute('aria-current', active ? 'page' : 'false')
   })
   qsa(document, '.nav-pill').forEach((btn) => btn.classList.toggle('active-pill', btn.dataset.view === view))
+  qsa(document, '.dock-item').forEach((btn) => {
+    const active = btn.dataset.view === view
+    btn.classList.toggle('is-active', active)
+    if (active) btn.setAttribute('aria-current', 'page')
+    else btn.removeAttribute('aria-current')
+  })
   setMobileNav(false)
   renderCurrentView()
   // The view swap above is synchronous; CSS owns the entrance. Re-showing a

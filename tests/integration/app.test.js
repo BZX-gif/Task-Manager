@@ -148,6 +148,25 @@ test('the overview keeps its roadmap and actions usable across refreshes', async
   await settle()
 })
 
+test('overview shortcuts and mobile dock navigate to the right workspace', () => {
+  click('.overview-stat[data-action="view-timetable"]')
+  assert.equal($('#view-timetable').classList.contains('hidden'), false)
+  assert.equal($('#mobile-dock [data-view="timetable"]').getAttribute('aria-current'), 'page')
+  click('#mobile-dock [data-view="tasks"]')
+  assert.equal($('#view-tasks').classList.contains('hidden'), false)
+  assert.equal($('#mobile-dock [data-view="tasks"]').getAttribute('aria-current'), 'page')
+  assert.equal($('#mobile-dock [data-view="timetable"]').hasAttribute('aria-current'), false)
+  click('#mobile-dock [data-view="dashboard"]')
+  assert.equal($('#view-dashboard').classList.contains('hidden'), false)
+})
+
+test('dashboard artwork is included in the offline shell', async () => {
+  const image = await readFile(path.join(root, 'dist', 'static', 'hero-atmosphere.jpg'))
+  const sw = await readFile(path.join(root, 'dist', 'sw.js'), 'utf8')
+  assert.ok(image.length > 0)
+  assert.match(sw, /hero-atmosphere\.jpg/)
+})
+
 test('mobile navigation closes with its accessibility state in sync', () => {
   click('#mobile-menu-btn')
   assert.equal($('#mobile-menu-btn').getAttribute('aria-expanded'), 'true')

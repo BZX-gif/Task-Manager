@@ -7,13 +7,14 @@
    • /api/* is never cached — AI responses must always be live.
    ------------------------------------------------------------------------- */
 
-const VERSION = 'v2-3-2'
+const VERSION = 'v2-3-3'
 const SHELL_CACHE = `cc-shell-${VERSION}`
 const ASSET_CACHE = `cc-assets-${VERSION}`
 
 const SHELL_ASSETS = [
   '/',
   '/static/style.css',
+  '/static/hero-atmosphere.jpg',
   '/static/tailwind.css',
   '/static/js/app.js',
   '/static/vendor/fontawesome/css/all.min.css',
@@ -80,7 +81,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(ASSET_CACHE)
-      const cached = await cache.match(request)
+      const shell = await caches.open(SHELL_CACHE)
+      const cached = (await cache.match(request)) || (await shell.match(request))
       if (cached) {
         // refresh in the background for the next load
         fetch(request)
@@ -95,7 +97,7 @@ self.addEventListener('fetch', (event) => {
         if (response && response.ok) cache.put(request, response.clone())
         return response
       } catch {
-        return (await caches.match('/static/js/app.js')) || Response.error()
+        return Response.error()
       }
     })(),
   )
