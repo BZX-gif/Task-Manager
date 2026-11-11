@@ -17,7 +17,7 @@ export function renderShell(): string {
 
 <!-- PWA -->
 <link rel="manifest" href="/manifest.webmanifest" />
-<meta name="theme-color" content="#0b0d11" />
+<meta name="theme-color" content="#11151b" />
 <meta name="color-scheme" content="dark" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -35,7 +35,7 @@ export function renderShell(): string {
 <link href="/static/style.css" rel="stylesheet" />
 </head>
 <body class="font-body bg-base-950 text-slate-200 antialiased selection:bg-accent/40 selection:text-white">
-<a href="#view-dashboard" class="skip-link">Skip to content</a>
+<a href="#main-content" class="skip-link">Skip to content</a>
 <div id="app" class="relative z-10 min-h-screen flex">
 <aside id="sidebar" class="hidden lg:flex flex-col w-[248px] shrink-0 border-r border-white/5 px-4 py-6 gap-1">
 <div class="brand-lockup"><div class="brand-mark"><i class="fa-solid fa-layer-group"></i></div><div><p class="brand-name">Command Center<span>.</span></p><p class="brand-caption">PERSONAL WORKSPACE</p></div></div>
@@ -64,7 +64,14 @@ export function renderShell(): string {
 </aside>
 <div class="flex-1 flex flex-col min-w-0">
 <header class="sticky top-0 z-30 border-b border-white/5"><div class="px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-3"><button id="mobile-menu-btn" class="lg:hidden w-11 h-11 rounded-xl bg-base-800/80 grid place-items-center border border-white/5" aria-label="Open navigation menu" aria-expanded="false"><i class="fa-solid fa-bars text-slate-300"></i></button><div class="flex-1 min-w-0"><h1 id="greeting-text" class="font-display font-bold text-white text-base sm:text-lg truncate">Loading…</h1><p id="quote-text" class="text-[12px] sm:text-[13px] text-slate-400 truncate">Your space to focus on what matters.</p></div><button id="active-timer-chip" class="hidden items-center gap-2 px-3 py-1.5 rounded-full bg-accent/15 border border-accent/30 text-[13px] text-white font-semibold" title="Return to your running focus session"><i class="fa-solid fa-stopwatch text-accent-2 text-xs"></i><span id="active-timer-chip-text">25:00</span></button><div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-800/70 border border-white/5 text-[13px] text-slate-300 font-medium" title="Local time"><i class="fa-regular fa-clock text-accent-2 text-xs"></i><span id="live-clock">--:--:--</span></div><button id="quick-add-btn" aria-label="Add task" class="btn-primary inline-flex items-center gap-1.5 px-3.5 py-2" title="Quick capture (Ctrl + K)"><i class="fa-solid fa-plus text-xs"></i><span class="hidden sm:inline">Quick add</span></button><div class="brand-avatar" title="${USER_NAME}">K</div></div><nav id="mobile-nav" class="lg:hidden hidden px-4 pb-3 flex gap-2 overflow-x-auto" aria-label="Mobile"><button data-view="dashboard" class="nav-pill active-pill"><i class="fa-solid fa-gauge-high"></i> Dashboard</button><button data-view="timetable" class="nav-pill"><i class="fa-solid fa-table-cells-large"></i> Timetable</button><button data-view="tasks" class="nav-pill"><i class="fa-solid fa-list-check"></i> Tasks</button><button data-view="focus" class="nav-pill"><i class="fa-solid fa-stopwatch"></i> Focus</button><button data-view="progress" class="nav-pill"><i class="fa-solid fa-chart-line"></i> Progress</button><button data-view="assistant" class="nav-pill"><i class="fa-solid fa-robot"></i> Assistant</button><button data-view="settings" class="nav-pill"><i class="fa-solid fa-gear"></i> Settings</button></nav></header>
-<main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1400px] w-full mx-auto"><section id="view-dashboard" class="view-section space-y-6"></section><section id="view-timetable" class="view-section hidden space-y-5"></section><section id="view-tasks" class="view-section hidden space-y-5"></section><section id="view-progress" class="view-section hidden space-y-6"></section><section id="view-assistant" class="view-section hidden"></section><section id="view-settings" class="view-section hidden space-y-6"></section></main><footer class="text-center text-[11px] text-slate-600 py-4">Built for ${USER_NAME} · Data stored 100% locally in your browser · v${APP_VERSION}</footer></div></div>
+<main id="main-content" tabindex="-1" class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1400px] w-full mx-auto"><section id="view-dashboard" class="view-section space-y-6"></section><section id="view-timetable" class="view-section hidden space-y-5"></section><section id="view-tasks" class="view-section hidden space-y-5"></section><section id="view-progress" class="view-section hidden space-y-6"></section><section id="view-assistant" class="view-section hidden"></section><section id="view-settings" class="view-section hidden space-y-6"></section></main><footer class="text-center text-[11px] text-slate-600 py-4">Built for ${USER_NAME} · Data stored 100% locally in your browser · v${APP_VERSION}</footer></div></div>
+<nav id="mobile-dock" class="mobile-dock" aria-label="Quick navigation">
+<button class="dock-item" data-view="dashboard"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Today</span></button>
+<button class="dock-item" data-view="tasks"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Tasks</span></button>
+<button class="dock-item" data-view="focus"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i><span>Focus</span></button>
+<button class="dock-item" data-view="timetable"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span>Schedule</span></button>
+<button class="dock-item" data-view="progress"><i class="fa-solid fa-chart-simple" aria-hidden="true"></i><span>Progress</span></button>
+</nav>
 <div id="modal-root"></div>
 <div id="focus-root"></div>
 <div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2 items-end" aria-live="polite" aria-atomic="false"></div>
