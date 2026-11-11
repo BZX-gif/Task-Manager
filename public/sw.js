@@ -7,13 +7,15 @@
    • /api/* is never cached — AI responses must always be live.
    ------------------------------------------------------------------------- */
 
-const VERSION = 'v2-3-3'
+const VERSION = 'v2-3-4'
 const SHELL_CACHE = `cc-shell-${VERSION}`
 const ASSET_CACHE = `cc-assets-${VERSION}`
 
 const SHELL_ASSETS = [
   '/',
   '/static/style.css',
+  '/static/studio.css',
+  '/static/daylight-studio.jpg',
   '/static/hero-atmosphere.jpg',
   '/static/tailwind.css',
   '/static/js/app.js',

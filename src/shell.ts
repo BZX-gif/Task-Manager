@@ -17,11 +17,11 @@ export function renderShell(): string {
 
 <!-- PWA -->
 <link rel="manifest" href="/manifest.webmanifest" />
-<meta name="theme-color" content="#11151b" />
-<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#f3f2ec" />
+<meta name="color-scheme" content="light" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Command Center" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 
@@ -33,15 +33,16 @@ export function renderShell(): string {
 <link href="/static/tailwind.css" rel="stylesheet" />
 <link href="/static/vendor/fontawesome/css/all.min.css" rel="stylesheet" />
 <link href="/static/style.css" rel="stylesheet" />
+<link href="/static/studio.css" rel="stylesheet" />
 </head>
 <body class="font-body bg-base-950 text-slate-200 antialiased selection:bg-accent/40 selection:text-white">
 <a href="#main-content" class="skip-link">Skip to content</a>
 <div id="app" class="relative z-10 min-h-screen flex">
 <aside id="sidebar" class="hidden lg:flex flex-col w-[248px] shrink-0 border-r border-white/5 px-4 py-6 gap-1">
-<div class="brand-lockup"><div class="brand-mark"><i class="fa-solid fa-layer-group"></i></div><div><p class="brand-name">Command Center<span>.</span></p><p class="brand-caption">PERSONAL WORKSPACE</p></div></div>
+<div class="brand-lockup"><div class="brand-mark"><i class="fa-solid fa-asterisk"></i></div><div><p class="brand-name">Command Center<span>.</span></p><p class="brand-caption">SPACE TO DO YOUR BEST</p></div></div>
 <p class="nav-label">WORKSPACE</p><nav class="flex flex-col gap-1" id="nav-list" aria-label="Primary">
-<button data-view="dashboard" class="nav-item active-nav"><i class="fa-solid fa-gauge-high w-5"></i><span>Overview</span></button>
-<button data-view="timetable" class="nav-item"><i class="fa-solid fa-table-cells-large w-5"></i><span>Timetable</span></button>
+<button data-view="dashboard" class="nav-item active-nav"><i class="fa-solid fa-gauge-high w-5"></i><span>Today</span></button>
+<button data-view="timetable" class="nav-item"><i class="fa-solid fa-table-cells-large w-5"></i><span>Schedule</span></button>
 <button data-view="tasks" class="nav-item"><i class="fa-solid fa-list-check w-5"></i><span>Tasks</span></button>
 <button data-view="focus" class="nav-item"><i class="fa-solid fa-stopwatch w-5"></i><span>Focus Mode</span></button>
 <button data-view="progress" class="nav-item"><i class="fa-solid fa-chart-line w-5"></i><span>Progress</span></button>

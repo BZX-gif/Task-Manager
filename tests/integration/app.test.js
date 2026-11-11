@@ -87,7 +87,7 @@ test('worker serves the shell, static assets and the ai endpoint', async () => {
 
   // static assets are served by Cloudflare's asset layer (before the worker),
   // so verify they are present in the build output the worker deploys with
-  const shellAssets = ['static/js/app.js', 'static/tailwind.css', 'static/style.css', 'static/favicon.svg', 'manifest.webmanifest', 'icons/apple-touch-icon.png']
+  const shellAssets = ['static/js/app.js', 'static/tailwind.css', 'static/style.css', 'static/studio.css', 'static/favicon.svg', 'manifest.webmanifest', 'icons/apple-touch-icon.png']
   const optionalAssets = ['sw.js', 'static/vendor/fontawesome/css/all.min.css', 'icons/apple-touch-icon.png', 'static/fonts.css', 'static/fonts/sora-latin-700.woff2']
   for (const asset of [...shellAssets, ...optionalAssets]) {
     const content = await readFile(path.join(root, 'dist', asset)).catch(() => null)
@@ -165,6 +165,24 @@ test('dashboard artwork is included in the offline shell', async () => {
   const sw = await readFile(path.join(root, 'dist', 'sw.js'), 'utf8')
   assert.ok(image.length > 0)
   assert.match(sw, /hero-atmosphere\.jpg/)
+})
+
+test('daily brief shows the current day and opens the schedule', () => {
+  assert.ok($('.daily-brief .brief-date').textContent.trim().length > 0)
+  assert.ok($('.daily-brief .brief-next strong').textContent.trim().length > 0)
+  click('.daily-brief [data-action="view-timetable"]')
+  assert.equal($('#view-timetable').classList.contains('hidden'), false)
+  window.CC.switchView('dashboard')
+})
+
+test('the studio artwork and styling are bundled for offline use', async () => {
+  const image = await readFile(path.join(root, 'dist', 'static', 'daylight-studio.jpg'))
+  const css = await readFile(path.join(root, 'dist', 'static', 'studio.css'), 'utf8')
+  const sw = await readFile(path.join(root, 'dist', 'sw.js'), 'utf8')
+  assert.ok(image.length > 0)
+  assert.match(css, /daylight-studio\.jpg/)
+  assert.match(sw, /daylight-studio\.jpg/)
+  assert.match(sw, /studio\.css/)
 })
 
 test('mobile navigation closes with its accessibility state in sync', () => {
