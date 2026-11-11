@@ -193,7 +193,7 @@ function drawTrendChart(rows) {
         {
           label: 'Score',
           data: rows.map((r) => r.score),
-          backgroundColor: rows.map((r) => (r.score >= 80 ? 'rgba(87,178,140,0.85)' : r.score >= 50 ? 'rgba(91,147,230,0.85)' : r.score > 0 ? 'rgba(207,159,95,0.8)' : 'rgba(255,255,255,0.07)')),
+          backgroundColor: rows.map((r) => (r.score >= 80 ? 'rgba(87,178,140,0.85)' : r.score >= 50 ? 'rgba(91,147,230,0.85)' : r.score > 0 ? 'rgba(207,159,95,0.8)' : 'rgba(39,53,44,0.08)')),
           borderRadius: 6,
           maxBarThickness: rows.length > 60 ? 6 : 26,
           yAxisID: 'y',
@@ -215,7 +215,7 @@ function drawTrendChart(rows) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7c8499' } },
+        y: { min: 0, max: 100, grid: { color: 'rgba(39,53,44,0.09)' }, ticks: { color: '#7c8499' } },
         y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#7c8499', callback: (v) => `${v}m` } },
         x: { grid: { display: false }, ticks: { color: '#7c8499', maxRotation: 0, autoSkip: true } },
       },
@@ -235,7 +235,7 @@ function drawCategoryChart(categories) {
         {
           data: withTime.map((c) => c.plannedMinutes),
           backgroundColor: withTime.map((c) => c.color),
-          borderColor: '#0a0e1a',
+          borderColor: '#fffefa',
           borderWidth: 3,
         },
       ],
@@ -244,7 +244,7 @@ function drawCategoryChart(categories) {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '68%',
-      plugins: { legend: { position: 'bottom', labels: { color: '#9aa3ba', boxWidth: 10, font: { size: 11 }, padding: 10 } } },
+      plugins: { legend: { position: 'bottom', labels: { color: '#6c796e', boxWidth: 10, font: { size: 11 }, padding: 10 } } },
     },
   })
 }
@@ -258,7 +258,7 @@ function drawFocusChart(rows) {
         {
           label: 'Focused minutes',
           data: rows.map((r) => r.focusedMinutes),
-          backgroundColor: 'rgba(34,211,238,0.7)',
+          backgroundColor: 'rgba(103,153,115,0.75)',
           borderRadius: 6,
           maxBarThickness: rows.length > 60 ? 6 : 24,
         },
@@ -269,7 +269,7 @@ function drawFocusChart(rows) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { min: 0, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7c8499', callback: (v) => `${v}m` } },
+        y: { min: 0, grid: { color: 'rgba(39,53,44,0.09)' }, ticks: { color: '#7c8499', callback: (v) => `${v}m` } },
         x: { grid: { display: false }, ticks: { color: '#7c8499', autoSkip: true, maxRotation: 0 } },
       },
     },

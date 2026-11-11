@@ -49,21 +49,30 @@ export function renderDashboard() {
   const missionOptions = Object.values(state.missions.definitions)
   section.innerHTML = `
     <div class="dashboard-heading">
-      <div><p class="workspace-kicker"><span></span> YOUR PERSONAL WORKSPACE</p><h2>Today, at a glance<span class="heading-period">.</span></h2><p>Everything you need to move forward, in one place.</p></div>
+      <div><p class="workspace-kicker"><span></span> THE PERSONAL WORKSPACE</p><h2>A little more <em>intentional.</em></h2><p>Make space for a day that feels like yours.</p></div>
       <div class="dashboard-date"><i class="fa-regular fa-calendar" aria-hidden="true"></i> ${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</div>
     </div>
 
+    <div class="dashboard-intro">
     <div class="today-hero">
       <div class="hero-content">
-        <p class="today-eyebrow"><span class="live-indicator"></span> A LITTLE MORE INTENTIONAL, EVERY DAY</p>
-        <h2 class="today-headline">Make space for<br /><span>what matters.</span></h2>
-        <p class="today-subline">${stats.hasData && stats.score === 100 ? 'A day to be proud of. Take a moment to appreciate how far you’ve come.' : 'A clearer mind starts with a little direction. Let’s make today count, one step at a time.'}</p>
+        <p class="today-eyebrow"><span class="live-indicator"></span> A FRESH START, EVERY DAY</p>
+        <h2 class="today-headline">A clearer mind.<br /><span>A better day.</span></h2>
+        <p class="today-subline">${stats.hasData && stats.score === 100 ? 'A day to be proud of. Take a moment to appreciate how far you’ve come.' : 'A little structure goes a long way. Take a breath, choose what matters, and begin.'}</p>
         <div class="today-actions flex flex-wrap gap-2">
           <button class="btn-primary hero-primary" data-action="new-task"><i class="fa-solid fa-plus mr-1.5"></i> Add a task</button>
           <button class="hero-link" data-action="focus"><i class="fa-solid fa-play" aria-hidden="true"></i> Start a focus session</button>
         </div>
       </div>
-      <div class="hero-bottom"><span><i class="fa-solid fa-crosshairs" aria-hidden="true"></i> CURRENT MISSION <strong>${escapeHtml(mission.exam)} ${mission.year}</strong></span><span class="hero-bottom-right">YOUR JOURNEY, YOUR PACE <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i></span></div>
+      <div class="hero-bottom"><span><i class="fa-solid fa-crosshairs" aria-hidden="true"></i> CURRENT MISSION <strong>${escapeHtml(mission.exam)} ${mission.year}</strong></span><span class="hero-bottom-right">ONE DAY AT A TIME <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i></span></div>
+    </div>
+    <aside class="daily-brief" aria-label="Today's brief">
+      <div class="brief-heading"><span>THE DAILY BRIEF</span><i class="fa-solid fa-asterisk" aria-hidden="true"></i></div>
+      <div class="brief-date">${now.toLocaleDateString([], { weekday: 'long' })}<span>${now.toLocaleDateString([], { month: 'long', day: 'numeric' })}</span></div>
+      <div class="brief-divider"></div>
+      <div class="brief-next"><span>${current ? 'HAPPENING NOW' : next ? 'COMING UP' : 'YOUR SCHEDULE'}</span><strong>${current || next ? escapeHtml((current || next).title) : 'A little room to breathe'}</strong><small>${current || next ? `${escapeHtml((current || next).time)} · ${escapeHtml(categoryName((current || next).cat))}` : 'No upcoming blocks today'}</small></div>
+      <button class="brief-link" data-action="view-timetable">Open schedule <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+    </aside>
     </div>
 
     <div class="overview-stats" aria-label="Today's overview">
@@ -73,7 +82,7 @@ export function renderDashboard() {
       <button class="overview-stat" data-action="view-progress"><span class="stat-icon stat-icon-green"><i class="fa-solid fa-fire" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Day streak</span><strong>${streakInfo.current}</strong><small>days in a row</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
     </div>
 
-    <div class="dashboard-section-heading"><div><p>THE DAY AHEAD</p><h3>Make today yours</h3></div><button class="section-text-button" data-action="recover">Recover my day <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
+    <div class="dashboard-section-heading"><div><p>01 / THE DAY AHEAD</p><h3>Where to begin</h3></div><button class="section-text-button" data-action="recover">Recover my day <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
 
     <!-- Top 3 + Do This Now -->
     <div class="dashboard-priorities grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -132,7 +141,7 @@ export function renderDashboard() {
       </div>
     </details>
 
-    <div class="dashboard-section-heading"><div><p>YOUR MOMENTUM</p><h3>Progress, in perspective</h3></div><button class="section-text-button" data-action="review">Weekly review <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
+    <div class="dashboard-section-heading"><div><p>02 / YOUR MOMENTUM</p><h3>Progress, in perspective</h3></div><button class="section-text-button" data-action="review">Weekly review <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
     <!-- Progress · Consistency · Achievement -->
     <div class="dashboard-progress">
       <div class="glass-card p-5" data-card="score">
@@ -311,7 +320,7 @@ function disciplineCardHtml(d) {
       <p class="font-display font-extrabold text-white text-3xl mt-1">${d.current}<span class="text-base text-slate-500"> day${d.current === 1 ? '' : 's'}</span></p>
       <div class="progress-track mt-3 !h-2"><div class="progress-fill discipline-fill" style="width:${pct}%"></div></div>
       <div class="flex gap-1 mt-3">
-        ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? '#fbbf24' : 'rgba(255,255,255,0.08)'}" title="${day.dateKey} · ${day.perfect ? 'Perfect ✓' : 'Not perfect'}"></span>`).join('')}
+        ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? '#fbbf24' : 'rgba(76,99,77,0.15)'}" title="${day.dateKey} · ${day.perfect ? 'Perfect ✓' : 'Not perfect'}"></span>`).join('')}
       </div>
       <p class="text-[12px] text-slate-400 mt-3">${d.remaining === 0 ? 'Complete today to keep the streak!' : `${d.remaining} perfect day${d.remaining === 1 ? '' : 's'} to go`}</p>
       <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">100% tasks + 100% timetable for 10 consecutive days. Zero-task days don't count.</p>
@@ -536,8 +545,8 @@ function drawWeekChart(week) {
         {
           label: 'Score',
           data: week.rows.map((r) => r.score),
-          borderColor: '#5b93e6',
-          backgroundColor: 'rgba(91,147,230,0.08)',
+          borderColor: '#61836c',
+          backgroundColor: 'rgba(97,131,108,0.09)',
           fill: true,
           tension: 0.4,
           pointRadius: 3,
@@ -561,7 +570,7 @@ function drawWeekChart(week) {
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false } },
       scales: {
-        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7c8499' } },
+        y: { min: 0, max: 100, grid: { color: 'rgba(39,53,44,0.09)' }, ticks: { color: '#7c8499' } },
         y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#7c8499', callback: (v) => `${v}m` } },
         x: { grid: { display: false }, ticks: { color: '#7c8499' } },
       },
