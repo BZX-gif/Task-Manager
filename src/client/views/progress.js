@@ -43,16 +43,17 @@ export function renderProgress() {
   const bestDay = withData.length ? withData.reduce((best, r) => (r.score > best.score ? r : best), withData[0]) : null
 
   section.innerHTML = `
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="view-heading flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="section-title">Progress Analytics</h2>
+        <p class="view-eyebrow">YOUR WORKSPACE / INSIGHTS</p>
+        <h2 class="section-title">Progress Analytics<span class="heading-period">.</span></h2>
         <p class="section-sub">Every number here comes from your own records — no estimates, no demo data.</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <div class="segmented" id="progress-range-seg">
-          <button data-r="week" class="${range === 'week' ? 'seg-active' : ''}">Week</button>
-          <button data-r="month" class="${range === 'month' ? 'seg-active' : ''}">Month</button>
-          <button data-r="year" class="${range === 'year' ? 'seg-active' : ''}">Year</button>
+          <button data-r="week" aria-pressed="${range === 'week'}" class="${range === 'week' ? 'seg-active' : ''}">Week</button>
+          <button data-r="month" aria-pressed="${range === 'month'}" class="${range === 'month' ? 'seg-active' : ''}">Month</button>
+          <button data-r="year" aria-pressed="${range === 'year'}" class="${range === 'year' ? 'seg-active' : ''}">Year</button>
         </div>
         <button class="btn-primary" data-action="review"><i class="fa-solid fa-clipboard-list mr-1.5"></i>Weekly Review</button>
       </div>

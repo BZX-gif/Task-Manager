@@ -24,6 +24,8 @@ import { activeMission, activeTimetable } from '../lib/missions.js'
 export function renderDashboard() {
   const section = document.getElementById('view-dashboard')
   if (!section) return
+  // Keep the roadmap open when background updates refresh the dashboard.
+  const roadmapOpen = section.querySelector('.mission-command')?.hasAttribute('open')
   const now = new Date()
   const today = currentDayKey(now)
   const stats = statsFor(today, { now })
@@ -46,35 +48,42 @@ export function renderDashboard() {
   const mission = activeMission(state.missions)
   const missionOptions = Object.values(state.missions.definitions)
   section.innerHTML = `
-    <section class="glass-card p-5 mb-5 mission-command" aria-label="Current mission and roadmap">
-      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div><p class="text-[11px] uppercase tracking-[.22em] font-bold text-accent-2">Current mission</p>
-          <h2 class="font-display text-2xl font-extrabold text-white mt-1">${escapeHtml(mission.exam)} ${mission.year}</h2>
-          <p class="text-sm text-slate-300 mt-1">${escapeHtml(mission.targetRole)} · ${escapeHtml(mission.target)}</p></div>
-        <label class="field-label sm:min-w-56">Switch mission<select class="input-field mt-2 w-full" data-mission-switch aria-label="Current mission">${missionOptions.map((m) => `<option value="${escapeHtml(m.id)}" ${m.id === mission.id ? 'selected' : ''}>${escapeHtml(m.exam)} ${m.year}</option>`).join('')}</select></label>
-      </div>
-      <div class="mt-5 pt-4 border-t border-white/5"><p class="text-[11px] uppercase tracking-[.2em] font-bold text-slate-500 mb-3">My roadmap</p>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">${missionOptions.map((m) => `<div class="rounded-xl border p-3 ${m.id === mission.id ? 'border-amber-400/50 bg-amber-400/5' : 'border-white/5 bg-white/[.02]'}"><p class="text-xs ${m.id === mission.id ? 'text-amber-300' : 'text-slate-500'}">${m.id === mission.id ? '● ACTIVE' : '○'} · ${m.year}</p><p class="font-semibold text-white mt-1">${escapeHtml(m.exam)}</p><p class="text-xs text-slate-400 mt-1">${escapeHtml(m.targetRole)} · ${escapeHtml(m.target)}</p></div>`).join('')}</div>
-      </div>
-    </section>
-    <div class="today-hero">
-      <p class="today-eyebrow">Today · ${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-      <h2 class="today-headline">${stats.hasData && stats.score === 100 ? 'A day to be proud of.' : openToday.length ? `${openToday.length} open task${openToday.length === 1 ? '' : 's'}. One clear next step.` : 'Make room for what matters.'}</h2>
-      <p class="today-subline">${missionState.timetable.length} scheduled blocks · ${top3.done} of ${top3.total} priorities complete. ${stats.onTrack ? 'You’re on track. Keep your attention here.' : 'Choose your next action, then give it your attention.'}</p>
-      <div class="today-actions flex flex-wrap gap-2">
-        <button class="btn-ghost" data-action="recover"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Recover My Day</button>
-        <button class="btn-ghost" data-action="review"><i class="fa-solid fa-clipboard-list mr-1.5"></i>Weekly Review</button>
-      </div>
+    <div class="dashboard-heading">
+      <div><p class="workspace-kicker"><span></span> YOUR PERSONAL WORKSPACE</p><h2>Overview<span class="heading-period">.</span></h2><p>A little progress, every single day.</p></div>
+      <div class="dashboard-date"><i class="fa-regular fa-calendar" aria-hidden="true"></i> ${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</div>
     </div>
+
+    <div class="today-hero">
+      <div class="hero-content">
+        <p class="today-eyebrow"><span class="live-indicator"></span> YOUR SPACE TO FOCUS</p>
+        <h2 class="today-headline">Make room for<br /><span>what matters.</span></h2>
+        <p class="today-subline">${stats.hasData && stats.score === 100 ? 'A day to be proud of. Take a moment to appreciate how far you’ve come.' : 'A clearer mind starts with a little direction. Let’s make today count, one step at a time.'}</p>
+        <div class="today-actions flex flex-wrap gap-2">
+          <button class="btn-primary hero-primary" data-action="new-task"><i class="fa-solid fa-plus mr-1.5"></i> Add a task</button>
+          <button class="hero-link" data-action="review">View weekly review <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true"><div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><div class="hero-orb"><div class="orb-shine"></div></div><span class="hero-spark spark-one">✳</span><span class="hero-spark spark-two">✦</span></div>
+      <div class="hero-bottom"><span><i class="fa-solid fa-crosshairs" aria-hidden="true"></i> CURRENT MISSION <strong>${escapeHtml(mission.exam)} ${mission.year}</strong></span><span class="hero-bottom-right">YOUR JOURNEY, YOUR PACE <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i></span></div>
+    </div>
+
+    <div class="overview-stats" aria-label="Today's overview">
+      <div class="overview-stat"><span class="stat-icon stat-icon-purple"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span><div><p>OPEN TASKS</p><strong>${openToday.length}</strong><small> to do today</small></div></div>
+      <div class="overview-stat"><span class="stat-icon stat-icon-blue"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i></span><div><p>SCHEDULED</p><strong>${missionState.timetable.length}</strong><small> blocks planned</small></div></div>
+      <div class="overview-stat"><span class="stat-icon stat-icon-peach"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span><div><p>PRIORITIES</p><strong>${top3.done}<span> / ${top3.total}</span></strong><small> completed</small></div></div>
+      <div class="overview-stat"><span class="stat-icon stat-icon-green"><i class="fa-solid fa-fire" aria-hidden="true"></i></span><div><p>DAY STREAK</p><strong>${streakInfo.current}</strong><small> days in a row</small></div></div>
+    </div>
+
+    <div class="dashboard-section-heading"><div><p>THE DAY AHEAD</p><h3>Make today yours</h3></div><button class="section-text-button" data-action="recover">Recover my day <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
 
     <!-- Top 3 + Do This Now -->
     <div class="dashboard-priorities grid grid-cols-1 lg:grid-cols-2 gap-5">
       <div class="glass-card top3-card p-5" data-card="top3">
         <div class="flex items-center justify-between mb-1">
-          <h3 class="section-title text-base flex items-center gap-2"><span class="top3-badge">TODAY'S TOP 3</span></h3>
+          <h3 class="section-title text-base flex items-center gap-2"><span class="top3-badge">Today's priorities</span></h3>
           <span class="text-[11px] text-slate-500">${top3.done}/${top3.total} done</span>
         </div>
-        <p class="text-[12px] text-slate-500 mb-4">The three things that make today a win.</p>
+        <p class="text-[12px] text-slate-500 mb-4">A little intention goes a long way. Pick up to three.</p>
         <div class="space-y-2.5" data-top3-list>
           ${top3ListHtml(top3)}
         </div>
@@ -96,7 +105,7 @@ export function renderDashboard() {
       </div>
 
       <div class="glass-card now-card p-5" data-card="next-action">
-        <p class="text-[11px] uppercase tracking-[0.25em] font-bold text-accent-2 mb-2">Do this now</p>
+        <p class="text-[11px] uppercase tracking-[0.25em] font-bold text-accent-2 mb-2">YOUR NEXT STEP</p>
         <h3 class="font-display font-bold text-white text-xl leading-snug" data-next-title>${escapeHtml(action.title)}</h3>
         <div class="flex flex-wrap items-center gap-2 mt-2 text-[12px] text-slate-400">
           <span class="chip">${escapeHtml(action.reason)}</span>
@@ -112,10 +121,19 @@ export function renderDashboard() {
                ${action.block ? `<button class="btn-ghost" data-next-block><i class="fa-solid fa-table-cells-large mr-1.5"></i>Timetable</button>` : ''}`
             : `<button class="btn-ghost" data-action="new-task"><i class="fa-solid fa-plus mr-1.5"></i>Plan something</button>`}
         </div>
-        <p class="text-[11.5px] text-slate-500 mt-4">Picked automatically: Top 3 → running block → overdue → priority → next block.</p>
+        <p class="text-[11.5px] text-slate-500 mt-4">A thoughtful suggestion based on your plans and priorities.</p>
       </div>
     </div>
 
+    <details class="mission-command glass-card">
+      <summary><span class="mission-summary-icon"><i class="fa-solid fa-route" aria-hidden="true"></i></span><span class="mission-summary-copy"><span>YOUR ROADMAP</span><strong>${escapeHtml(mission.exam)} ${mission.year}</strong><small>${escapeHtml(mission.targetRole)} · ${escapeHtml(mission.target)}</small></span><span class="mission-summary-action">View roadmap <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span></summary>
+      <div class="mission-details">
+        <label class="field-label">Switch mission<select class="input-field mt-2 w-full" data-mission-switch aria-label="Current mission">${missionOptions.map((m) => `<option value="${escapeHtml(m.id)}" ${m.id === mission.id ? 'selected' : ''}>${escapeHtml(m.exam)} ${m.year}</option>`).join('')}</select></label>
+        <div class="mission-roadmap">${missionOptions.map((m) => `<div class="mission-roadmap-item ${m.id === mission.id ? 'is-active' : ''}"><p>${m.id === mission.id ? '● ACTIVE' : '○ UPCOMING'} · ${m.year}</p><strong>${escapeHtml(m.exam)}</strong><small>${escapeHtml(m.targetRole)} · ${escapeHtml(m.target)}</small></div>`).join('')}</div>
+      </div>
+    </details>
+
+    <div class="dashboard-section-heading"><div><p>YOUR MOMENTUM</p><h3>Progress, in perspective</h3></div></div>
     <!-- Progress · Consistency · Achievement -->
     <div class="dashboard-progress">
       <div class="glass-card p-5" data-card="score">
@@ -248,6 +266,7 @@ export function renderDashboard() {
     </div>
   `
 
+  if (roadmapOpen) section.querySelector('.mission-command')?.setAttribute('open', '')
   bindDashboard(section, { today, action, discipline })
   drawWeekChart(week)
   if (window.CC?.refreshQuoteInline) window.CC.refreshQuoteInline()

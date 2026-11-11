@@ -133,6 +133,82 @@ test('the app boots and renders the dashboard', async () => {
   assert.equal(seeded.version, 5)
 })
 
+test('the overview keeps its roadmap and actions usable across refreshes', async () => {
+  assert.equal($$('.overview-stat').length, 4)
+  const roadmap = $('.mission-command')
+  roadmap.setAttribute('open', '')
+  window.CC.refreshCurrentView()
+  await settle()
+  assert.ok($('.mission-command').hasAttribute('open'), 'roadmap stays open on refresh')
+  assert.ok($('[data-mission-switch]'), 'mission switch remains available')
+  click('.today-hero [data-action="new-task"]')
+  await settle()
+  assert.ok($('[data-modal-box]'), 'hero action opens task creation')
+  window.CC.closeModal()
+  await settle()
+})
+
+test('mobile navigation closes with its accessibility state in sync', () => {
+  click('#mobile-menu-btn')
+  assert.equal($('#mobile-menu-btn').getAttribute('aria-expanded'), 'true')
+  click('#mobile-nav [data-view="tasks"]')
+  assert.equal($('#mobile-menu-btn').getAttribute('aria-expanded'), 'false')
+  assert.ok($('#mobile-nav').classList.contains('hidden'))
+  window.CC.switchView('dashboard')
+})
+
+test('task search offers a clear empty state without breaking inbox actions', async () => {
+  window.CC.switchView('tasks')
+  const search = $('[data-task-search]')
+  search.value = 'a task that does not exist'
+  search.dispatchEvent(new window.Event('input', { bubbles: true }))
+  assert.match($('[data-task-list]').textContent, /No matching tasks/)
+  assert.match($('[data-task-count]').textContent, /0 tasks/)
+  search.value = ''
+  search.dispatchEvent(new window.Event('input', { bubbles: true }))
+  click('[data-f="inbox"]')
+  click('[data-task-list] [data-action="quick-capture-inbox"]')
+  assert.ok($('#capture-form'), 'empty inbox action opens quick capture')
+  assert.equal($('[data-modal-box] [data-capture-dates] .preset-active').dataset.date, 'inbox')
+  window.CC.closeModal()
+  click('[data-f="today"]')
+  window.CC.switchView('dashboard')
+})
+
+test('assistant drafts survive a refresh without stealing focus', async () => {
+  window.CC.switchView('assistant')
+  const input = $('#chat-input')
+  input.value = 'A thought I am still writing'
+  $('#chat-send-btn').focus()
+  window.CC.refreshCurrentView()
+  await settle()
+  assert.equal($('#chat-input').value, 'A thought I am still writing')
+  assert.notEqual(window.document.activeElement, $('#chat-input'))
+  window.CC.switchView('dashboard')
+})
+
+test('quick capture starts with the right inbox state and traps tab focus', () => {
+  window.CC.openQuickCapture({ inbox: true })
+  const box = $('[data-modal-box]')
+  assert.equal(box.querySelectorAll('[data-capture-dates] .preset-active').length, 1)
+  assert.equal(box.querySelector('[data-capture-dates] .preset-active').dataset.date, 'inbox')
+  const close = box.querySelector('[data-modal-close]')
+  close.focus()
+  close.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }))
+  assert.equal(window.document.activeElement.textContent.trim(), 'Add task')
+  window.CC.closeModal()
+})
+
+test('keyboard shortcuts do not fire while interacting with a select', () => {
+  window.CC.switchView('dashboard')
+  const select = $('[data-top3-picker]')
+  select.focus()
+  const key = new window.KeyboardEvent('keydown', { key: 'f', bubbles: true, cancelable: true })
+  select.dispatchEvent(key)
+  assert.equal(key.defaultPrevented, false)
+  assert.equal(window.CC.hasRunningSession(), false)
+})
+
 test('the daily score card explains its own formula', async () => {
   const scoreCard = $('[data-card="score"]')
   assert.ok(scoreCard, 'score card exists')

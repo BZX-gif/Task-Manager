@@ -187,10 +187,23 @@ export function openModal({ title, body, footer = '', size = '', onMount, onClos
     if (event.target === overlay && onCloseDismiss) closeModal()
   })
   root.querySelectorAll('[data-modal-close]').forEach((btn) => btn.addEventListener('click', () => closeModal()))
+  box.addEventListener('keydown', (event) => {
+    const keyEvent = /** @type {KeyboardEvent} */ (event)
+    if (keyEvent.key !== 'Tab') return
+    const focusable = Array.from(box.querySelectorAll('a[href], button:not(:disabled), input:not(:disabled):not([type=hidden]), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'))
+      .filter((node) => !node.closest('.hidden, [hidden]'))
+    if (!focusable.length) { event.preventDefault(); return }
+    const first = /** @type {HTMLElement} */ (focusable[0])
+    const last = /** @type {HTMLElement} */ (focusable[focusable.length - 1])
+    if (keyEvent.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+    else if (!keyEvent.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+  })
   if (onMount) onMount(box)
   const focusable = /** @type {any} */ (box.querySelector('input, textarea, select, button:not([data-modal-close])'))
-  if (focusable && typeof focusable.focus === 'function') focusable.focus()
-  if (focusable && focusable.tagName === 'INPUT' && typeof focusable.select === 'function') focusable.select()
+  if (!box.contains(document.activeElement)) {
+    if (focusable && typeof focusable.focus === 'function') focusable.focus()
+    if (focusable && focusable.tagName === 'INPUT' && typeof focusable.select === 'function') focusable.select()
+  }
   return box
 }
 
@@ -217,6 +230,8 @@ function playModalExit(root) {
   ghost.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'))
   ghost.querySelectorAll('[role]').forEach((node) => node.removeAttribute('role'))
   ghost.setAttribute('aria-hidden', 'true')
+  ghost.setAttribute('inert', '')
+  ghost.querySelectorAll('a, button, input, select, textarea, [tabindex]').forEach((node) => node.setAttribute('tabindex', '-1'))
   ghost.style.pointerEvents = 'none'
   ghost.classList.add('is-exiting')
   const layer = document.body
@@ -270,6 +285,9 @@ export function confirmDialog({ title = 'Are you sure?', message = '', confirmTe
       title: escapeHtml(title),
       body: `<p class="text-[13.5px] text-slate-300 leading-relaxed">${escapeHtml(message)}</p>${details ? `<div class="mt-3 text-[12.5px] text-slate-500 whitespace-pre-line">${escapeHtml(details)}</div>` : ''}`,
       footer: `<button class="btn-ghost" data-cancel>${escapeHtml(cancelText)}</button><button class="${danger ? 'btn-danger' : 'btn-primary'}" data-confirm>${escapeHtml(confirmText)}</button>`,
+      onClose: () => {
+        if (!settled) { settled = true; resolve(false) }
+      },
       onMount: (box) => {
         box.querySelector('[data-cancel]').addEventListener('click', () => finish(false))
         box.querySelector('[data-confirm]').addEventListener('click', () => finish(true))

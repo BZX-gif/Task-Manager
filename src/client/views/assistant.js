@@ -16,9 +16,15 @@ export function renderAssistant() {
   const section = document.getElementById('view-assistant')
   if (!section) return
   const history = state.chatHistory || []
+  const previousInput = /** @type {HTMLTextAreaElement|null} */ (section.querySelector('#chat-input'))
+  const draft = previousInput?.value || ''
+  const hadFocus = previousInput === document.activeElement
+  const selectionStart = previousInput?.selectionStart ?? 0
+  const selectionEnd = previousInput?.selectionEnd ?? 0
 
   section.innerHTML = `
-    <div class="glass-card flex flex-col h-[calc(100vh-190px)] min-h-[520px]">
+    <div class="view-heading assistant-heading"><p class="view-eyebrow">YOUR WORKSPACE / ASSISTANT</p><h2 class="section-title">A little help, when you need it<span class="heading-period">.</span></h2><p class="section-sub">Think through your plans and find a way forward.</p></div>
+    <div class="assistant-panel glass-card flex flex-col h-[calc(100vh-190px)] min-h-[520px]">
       <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/5">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent-2 grid place-items-center shadow-glow">
@@ -80,7 +86,11 @@ export function renderAssistant() {
       input.style.height = 'auto'
       input.style.height = `${Math.min(input.scrollHeight, 112)}px`
     })
-    input.focus()
+    input.value = draft
+    if (hadFocus && !pending) {
+      input.focus()
+      input.setSelectionRange(selectionStart, selectionEnd)
+    }
   }
 }
 

@@ -30,6 +30,11 @@ export function greeting(now = new Date()) {
 export function updateClockAndGreeting() {
   const greetingEl = el('greeting-text')
   if (greetingEl) greetingEl.textContent = greeting()
+  const avatar = document.querySelector('.brand-avatar')
+  if (avatar) {
+    avatar.textContent = userName().trim().charAt(0).toLocaleUpperCase() || 'K'
+    avatar.setAttribute('title', userName())
+  }
   const clockEl = el('live-clock')
   if (clockEl) {
     const now = new Date()

@@ -10,6 +10,7 @@ import { renderTasks } from '../views/tasks.js'
 import { renderProgress } from '../views/progress.js'
 import { renderAssistant } from '../views/assistant.js'
 import { renderSettings } from '../views/settings.js'
+import { setMobileNav } from './chrome.js'
 
 export const VIEWS = ['dashboard', 'timetable', 'tasks', 'progress', 'assistant', 'settings']
 
@@ -51,8 +52,7 @@ export function switchView(view) {
     btn.setAttribute('aria-current', active ? 'page' : 'false')
   })
   qsa(document, '.nav-pill').forEach((btn) => btn.classList.toggle('active-pill', btn.dataset.view === view))
-  const nav = el('mobile-nav')
-  if (nav) nav.classList.add('hidden')
+  setMobileNav(false)
   renderCurrentView()
   // The view swap above is synchronous; CSS owns the entrance. Re-showing a
   // section that was already visible needs the animation restarted by hand.
@@ -100,8 +100,7 @@ export function initRouter() {
       if (view === 'focus') {
         // Focus Mode is an overlay, not a tab
         window.CC?.openFocusMode(undefined)
-        const nav = el('mobile-nav')
-        if (nav) nav.classList.add('hidden')
+        setMobileNav(false)
         return
       }
       switchView(view)

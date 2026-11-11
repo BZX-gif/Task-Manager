@@ -24,13 +24,15 @@ export function renderTimetable() {
   // v5: every edit and every number on this screen is scoped to the active mission
   const timetable = activeTimetable(state)
   const sorted = [...timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const visibleBlocks = sorted.filter((item) => showDone || !log.ttDone.includes(item.id))
   const conflicts = protectedConflicts(timetable, state.settings.protectedTime || [], today)
   const stats = statsFor(today, { now })
   const upcomingReminder = computeDueReminders({ state, todayKey: today, nowMinutes: nowMin, now, maxPerRun: 1 })[0] || null
 
   section.innerHTML = `
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="view-heading flex flex-wrap items-center justify-between gap-3">
       <div>
+        <p class="view-eyebrow">YOUR WORKSPACE / SCHEDULE</p>
         <h2 class="section-title">Daily Timetable <span class="chip ml-2 align-middle">${escapeHtml(mission.exam)} ${mission.year}</span></h2>
         <p class="section-sub">${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })} · ${escapeHtml(mission.exam)} schedule · tap a block to mark it complete</p>
       </div>
@@ -85,12 +87,11 @@ export function renderTimetable() {
 
     <div class="schedule-list">
       <div>
-        ${sorted.length
-          ? sorted
-              .filter((item) => showDone || !log.ttDone.includes(item.id))
+        ${visibleBlocks.length
+          ? visibleBlocks
               .map((item) => blockRowHtml(item, log, nowMin))
               .join('')
-          : emptyState({
+          : sorted.length ? emptyState({ icon: 'fa-regular fa-circle-check', title: 'All blocks are complete', body: 'Show completed blocks to see your full schedule.' }) : emptyState({
               icon: 'fa-regular fa-calendar',
               title: `No ${escapeHtml(mission.exam)} blocks yet`,
               body: `Add your ${escapeHtml(mission.exam)} daily structure — the dashboard, reminders and recovery planner use this mission's timetable.`,
@@ -162,19 +163,19 @@ function blockRowHtml(item, log, nowMin) {
   return `
     <div class="tt-row ${isDone ? 'tt-done' : ''} ${isNow ? 'active-now' : ''}" style="--cat-color:${categoryColor(item.cat)}">
       <button class="tt-time text-left" data-block-toggle="${escapeHtml(item.id)}" aria-label="Toggle ${escapeHtml(item.title)}">${escapeHtml(item.time)}</button>
-      <div class="min-w-0" data-block-toggle="${escapeHtml(item.id)}">
-        <p class="tt-title truncate">${escapeHtml(item.title)}</p>
-        <p class="text-[11px] text-slate-500">
+      <button class="min-w-0 text-left block-details" data-block-toggle="${escapeHtml(item.id)}" aria-label="Toggle ${escapeHtml(item.title)}">
+        <span class="tt-title truncate block">${escapeHtml(item.title)}</span>
+        <span class="text-[11px] text-slate-500 block">
           ${escapeHtml(categoryName(item.cat))} · ${duration} min
           ${isPast && !isDone ? ' · <span class="text-accent-5">missed</span>' : ''}
           ${isNow ? ' · <span class="text-emerald-400 font-semibold">LIVE</span>' : ''}
-        </p>
-      </div>
+        </span>
+      </button>
       <div class="flex items-center gap-1.5">
         ${isNow ? `<button class="icon-btn" data-block-focus="${escapeHtml(item.id)}" title="Start a focus session"><i class="fa-solid fa-stopwatch text-xs"></i></button>` : ''}
         <button class="icon-btn" data-block-edit="${escapeHtml(item.id)}" title="Edit block"><i class="fa-solid fa-pen text-xs"></i></button>
         <button class="icon-btn" data-block-delete="${escapeHtml(item.id)}" title="Delete block"><i class="fa-solid fa-trash text-xs"></i></button>
-        <button class="task-check ${isDone ? 'checked' : ''}" data-block-toggle="${escapeHtml(item.id)}" aria-label="Mark ${escapeHtml(item.title)} complete"><i class="fa-solid fa-check"></i></button>
+        <button class="task-check ${isDone ? 'checked' : ''}" data-block-toggle="${escapeHtml(item.id)}" aria-label="${isDone ? 'Mark unfinished' : 'Mark complete'}: ${escapeHtml(item.title)}" aria-pressed="${isDone}"><i class="fa-solid fa-check"></i></button>
       </div>
     </div>`
 }

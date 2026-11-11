@@ -28,9 +28,10 @@ export function renderSettings() {
   const dm = titles.disciplineMonster
 
   section.innerHTML = `
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="view-heading flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="section-title">Profile & Settings</h2>
+        <p class="view-eyebrow">YOUR WORKSPACE / PREFERENCES</p>
+        <h2 class="section-title">Profile & Settings<span class="heading-period">.</span></h2>
         <p class="section-sub">Your workspace, your preferences. Stored on this device. Never public.</p>
       </div>
       <span class="chip">Schema v${STATE_VERSION}</span>

@@ -21,15 +21,20 @@ let searchTerm = ''
 export function renderTasks() {
   const section = document.getElementById('view-tasks')
   if (!section) return
+  const previousSearch = /** @type {HTMLInputElement|null} */ (section.querySelector('[data-task-search]'))
+  const searchHadFocus = previousSearch === document.activeElement
+  const searchStart = previousSearch?.selectionStart ?? 0
+  const searchEnd = previousSearch?.selectionEnd ?? 0
   const today = currentDayKey()
   const list = filteredTasks(today)
   const inboxCount = state.tasks.filter((t) => t.inbox && !t.done).length
   const overdue = overdueTasks(state, today)
 
   section.innerHTML = `
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="view-heading flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="section-title">Task Manager</h2>
+        <p class="view-eyebrow">YOUR WORKSPACE / TASKS</p>
+        <h2 class="section-title">Task Manager<span class="heading-period">.</span></h2>
         <p class="section-sub">${state.tasks.filter((t) => !t.done).length} open · ${overdue.length ? `<span class="text-accent-5">${overdue.length} overdue</span>` : 'nothing overdue'} · ${inboxCount} in inbox</p>
       </div>
       <div class="flex gap-2">
@@ -38,9 +43,9 @@ export function renderTasks() {
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="segmented" id="task-filter-seg">
-        ${FILTERS.map((f) => `<button data-f="${f}" class="${filter === f ? 'seg-active' : ''}">${FILTER_LABELS[f]}${f === 'inbox' && inboxCount ? ` (${inboxCount})` : ''}</button>`).join('')}
+    <div class="task-toolbar flex flex-wrap items-center gap-2">
+      <div class="segmented" id="task-filter-seg" aria-label="Filter tasks">
+        ${FILTERS.map((f) => `<button data-f="${f}" aria-pressed="${filter === f}" class="${filter === f ? 'seg-active' : ''}">${FILTER_LABELS[f]}${f === 'inbox' && inboxCount ? ` (${inboxCount})` : ''}</button>`).join('')}
       </div>
       <div class="relative flex-1 min-w-[200px]">
         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
@@ -49,6 +54,7 @@ export function renderTasks() {
     </div>
 
     <div class="task-list-surface">
+      <div class="list-heading"><div><p>YOUR TASKS</p><h3>${FILTER_LABELS[filter]}</h3></div><span data-task-count>${list.length} task${list.length === 1 ? '' : 's'}</span></div>
       <div data-task-list>
         ${list.length ? list.map((t) => taskRowHtml(t, today)).join('') : emptyStateForFilter()}
       </div>
@@ -67,24 +73,32 @@ export function renderTasks() {
     const listEl = section.querySelector('[data-task-list]')
     const rows = filteredTasks(currentDayKey())
     listEl.innerHTML = rows.length ? rows.map((t) => taskRowHtml(t, currentDayKey())).join('') : emptyStateForFilter()
+    const count = section.querySelector('[data-task-count]')
+    if (count) count.textContent = `${rows.length} task${rows.length === 1 ? '' : 's'}`
     bindRows(section)
   })
-  qsa(section, '[data-action]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      if (btn.dataset.action === 'new-task') openTaskModal()
-      else if (btn.dataset.action === 'quick-capture') window.CC?.openQuickCapture()
-    }),
-  )
+  section.onclick = (event) => {
+    const button = event.target instanceof Element ? event.target.closest('[data-action]') : null
+    if (!button || !section.contains(button)) return
+    if (button.getAttribute('data-action') === 'new-task') openTaskModal()
+    else if (button.getAttribute('data-action') === 'quick-capture') window.CC?.openQuickCapture()
+    else if (button.getAttribute('data-action') === 'quick-capture-inbox') window.CC?.openQuickCapture({ inbox: true })
+  }
   bindRows(section)
+  if (searchHadFocus && search) {
+    search.focus()
+    search.setSelectionRange(searchStart, searchEnd)
+  }
 }
 
 function emptyStateForFilter() {
+  if (searchTerm.trim()) return emptyState({ icon: 'fa-solid fa-magnifying-glass', title: 'No matching tasks', body: 'Try a different search or switch filters.' })
   if (filter === 'inbox') {
     return emptyState({
       icon: 'fa-solid fa-inbox',
       title: 'Inbox is empty',
       body: 'Dump quick ideas here without deciding where they belong. Sort them later.',
-      action: '<button class="btn-ghost mt-2" data-action="quick-capture">Capture something</button>',
+      action: '<button class="btn-ghost mt-2" data-action="quick-capture-inbox">Capture something</button>',
     })
   }
   if (filter === 'recurring') {
