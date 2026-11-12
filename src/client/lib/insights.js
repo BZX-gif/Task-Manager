@@ -13,7 +13,7 @@
    ------------------------------------------------------------------------- */
 
 import { formatDuration, minutesOfDay } from './dates.js'
-import { dayPlanFor } from './daystats.js'
+import { scheduleFor, itemDone } from './planner.js'
 
 export const MIN_ITEMS_FOR_VERDICT = 2
 
@@ -66,13 +66,14 @@ export function categoryInsights(state, { from, to, todayKey }) {
   while (cursor <= to && guard++ < 800) {
     const log = state.completionLog?.[cursor] || { ttDone: [] }
     const doneSet = new Set(Array.isArray(log.ttDone) ? log.ttDone : [])
-    for (const block of dayPlanFor(state, cursor)) {
+    const dayBlocks = scheduleFor(state,cursor)
+    for (const block of dayBlocks) {
       const bucket = bucketFor(block.cat)
       const duration = block.duration || 60
       bucket.plannedMinutes += duration
       bucket.blocksPlanned += 1
       bucket.itemsPlanned += 1
-      if (doneSet.has(block.id)) {
+      if (itemDone(state,block,cursor)) {
         bucket.completedMinutes += duration
         bucket.blocksDone += 1
         bucket.itemsDone += 1
@@ -84,7 +85,7 @@ export function categoryInsights(state, { from, to, todayKey }) {
         bucket.plannedMinutes -= duration
       }
     }
-    for (const task of (state.tasks || []).filter((t) => t.date === cursor)) {
+    for (const task of (state.tasks || []).filter((t) => t.date === cursor && !t.inbox && t.status !== 'cancelled' && !dayBlocks.some((b) => b.taskId === t.id))) {
       const bucket = bucketFor(task.cat)
       const estimate = task.estimateMinutes ?? 30
       bucket.plannedMinutes += estimate

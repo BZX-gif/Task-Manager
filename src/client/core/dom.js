@@ -11,6 +11,7 @@ export function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, '&#96;')
 }
 
+/** @returns {any} */
 export function el(id) {
   return document.getElementById(id)
 }
@@ -62,10 +63,7 @@ let lastFocus = null
 /* ------------------------------------------------------------------ toasts */
 
 const TOAST_ICONS = {
-  info: 'fa-circle-info text-accent-2',
-  success: 'fa-circle-check text-emerald-400',
-  error: 'fa-circle-exclamation text-rose-400',
-  timer: 'fa-stopwatch text-accent',
+  info: 'info', success: 'check', error: 'info', timer: 'focus',
 }
 
 /**
@@ -80,7 +78,7 @@ export function toast(message, type = 'info', options = {}) {
   const node = document.createElement('div')
   node.className = 'toast'
   node.setAttribute('role', type === 'error' ? 'alert' : 'status')
-  node.innerHTML = `<i class="fa-solid ${TOAST_ICONS[type] || TOAST_ICONS.info}"></i><span>${escapeHtml(message)}</span>`
+  node.innerHTML = `<span class="toast-symbol toast-${type}">${type === 'success' ? '✓' : type === 'error' ? '!' : '·'}</span><span>${escapeHtml(message)}</span>`
   if (action) {
     const button = document.createElement('button')
     button.className = 'toast-action'
@@ -175,7 +173,7 @@ export function openModal({ title, body, footer = '', size = '', onMount, onClos
       <div class="modal-box ${size}" role="dialog" aria-modal="true" aria-labelledby="${id}-title" data-modal-box>
         <div class="flex items-start justify-between gap-3 mb-4">
           <h3 class="font-display font-bold text-lg text-white" id="${id}-title">${title}</h3>
-          <button class="icon-btn" data-modal-close aria-label="Close dialog"><i class="fa-solid fa-xmark"></i></button>
+          <button class="icon-btn" data-modal-close aria-label="Close dialog"><span aria-hidden="true">×</span></button>
         </div>
         <div data-modal-body>${body}</div>
         ${footer ? `<div class="mt-5 flex flex-wrap gap-3 justify-end" data-modal-footer>${footer}</div>` : ''}
@@ -274,11 +272,25 @@ export function isModalOpen() {
  */
 export function confirmDialog({ title = 'Are you sure?', message = '', confirmText = 'Confirm', cancelText = 'Cancel', danger = false, details = '' } = {}) {
   return new Promise((resolve) => {
+    const root = el('modal-root')
+    const previous = root?.querySelector('[data-modal-backdrop]') || null
+    const previousOnClose = activeModalOnClose
+    const previousFocus = lastFocus
+    // Detach instead of destroying: cancelling a confirmation returns to the
+    // exact editor/proposal, with its values and event listeners intact.
+    if (previous) previous.remove()
     let settled = false
     const finish = (value) => {
       if (settled) return
       settled = true
       closeModal()
+      if (previous && root && !root.querySelector('[data-modal-backdrop]')) {
+        root.appendChild(previous)
+        activeModalOnClose = previousOnClose
+        lastFocus = previousFocus
+        const focusTarget = /** @type {any} */ (previous.querySelector('input:not([disabled]), button:not([disabled]), select:not([disabled])'))
+        focusTarget?.focus()
+      }
       resolve(value)
     }
     openModal({
@@ -326,5 +338,5 @@ export async function copyText(text) {
 
 /** Bootstrap-ish tooltip: title attribute already covers most cases. */
 export function hint(text, label = '') {
-  return `<span class="help-dot" title="${escapeAttr(text)}" aria-label="${escapeAttr(text)}">${label || '<i class="fa-regular fa-circle-question"></i>'}</span>`
+  return `<span class="help-dot" title="${escapeAttr(text)}" aria-label="${escapeAttr(text)}">${label || '?'}</span>`
 }

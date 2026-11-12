@@ -24,6 +24,7 @@
 
 import { minutesOfDay, nowMinutes as nowMinutesOf } from './dates.js'
 import { activeTimetable } from './missions.js'
+import { scheduleFor, itemDone } from './planner.js'
 
 export const SCORE_WEIGHTS = {
   tasks: 30,
@@ -108,7 +109,7 @@ export function computeDailyScore(input) {
   })
 
   // --- Timetable adherence ---------------------------------------------
-  const elapsedBlocks = blocks.filter((b) => (isPast ? true : b.start <= effectiveNow))
+  const elapsedBlocks = blocks.filter((b) => (isPast ? true : b.start + (b.duration || 60) <= effectiveNow))
   const elapsedDone = elapsedBlocks.filter((b) => b.done).length
   parts.push({
     key: 'schedule',
@@ -157,18 +158,18 @@ export function computeDailyScore(input) {
  */
 export function describeScoreFormula() {
   return [
-    `Tasks ${SCORE_WEIGHTS.tasks}% · completed vs planned for today`,
-    `Top 3 ${SCORE_WEIGHTS.top3}% · priorities finished`,
-    `Focus ${SCORE_WEIGHTS.focus}% · focused minutes vs daily target`,
-    `Schedule ${SCORE_WEIGHTS.schedule}% · timetable blocks already elapsed`,
+    `Tasks · relative weight ${SCORE_WEIGHTS.tasks} · completed vs planned for today`,
+    `Top 3 · relative weight ${SCORE_WEIGHTS.top3} · priorities finished`,
+    `Focus · relative weight ${SCORE_WEIGHTS.focus} · focused minutes vs daily target`,
+    `Schedule · relative weight ${SCORE_WEIGHTS.schedule} · blocks already elapsed`,
     `Overdue −${OVERDUE_PENALTY_PER_TASK} each (max −${OVERDUE_PENALTY_MAX})`,
-    'Components with no data are dropped and the rest are re-weighted.',
+    'Available relative weights are normalised to 100 points; components with no data are excluded.',
   ]
 }
 
 /** Build the ScoreInput from app state (keeps views thin & pure logic testable). */
 export function buildScoreInput(state, dateKey, todayKey, now = new Date()) {
-  const tasksForDay = state.tasks.filter((t) => t.date === dateKey)
+  const tasksForDay = state.tasks.filter((t) => t.date === dateKey && !t.inbox && t.status !== 'cancelled')
   const top3Ids = (state.top3?.[dateKey] || []).filter((id) => tasksForDay.some((t) => t.id === id))
   const log = state.completionLog?.[dateKey] || { ttDone: [] }
   const focusedMinutes = focusedMinutesOn(state.focus?.sessions || [], dateKey)
@@ -180,9 +181,9 @@ export function buildScoreInput(state, dateKey, todayKey, now = new Date()) {
     top3Ids,
     focusedMinutes,
     focusTargetMinutes: state.settings?.focus?.targetMinutes ?? 180,
-    blocks: activeTimetable(state).map((b) => ({
+    blocks: (state.schedule?.days ? scheduleFor(state, dateKey) : activeTimetable(state)).map((b) => ({
       id: b.id,
-      done: log.ttDone.includes(b.id),
+      done: state.schedule?.days ? itemDone(state,b,dateKey) : log.ttDone.includes(b.id),
       start: minutesOfDay(b.time),
       duration: b.duration || 60,
     })),
@@ -193,7 +194,7 @@ export function buildScoreInput(state, dateKey, todayKey, now = new Date()) {
 
 /** Tasks whose date has passed and are still open. */
 export function overdueTasks(state, todayKey) {
-  return (state.tasks || []).filter((t) => !t.done && t.date && t.date < todayKey && !t.inbox)
+  return (state.tasks || []).filter((t) => !t.done && t.status !== 'cancelled' && t.date && t.date < todayKey && !t.inbox)
 }
 
 /** Focus minutes recorded on a given day (break sessions excluded). */

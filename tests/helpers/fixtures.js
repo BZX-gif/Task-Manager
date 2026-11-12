@@ -1,5 +1,5 @@
 /** Shared builders for the unit tests — mirrors the shape produced by lib/state.js */
-import { emptyState, makeContext, normalizeState } from '../../src/client/lib/state.js'
+import { emptyState, makeContext, normalizeState, migrateState } from '../../src/client/lib/state.js'
 
 export function makeCtx({ now = Date.UTC(2026, 8, 15, 12) } = {}) {
   let n = 0
@@ -8,7 +8,8 @@ export function makeCtx({ now = Date.UTC(2026, 8, 15, 12) } = {}) {
 
 export function baseState(overrides = {}) {
   const ctx = makeCtx()
-  const state = emptyState(ctx)
+  // Explicit legacy fixture: starter schedules are opt-in history, never fresh user data.
+  const state = migrateState({ version: 4 }, ctx).state
   const { timetable, ...rest } = overrides
   // v5: per-mission timetables — a `timetable` override seeds the active
   // mission's schedule (the shape every existing test works with).

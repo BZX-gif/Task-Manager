@@ -1,633 +1,69 @@
-/* -------------------------------------------------------------------------
-   SETTINGS — reminders, protected time, data backup/restore, AI status
-   Plus: Profile — My Private Titles (Discipline Monster)
-   ------------------------------------------------------------------------- */
-
-import { BREAK_PRESETS, FOCUS_PRESETS, STATE_VERSION } from '../lib/defaults.js'
+import { STATE_VERSION } from '../lib/defaults.js'
 import { buildExport, describeImport, exportFilename, validateImport } from '../lib/backup.js'
 import { reminderSummary } from '../lib/reminders.js'
 import { describeBlock } from '../lib/protected.js'
-import { STORAGE_KEY, storageUsage, uid } from '../lib/state.js'
+import { STORAGE_KEY, PRE_V6_BACKUP_KEY, PRE_MIGRATION_BACKUP_KEY, CORRUPT_BACKUP_KEY, storageUsage, uid, emptyState } from '../lib/state.js'
 import { allTimetableBlocks } from '../lib/missions.js'
-import { closeModal, confirmDialog, copyText, escapeHtml, openModal, qsa, toast } from '../core/dom.js'
+import { closeModal, confirmDialog, copyText, escapeHtml, openModal, toast } from '../core/dom.js'
 import { commit, currentDayKey, getStatus, replaceState, state, titlesInfo } from '../core/store.js'
-import { fieldRow } from './shared.js'
-import { formatUnlockDate } from '../lib/achievements.js'
-
-let statusLine = ''
-let statusTone = 'text-slate-400'
-
-export function renderSettings() {
-  const section = document.getElementById('view-settings')
-  if (!section) return
-  const settings = state.settings
-  const usage = storageUsage()
-  const appStatus = getStatus()
-  const reminders = settings.reminders
-  const titles = titlesInfo(new Date())
-  const dm = titles.disciplineMonster
-
-  section.innerHTML = `
-    <div class="view-heading flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="view-eyebrow">YOUR WORKSPACE / PREFERENCES</p>
-        <h2 class="section-title">Profile & Settings<span class="heading-period">.</span></h2>
-        <p class="section-sub">Your workspace, your preferences. Stored on this device. Never public.</p>
-      </div>
-      <span class="chip">Schema v${STATE_VERSION}</span>
-    </div>
-
-    <!-- Profile / Personal -->
-    <div class="glass-card settings-section p-5 space-y-4">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-user text-accent-2"></i>Profile</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label class="field-label" for="setting-userName">Your name</label>
-          <input class="input-field" id="setting-userName" data-setting="userName" value="${escapeHtml(settings.userName)}">
-        </div>
-        <div>
-          <label class="field-label" for="setting-weekStart">Week starts on</label>
-          <select class="input-field" id="setting-weekStart" data-setting="weekStart">
-            <option value="1" ${settings.weekStart === 1 ? 'selected' : ''}>Monday</option>
-            <option value="0" ${settings.weekStart === 0 ? 'selected' : ''}>Sunday</option>
-          </select>
-        </div>
-        <div>
-          <label class="field-label" for="setting-dayEnd">Day ends at</label>
-          <input type="time" class="input-field" id="setting-dayEnd" data-setting="dayEnd" value="${settings.dayEnd}">
-        </div>
-      </div>
-      <div class="divide-y divide-white/5">
-        ${fieldRow('Tasks', String(state.tasks.length))}
-        ${fieldRow('Focus sessions', String(state.focus.sessions.length))}
-        ${fieldRow('Tracked days', String(Object.keys(state.completionLog || {}).length))}
-        ${fieldRow('Perfect days', String(dm.streakInfo.totalPerfect))}
-        ${fieldRow('Best perfect streak', `${dm.best} days`)}
-        ${fieldRow('Storage used', `${usage.kb} kB`, `key: ${STORAGE_KEY}`)}
-        ${fieldRow('Last migration', appStatus.migrated ? `Upgraded on this load (${appStatus.applied?.join(', ') || 'v→v'})` : 'Not needed')}
-      </div>
-    </div>
-
-    <!-- MY TITLES — Private -->
-    <div class="glass-card settings-section p-5 space-y-5">
-      <div class="flex items-center justify-between gap-3">
-        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-crown text-accent-4"></i>MY TITLES</h3>
-        <span class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Private · Local only</span>
-      </div>
-
-      <div class="title-grid">
-        ${titleCardHtml(dm)}
-      </div>
-
-      <div class="border-t border-white/5 pt-5">
-        <h4 class="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-3">Locked Titles — Coming Soon</h4>
-        <div class="title-grid locked">
-          ${lockedFutureTitlesHtml()}
-        </div>
-      </div>
-
-      <p class="text-[11.5px] text-slate-500 leading-relaxed">
-        Titles are personal rewards stored only in your browser. No public profile, no leaderboard, no sharing.
-        <br>Future titles: Focus Beast, Consistency King, Task Slayer, Deep Work Beast, 30 Day Machine.
-      </p>
-    </div>
-
-    <!-- AI -->
-    <div class="glass-card settings-section p-5 space-y-3">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-shield-halved text-accent"></i>Gemini Assistant</h3>
-      <p class="text-[13px] text-slate-400">The assistant runs through your Cloudflare Worker (<code class="text-accent-2">/api/ai</code>). The API key is a Worker secret and never reaches the browser — nothing is stored in this page.</p>
-      <div class="flex flex-wrap items-center gap-3">
-        <button class="btn-ghost" data-action="test-ai"><i class="fa-solid fa-plug mr-1.5"></i>Test connection</button>
-        <span class="text-[12.5px] ${statusTone}" data-ai-status>${escapeHtml(statusLine || 'Not tested yet.')}</span>
-      </div>
-      <p class="text-[12px] text-slate-500">Requests are small: a compact snapshot of today's plan, priorities, focus time and score. AI is only called when you ask.</p>
-    </div>
-
-    <!-- Focus -->
-    <div class="glass-card settings-section p-5 space-y-4">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-stopwatch text-accent-2"></i>Focus Mode</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label class="field-label" for="setting-focus.defaultMinutes">Default session</label>
-          <select class="input-field" id="setting-focus.defaultMinutes" data-setting="focus.defaultMinutes">
-            ${[...new Set([...FOCUS_PRESETS, settings.focus.defaultMinutes])].sort((a, b) => a - b).map((m) => `<option value="${m}" ${settings.focus.defaultMinutes === m ? 'selected' : ''}>${m} min</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label class="field-label" for="setting-focus.breakMinutes">Break length</label>
-          <select class="input-field" id="setting-focus.breakMinutes" data-setting="focus.breakMinutes">
-            ${[...new Set([...BREAK_PRESETS, settings.focus.breakMinutes])].sort((a, b) => a - b).map((m) => `<option value="${m}" ${settings.focus.breakMinutes === m ? 'selected' : ''}>${m} min</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label class="field-label" for="setting-focus.targetMinutes">Daily focus target</label>
-          <input type="number" min="30" step="15" class="input-field" id="setting-focus.targetMinutes" data-setting="focus.targetMinutes" value="${settings.focus.targetMinutes}">
-        </div>
-      </div>
-      <label class="flex items-center gap-3 text-[13.5px] text-slate-200">
-        <input type="checkbox" data-setting="focus.autoCompleteTask" ${settings.focus.autoCompleteTask ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
-        Completing a focus session marks its task done
-      </label>
-      <p class="text-[12px] text-slate-500">${fieldRow('Focused today', `${state.focus.sessions.filter((s) => s.date === currentDayKey()).reduce((sum, s) => sum + s.focusedSeconds, 0) / 60 | 0} min`)}</p>
-    </div>
-
-    <!-- Reminders -->
-    <div class="glass-card settings-section p-5 space-y-4">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-bell text-accent-3"></i>Reminders</h3>
-      <label class="flex items-center gap-3 text-[13.5px] text-slate-200">
-        <input type="checkbox" data-setting="reminders.enabled" ${reminders.enabled ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
-        Enable reminders
-      </label>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label class="flex items-center gap-3 text-[13px] text-slate-300">
-          <input type="checkbox" data-setting="reminders.timetable" ${reminders.timetable ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
-          Timetable blocks
-        </label>
-        <label class="flex items-center gap-3 text-[13px] text-slate-300">
-          <input type="checkbox" data-setting="reminders.taskDue" ${reminders.taskDue ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
-          Timed tasks
-        </label>
-        <label class="flex items-center gap-3 text-[13px] text-slate-300">
-          <input type="checkbox" data-setting="reminders.overdue" ${reminders.overdue ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
-          Overdue summary
-        </label>
-        <label class="flex items-center gap-3 text-[13px] text-slate-300">
-          <input type="checkbox" data-setting="reminders.respectProtectedTime" ${reminders.respectProtectedTime ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
-          Stay silent during protected time
-        </label>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label class="field-label" for="setting-reminders.beforeMinutes">Warn before (minutes)</label>
-          <input type="number" min="1" max="60" class="input-field" id="setting-reminders.beforeMinutes" data-setting="reminders.beforeMinutes" value="${reminders.beforeMinutes}">
-        </div>
-        <div>
-          <label class="field-label" for="setting-reminders.top3NudgeAt">Top 3 nudge</label>
-          <input type="time" class="input-field" id="setting-reminders.top3NudgeAt" data-setting="reminders.top3NudgeAt" value="${reminders.top3NudgeAt || ''}">
-        </div>
-        <div>
-          <label class="field-label">Desktop notifications</label>
-          <button class="btn-ghost w-full" data-action="enable-notifications">
-            <i class="fa-solid fa-desktop mr-1.5"></i>${'Notification' in window && Notification.permission === 'granted' ? 'Enabled' : 'Enable'}
-          </button>
-        </div>
-      </div>
-      <p class="text-[12px] text-slate-500">${escapeHtml(reminderSummary(reminders))} If the browser blocks notifications, reminders appear as in-app toasts instead. No paid service, no spam.</p>
-    </div>
-
-    <!-- Protected time -->
-    <div class="glass-card settings-section p-5 space-y-4">
-      <div class="flex items-center justify-between gap-3">
-        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-moon text-accent-2"></i>Protected Time</h3>
-        <button class="btn-ghost !py-1.5 !text-xs" data-action="add-protected"><i class="fa-solid fa-plus mr-1.5"></i>Add window</button>
-      </div>
-      <p class="text-[13px] text-slate-400">Sleep, meals or any window you do not want scheduled into. Recovery plans skip these windows and the timetable warns about overlaps. This is purely a scheduling feature.</p>
-      <div class="space-y-2.5">
-        ${settings.protectedTime.length
-          ? settings.protectedTime
-              .map(
-                (block) => `
-          <div class="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-            <div class="flex-1 min-w-[140px]">
-              <p class="text-[13.5px] text-slate-200 font-semibold">${escapeHtml(block.label)}</p>
-              <p class="text-[11.5px] text-slate-500">${escapeHtml(describeBlock(block))}</p>
-            </div>
-            <button class="icon-btn" data-protected-edit="${escapeHtml(block.id)}" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
-            <button class="icon-btn" data-protected-delete="${escapeHtml(block.id)}" title="Remove"><i class="fa-solid fa-trash text-xs"></i></button>
-          </div>`,
-              )
-              .join('')
-          : '<p class="text-[13px] text-slate-500">No protected windows yet. A common setup is Sleep 23:00 → 06:00.</p>'}
-      </div>
-      ${settings.protectedTime.length ? '' : '<button class="btn-ghost !py-1.5 !text-xs" data-action="sleep-preset"><i class="fa-solid fa-bed mr-1.5"></i>Add 23:00 → 06:00 sleep window</button>'}
-    </div>
-
-    <!-- Categories -->
-    <div class="glass-card settings-section p-5 space-y-4">
-      <div class="flex items-center justify-between gap-3">
-        <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-tags text-accent-4"></i>Categories</h3>
-        <button class="btn-ghost !py-1.5 !text-xs" data-action="add-category"><i class="fa-solid fa-plus mr-1.5"></i>Add category</button>
-      </div>
-      <div class="space-y-2.5">
-        ${(state.categories || [])
-          .map(
-            (cat) => `
-          <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
-            <input type="color" value="${escapeHtml(cat.color)}" class="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer" data-category-color="${escapeHtml(cat.id)}" aria-label="Colour for ${escapeHtml(cat.name)}">
-            <input class="input-field flex-1 !py-1.5" value="${escapeHtml(cat.name)}" data-category-name="${escapeHtml(cat.id)}" aria-label="Name for ${escapeHtml(cat.name)}">
-            <span class="text-xs text-slate-500 whitespace-nowrap">${allTimetableBlocks(state).filter((t) => t.cat === cat.id).length} blocks</span>
-            <button class="icon-btn" data-category-delete="${escapeHtml(cat.id)}" title="Delete category"><i class="fa-solid fa-trash text-xs"></i></button>
-          </div>`,
-          )
-          .join('')}
-      </div>
-    </div>
-
-    <!-- Day & data -->
-    <div class="glass-card settings-section p-5 space-y-4">
-      <h3 class="section-title text-base flex items-center gap-2"><i class="fa-solid fa-database text-accent-3"></i>Data & Day</h3>
-      <div class="divide-y divide-white/5">
-        ${fieldRow('Storage used', `${usage.kb} kB`, `key: ${STORAGE_KEY}`)}
-        ${fieldRow('Tasks', String(state.tasks.length))}
-        ${fieldRow('Focus sessions', String(state.focus.sessions.length))}
-        ${fieldRow('Tracked days', String(Object.keys(state.completionLog || {}).length))}
-        ${fieldRow('Daily snapshots', String(Object.keys(state.dailyProgress || {}).length))}
-        ${fieldRow('Last migration', appStatus.migrated ? 'Upgraded on this load' : 'Not needed')}
-      </div>
-      <div class="flex flex-wrap gap-2.5">
-        <button class="btn-ghost" data-action="export"><i class="fa-solid fa-download mr-1.5"></i>Export JSON</button>
-        <label class="btn-ghost cursor-pointer">
-          <i class="fa-solid fa-upload mr-1.5"></i>Import JSON
-          <input type="file" accept="application/json,.json" class="hidden" data-import>
-        </label>
-        <button class="btn-danger-ghost" data-action="reset"><i class="fa-solid fa-trash-can mr-1.5"></i>Reset all data</button>
-      </div>
-      <p class="text-[12px] text-slate-500">Exports include tasks, timetable, focus history, priorities, reminders, settings and your private titles. Import validates the file, keeps a backup of what you had, and never half-applies a broken file.</p>
-    </div>
-
-    <div class="glass-card p-5">
-      <h3 class="section-title text-base flex items-center gap-2 mb-2"><i class="fa-solid fa-circle-info text-slate-400"></i>About</h3>
-      <p class="text-[13px] text-slate-500 leading-relaxed">
-        Command Center v2.3 · Private titles + Discipline Monster · Runs on Cloudflare Workers + Hono with a 100% local-first client.
-        Focus sessions, priorities, recurring tasks, reminders, weekly review and analytics all work offline;
-        only the AI assistant needs the internet. No backend, no database, no social features — ₹0 cost.
-      </p>
-    </div>
-  `
-
-  bindSettings(section)
+import { applyTheme } from '../core/actions.js'
+import { updateClockAndGreeting } from '../ui/chrome.js'
+import { icon, pageHeading, weekdayButtons } from '../ui/common.js'
+import { minutesOfDay } from '../lib/dates.js'
+let statusLine='',statusTone=''
+const setting=(key,label,control,hint='')=>`<div><label class="field-label" for="setting-${key}">${label}</label>${control}${hint?`<p class="form-hint" style="margin-top:6px">${hint}</p>`:''}</div>`
+const input=(key,value,type='text',extra='')=>`<input class="input-field" id="setting-${key}" data-setting="${key}" type="${type}" value="${escapeHtml(value)}" ${extra}>`
+const select=(key,value,options)=>`<select class="input-field" id="setting-${key}" data-setting="${key}">${options.map(([v,l])=>`<option value="${v}" ${String(value)===String(v)?'selected':''}>${l}</option>`).join('')}</select>`
+const check=(key,label,value,hint='')=>`<label class="setting-toggle"><span><strong>${label}</strong>${hint?`<small>${hint}</small>`:''}</span><input type="checkbox" data-setting="${key}" ${value?'checked':''}><span class="switch-track" aria-hidden="true"></span></label>`
+const section=(id,symbol,title,subtitle,body)=>`<section class="card settings-section" id="settings-${id}"><div class="settings-section-heading"><span class="entity-icon">${icon(symbol)}</span><div><h3>${title}</h3><p>${subtitle}</p></div></div>${body}</section>`
+export function renderSettings(){
+  const root=document.getElementById('view-settings');if(!root)return
+  const s=state.settings,r=s.reminders,f=s.focus,usage=storageUsage(),dm=titlesInfo().disciplineMonster
+  root.innerHTML=`${pageHeading('MAKE YOURSELF AT HOME','Your workspace, your way.','A few thoughtful preferences. Everything stays on this device.',`<span class="chip chip-good">${icon('shield')}Local-first · v${STATE_VERSION}</span>`)}<div class="settings-layout"><nav class="settings-nav" aria-label="Settings sections">${[['profile','user','Profile'],['appearance','sun','Appearance'],['calendar','calendar','Your day'],['focus','focus','Focus'],['reminders','bell','Reminders'],['categories','projects','Categories & protected time'],['assistant','sparkles','Assistant'],['data','shield','Your data']].map(([id,i,l])=>`<button data-settings-section="${id}">${icon(i)}${l}</button>`).join('')}</nav><div class="settings-content">
+  ${section('profile','user','A space that feels like you','Your name is optional. This workspace is already yours.',`<div class="form-grid">${setting('userName','What should we call you?',input('userName',s.userName,'text','maxlength="60" placeholder="Your name"'))}${setting('weekStart','Start the week on',select('weekStart',s.weekStart,[[1,'Monday'],[0,'Sunday']]))}</div><div class="settings-facts"><span>${state.tasks.length} missions</span><span>${state.goals.length} goals</span><span>${state.focus.sessions.length} focus sessions</span><span>${usage.kb} kB stored</span></div>${dm.unlocked?`<details class="history-details"><summary>Your private milestone · Discipline Monster</summary><p>Earned ${escapeHtml(dm.unlockedAt||'from your recorded history')} · ${dm.best} best perfect-day run. This is a private keepsake, not a leaderboard.</p></details>`:''}`)}
+  ${section('appearance','sun','Set the mood','Calm by default. A little color where it matters.',`<div class="form-grid">${setting('theme','Theme',`<div class="theme-options">${[['dark','Dark'],['light','Light'],['system','System']].map(([v,l])=>`<button class="theme-option ${s.theme===v?'is-selected':''}" data-theme-choice="${v}" aria-pressed="${s.theme===v}"><span class="theme-swatch theme-${v}"></span>${l}${s.theme===v?icon('check'):''}</button>`).join('')}</div>`)}${setting('timeFormat','Time format',select('timeFormat',s.timeFormat,[['12h','12-hour · 9:30 pm'],['24h','24-hour · 21:30']]))}</div><div><p class="field-label">Your accent</p><div class="accent-options">${[['iris','Iris'],['blue','Blue'],['sage','Sage'],['amber','Amber'],['rose','Rose']].map(([v,l])=>`<button data-accent-choice="${v}" class="${s.accent===v?'is-selected':''}" aria-label="${l} accent" aria-pressed="${s.accent===v}"><span class="accent-swatch accent-${v}"></span>${l}</button>`).join('')}</div></div>${check('sidebarCollapsed','A little more room',s.sidebarCollapsed,'Collapse the desktop sidebar.')}`)}
+  ${section('calendar','calendar','Give your day a rhythm','Realistic boundaries make space for good work.',`<div class="form-grid">${setting('workingHours.start','Available from',input('workingHours.start',s.workingHours.start,'time'))}${setting('workingHours.end','Available until',input('workingHours.end',s.workingHours.end,'time'))}${setting('dayEnd','Day wraps up at',input('dayEnd',s.dayEnd,'time'))}${setting('defaultTaskMinutes','Default mission · minutes',input('defaultTaskMinutes',s.defaultTaskMinutes,'number','min="5" max="600" step="5"'))}</div><p class="form-hint">Planning suggestions stay within your available hours and never overwrite protected time. You always approve the final plan.</p>`)}
+  ${section('focus','focus','Protect your attention','A rhythm that works for you—not the other way around.',`<div class="form-grid">${setting('focus.defaultMinutes','Default session · minutes',input('focus.defaultMinutes',f.defaultMinutes,'number','min="1" max="600"'))}${setting('focus.targetMinutes','Daily intention · minutes',input('focus.targetMinutes',f.targetMinutes,'number','min="15" max="1440" step="15"'))}${setting('focus.breakMinutes','Short break · minutes',input('focus.breakMinutes',f.breakMinutes,'number','min="1" max="60"'))}${setting('focus.longBreakMinutes','Long break · minutes',input('focus.longBreakMinutes',f.longBreakMinutes,'number','min="5" max="120"'))}${setting('focus.longBreakEvery','Long break after · sessions',input('focus.longBreakEvery',f.longBreakEvery,'number','min="2" max="12"'))}</div><div class="setting-toggle-list">${check('focus.autoStartBreaks','Let breaks begin automatically',f.autoStartBreaks,'Only after you complete a focus session.')}${check('focus.autoCompleteTask','Mark a linked mission done when a session finishes',f.autoCompleteTask,'Off by default. Finishing a timer doesn’t always mean finishing the work.')}</div>`)}
+  ${section('reminders','bell','A gentle nudge, never noise','Reminders work while this workspace is open. In-app messages are always available.',`<div class="setting-toggle-list">${check('reminders.enabled','Enable reminders',r.enabled)}${check('reminders.timetable','Upcoming time blocks',r.timetable)}${check('reminders.taskDue','Mission start times',r.taskDue)}${check('reminders.overdue','A once-daily overdue summary',r.overdue)}${check('reminders.routines','Routine check-ins',r.routines)}${check('reminders.respectProtectedTime','Keep protected time quiet',r.respectProtectedTime)}</div><div class="form-grid">${setting('reminders.beforeMinutes','Heads-up · minutes before',input('reminders.beforeMinutes',r.beforeMinutes,'number','min="1" max="60"'))}${setting('reminders.planningAt','Daily planning nudge',input('reminders.planningAt',r.planningAt,'time'))}${setting('reminders.top3NudgeAt','Priority check-in',input('reminders.top3NudgeAt',r.top3NudgeAt,'time'))}${setting('reminders.reviewAt','Reflection nudge',input('reminders.reviewAt',r.reviewAt,'time'))}${setting('reminders.reviewDay','Weekly reflection day',select('reminders.reviewDay',r.reviewDay,[[0,'Sunday'],[1,'Monday'],[2,'Tuesday'],[3,'Wednesday'],[4,'Thursday'],[5,'Friday'],[6,'Saturday']]))}</div><div class="notification-permission"><div><strong>Browser notifications</strong><p>${typeof Notification==='undefined'?'Not supported here. In-app reminders still work.':Notification.permission==='granted'?'Permission granted. You’re in control.':'Optional. We only ask when you choose to enable them.'}</p></div><button class="btn-ghost btn-small" data-action="enable-notifications">${icon('bell')}Enable</button></div>${check('reminders.desktopNotifications','Use browser notifications when permitted',r.desktopNotifications)}`)}
+  ${section('categories','projects','The texture of your day','Organize your work and protect the time that isn’t up for negotiation.',`<div class="section-heading"><h4>Categories</h4><button class="text-button" data-add-category>${icon('plus')}Add category</button></div><div class="category-settings">${state.categories.map((c)=>`<div><span class="legend-dot" style="background:${c.color}"></span><strong>${escapeHtml(c.name)}</strong><button class="icon-btn" data-category-edit="${escapeHtml(c.id)}" aria-label="Edit ${escapeHtml(c.name)}">${icon('edit')}</button><button class="icon-btn danger-hover" data-category-delete="${escapeHtml(c.id)}" aria-label="Delete ${escapeHtml(c.name)}">${icon('trash')}</button></div>`).join('')}</div><div class="section-heading" style="margin-top:24px"><h4>Protected time</h4><button class="text-button" data-add-protected>${icon('plus')}Add window</button></div>${s.protectedTime.length?s.protectedTime.map((b)=>`<div class="protected-row">${icon('shield')}<span><strong>${escapeHtml(b.label)}</strong><small>${escapeHtml(describeBlock(b))}</small></span><button class="icon-btn" data-protected-edit="${escapeHtml(b.id)}" aria-label="Edit ${escapeHtml(b.label)}">${icon('edit')}</button><button class="icon-btn danger-hover" data-protected-delete="${escapeHtml(b.id)}" aria-label="Delete ${escapeHtml(b.label)}">${icon('trash')}</button></div>`).join(''):'<p class="form-hint">Sleep, meals, family time. Add a window and the planner will work around it.</p>'}<button class="text-button" style="margin-top:12px" data-sleep-preset>${icon('moon')}Protect sleep · 11 pm–6 am</button>`)}
+  ${section('assistant','sparkles','A thoughtful second opinion','Optional intelligence. Your workspace works perfectly without it.',`<div class="notice">${icon('shield')}The API key stays server-side in your Cloudflare Worker. Only a compact productivity snapshot is sent when you ask.</div><p class="form-hint" style="margin:14px 0">The assistant suggests; you decide. It can’t change your schedule. Built-in planning and recovery tools are always available offline.</p><div class="heading-actions"><button class="btn-ghost btn-small" data-action="test-ai">${icon('bolt')}Test connection</button><span class="form-hint ${statusTone}" data-ai-status>${escapeHtml(statusLine||'Not tested yet.')}</span></div>`)}
+  ${section('data','shield','Your data belongs to you','No account. No tracking. No cloud database. Keep a backup somewhere safe.',`${getStatus().storageAvailable===false?`<div class="notice warning-notice" style="margin-bottom:16px">${icon('info')}<span>Storage is unavailable or full. This tab still works, but changes cannot survive closing it. Export a backup now.</span></div>`:''}<div class="data-summary"><div><strong>${usage.kb}<small> kB</small></strong><span>in this browser</span></div><div><strong>${Object.keys(state.completionLog).length}</strong><span>recorded days</span></div><div><strong>${state.focus.sessions.length}</strong><span>focus sessions</span></div></div><div class="data-actions"><button class="btn-primary" data-action="export">${icon('download')}Export backup</button><label class="btn-ghost import-label" tabindex="0">${icon('upload')}Import backup<input type="file" accept="application/json,.json" data-import aria-label="Import a backup"></label></div><p class="form-hint" style="margin-top:12px">Import validates the whole file before replacing anything. A safety copy of your current workspace is saved first.</p>${backupButtons()}<details class="history-details"><summary>Storage & migration details</summary><p>Key: ${STORAGE_KEY} · Schema v${STATE_VERSION}</p><p>${getStatus().migrated?'Your previous data was safely upgraded on this load.':'Your data is already on the current schema.'}</p><p>Browser storage can be cleared by the browser or by private browsing. Export regularly; this device is the source of truth.</p></details><div class="danger-zone"><div><strong>A completely fresh start</strong><p>Remove missions, goals, history and preferences from this browser.</p></div><button class="btn-danger btn-small" data-action="reset">${icon('trash')}Reset workspace</button></div>`)}
+  </div></div>`
+  bindSettings(root)
 }
-
-function titleCardHtml(d) {
-  const def = d.definition
-  if (d.unlocked) {
-    return `
-      <div class="title-card is-unlocked">
-        <div class="title-card-glow" aria-hidden="true"></div>
-        <div class="title-card-top">
-          <span class="title-card-icon is-unlocked"><i class="fa-solid fa-award" aria-hidden="true"></i></span>
-          <span class="chip chip-good">UNLOCKED ✓</span>
-        </div>
-        <h4 class="title-card-name">${escapeHtml(def.name)}</h4>
-        <p class="title-card-sub">${escapeHtml(def.subtitle)}</p>
-        <div class="title-card-meta">
-          <p class="text-[12px] text-slate-300">10 consecutive Perfect Days</p>
-          <p class="text-[11px] text-slate-500 mt-1">Current: ${d.current} · Best: ${d.best} days</p>
-          ${d.unlockedAt ? `<p class="text-[11px] text-amber-300 mt-2"><i class="fa-solid fa-calendar-check mr-1"></i>Unlocked ${escapeHtml(formatUnlockDate(d.unlockedAt))}</p>` : ''}
-        </div>
-        <div class="progress-track mt-4 !h-2"><div class="progress-fill discipline-fill" style="width:100%"></div></div>
-      </div>
-    `
-  }
-
-  const pct = Math.round((d.progress / d.total) * 100)
-  return `
-    <div class="title-card is-locked">
-      <div class="title-card-top">
-        <span class="title-card-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
-        <span class="chip">${d.progress} / ${d.total}</span>
-      </div>
-      <h4 class="title-card-name">${escapeHtml(def.name)}</h4>
-      <p class="title-card-sub">${escapeHtml(def.subtitle)}</p>
-      <div class="title-card-meta">
-        <p class="text-[12px] text-slate-400">${d.progress} / ${d.total} PERFECT DAYS</p>
-        <div class="progress-track mt-2 !h-2"><div class="progress-fill discipline-fill" style="width:${pct}%"></div></div>
-        <p class="text-[11px] text-slate-500 mt-2">${d.remaining} day${d.remaining === 1 ? '' : 's'} to go · Current streak ${d.current}</p>
-        <div class="flex gap-1 mt-3">
-          ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? '#fbbf24' : 'rgba(255,255,255,0.08)'}" title="${day.dateKey}"></span>`).join('')}
-        </div>
-      </div>
-    </div>
-  `
+function backupButtons(){const keys=[[PRE_V6_BACKUP_KEY,'Pre-upgrade safety copy'],[PRE_MIGRATION_BACKUP_KEY,'Original migration backup'],['kcc_backup_pre_import','Before last import'],['kcc_backup_before_reset','Before last reset'],[CORRUPT_BACKUP_KEY,'Unreadable data rescue copy']];let available=[];for(const [key,label]of keys){try{if(localStorage.getItem(key))available.push([key,label])}catch{}}return available.length?`<div class="recovery-backups"><h4>Safety copies on this device</h4>${available.map(([key,label])=>`<button class="text-button" data-download-backup="${key}">${icon('download')}${label}</button>`).join('')}</div>`:''}
+function bindSettings(root){
+  root.querySelectorAll('[data-settings-section]').forEach((b)=>b.addEventListener('click',()=>root.querySelector(`#settings-${b.dataset.settingsSection}`)?.scrollIntoView({behavior:'smooth',block:'start'})))
+  root.querySelectorAll('[data-setting]').forEach((node)=>node.addEventListener('change',()=>{
+    const key=node.dataset.setting;let value=node.type==='checkbox'?node.checked:node.value
+    if(node.type==='number'){value=Number(value);const min=Number(node.min||0),max=Number(node.max||1440);if(!Number.isFinite(value)||value<min||value>max){toast(`Choose a value between ${min} and ${max}.`,'error');renderSettings();return}}
+    if(key==='weekStart'||key==='reminders.reviewDay')value=Number(value)
+    if(key==='workingHours.start'&&minutesOfDay(value)>=minutesOfDay(state.settings.workingHours.end)||key==='workingHours.end'&&minutesOfDay(value)<=minutesOfDay(state.settings.workingHours.start)){toast('Your available hours need to end after they start.','error');renderSettings();return}
+    commit((s)=>{const parts=key.split('.');let target=s.settings;for(const part of parts.slice(0,-1))target=target[part];target[parts.at(-1)]=value},{silent:true,immediate:true});applyTheme();updateClockAndGreeting()
+  }))
+  root.querySelectorAll('[data-theme-choice]').forEach((b)=>b.addEventListener('click',()=>{commit((s)=>s.settings.theme=b.dataset.themeChoice,{silent:true,immediate:true});applyTheme();renderSettings()}))
+  root.querySelectorAll('[data-accent-choice]').forEach((b)=>b.addEventListener('click',()=>{commit((s)=>s.settings.accent=b.dataset.accentChoice,{silent:true,immediate:true});applyTheme();renderSettings()}))
+  root.querySelector('[data-action="test-ai"]').addEventListener('click',testAiConnection)
+  root.querySelector('[data-action="enable-notifications"]').addEventListener('click',requestNotifications)
+  root.querySelector('[data-add-protected]').addEventListener('click',()=>openProtectedModal())
+  root.querySelectorAll('[data-protected-edit]').forEach((b)=>b.addEventListener('click',()=>openProtectedModal(b.dataset.protectedEdit)))
+  root.querySelectorAll('[data-protected-delete]').forEach((b)=>b.addEventListener('click',async()=>{if(await confirmDialog({title:'Remove this protected window?',message:'Future planning proposals will be able to use this time. Existing scheduled blocks stay unchanged.',confirmText:'Remove protection'})){commit((s)=>s.settings.protectedTime=s.settings.protectedTime.filter((x)=>x.id!==b.dataset.protectedDelete));toast('Protected window removed.','info')}}))
+  root.querySelector('[data-sleep-preset]').addEventListener('click',()=>{if(state.settings.protectedTime.some((b)=>b.start==='23:00'&&b.end==='06:00')){toast('Your sleep window is already protected.','info');return}commit((s)=>s.settings.protectedTime.push({id:uid(),label:'Sleep',start:'23:00',end:'06:00',days:[]}));toast('Sleep is protected. Rest is part of the plan.','success')})
+  root.querySelector('[data-add-category]').addEventListener('click',()=>openCategoryModal())
+  root.querySelectorAll('[data-category-edit]').forEach((b)=>b.addEventListener('click',()=>openCategoryModal(b.dataset.categoryEdit)))
+  root.querySelectorAll('[data-category-delete]').forEach((b)=>b.addEventListener('click',()=>deleteCategory(b.dataset.categoryDelete)))
+  root.querySelector('[data-action="export"]').addEventListener('click',exportData)
+  root.querySelector('[data-import]').addEventListener('change',importData)
+  root.querySelector('.import-label').addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();root.querySelector('[data-import]').click()}})
+  root.querySelector('[data-action="reset"]').addEventListener('click',resetAllData)
+  root.querySelectorAll('[data-download-backup]').forEach((b)=>b.addEventListener('click',()=>{try{downloadText(localStorage.getItem(b.dataset.downloadBackup),b.dataset.downloadBackup+'.json');toast('Safety copy downloaded.','success')}catch{toast('This safety copy could not be read.','error')}}))
 }
-
-function lockedFutureTitlesHtml() {
-  const future = [
-    { icon: 'fa-bullseye', name: 'FOCUS BEAST', sub: 'DEEP WORK MASTER' },
-    { icon: 'fa-crown', name: 'CONSISTENCY KING', sub: '30 DAY STREAK' },
-    { icon: 'fa-check-double', name: 'TASK SLAYER', sub: '100 TASKS CRUSHED' },
-    { icon: 'fa-brain', name: 'DEEP WORK BEAST', sub: '50 HOURS FOCUSED' },
-    { icon: 'fa-calendar-check', name: '30 DAY MACHINE', sub: 'MONTH OF DISCIPLINE' },
-  ]
-  return future.map(f => `
-    <div class="title-card is-locked is-future">
-      <div class="title-card-top">
-        <span class="title-card-icon"><i class="fa-solid ${escapeHtml(f.icon)}" aria-hidden="true"></i></span>
-        <span class="chip">LOCKED</span>
-      </div>
-      <h4 class="title-card-name">${escapeHtml(f.name)}</h4>
-      <p class="title-card-sub">${escapeHtml(f.sub)}</p>
-      <p class="text-[11px] text-slate-600 mt-3">Coming soon</p>
-    </div>
-  `).join('')
-}
-
-function bindSettings(section) {
-  qsa(section, '[data-setting]').forEach((input) => {
-    input.addEventListener('change', () => {
-      const path = input.dataset.setting
-      const value = input.type === 'checkbox' ? input.checked : input.type === 'number' ? Number(input.value) : input.value
-      commit((s) => {
-        const [group, key] = path.split('.')
-        if (key) s.settings[group][key] = value
-        else s.settings[group] = value
-      })
-      toast('Setting saved', 'success')
-      if (path.startsWith('reminders')) renderSettings()
-    })
-  })
-
-  section.querySelector('[data-action="test-ai"]')?.addEventListener('click', testAiConnection)
-  section.querySelector('[data-action="enable-notifications"]')?.addEventListener('click', requestNotifications)
-  section.querySelector('[data-action="add-protected"]')?.addEventListener('click', () => openProtectedModal())
-  section.querySelector('[data-action="sleep-preset"]')?.addEventListener('click', () => {
-    commit((s) => {
-      s.settings.protectedTime.push({ id: uid(), label: 'Sleep', start: '23:00', end: '06:00', days: [] })
-    })
-    toast('Sleep window added', 'success')
-  })
-  qsa(section, '[data-protected-edit]').forEach((btn) => btn.addEventListener('click', () => openProtectedModal(btn.dataset.protectedEdit)))
-  qsa(section, '[data-protected-delete]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      commit((s) => {
-        s.settings.protectedTime = s.settings.protectedTime.filter((b) => b.id !== btn.dataset.protectedDelete)
-      })
-      toast('Protected window removed', 'info')
-    }),
-  )
-  section.querySelector('[data-action="add-category"]')?.addEventListener('click', () => openCategoryModal())
-  qsa(section, '[data-category-color]').forEach((input) =>
-    input.addEventListener('change', () => {
-      commit((s) => {
-        const cat = s.categories.find((c) => c.id === input.dataset.categoryColor)
-        if (cat) cat.color = input.value
-      })
-    }),
-  )
-  qsa(section, '[data-category-name]').forEach((input) =>
-    input.addEventListener('change', () => {
-      const name = input.value.trim()
-      if (!name) return
-      commit((s) => {
-        const cat = s.categories.find((c) => c.id === input.dataset.categoryName)
-        if (cat) cat.name = name
-      })
-      toast('Category updated', 'success')
-    }),
-  )
-  qsa(section, '[data-category-delete]').forEach((btn) =>
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.categoryDelete
-      const cat = state.categories.find((c) => c.id === id)
-      const used = allTimetableBlocks(state).filter((b) => b.cat === id).length + state.tasks.filter((t) => t.cat === id).length
-      const ok = await confirmDialog({
-        title: `Delete “${cat?.name || id}”?`,
-        message: used ? `${used} item${used === 1 ? '' : 's'} use this category — they become uncategorised.` : 'This category is unused.',
-        confirmText: 'Delete',
-        danger: true,
-      })
-      if (!ok) return
-      commit((s) => {
-        s.categories = s.categories.filter((c) => c.id !== id)
-        allTimetableBlocks(s).forEach((b) => {
-          if (b.cat === id) b.cat = null
-        })
-        s.tasks.forEach((t) => {
-          if (t.cat === id) t.cat = null
-        })
-      })
-      toast('Category deleted', 'info')
-    }),
-  )
-
-  section.querySelector('[data-action="export"]')?.addEventListener('click', exportData)
-  section.querySelector('[data-import]')?.addEventListener('change', importData)
-  section.querySelector('[data-action="reset"]')?.addEventListener('click', resetAllData)
-}
-
-async function testAiConnection() {
-  const statusEl = document.querySelector('[data-ai-status]')
-  if (statusEl) {
-    statusEl.textContent = 'Testing…'
-    statusEl.className = 'text-[12.5px] text-slate-400'
-  }
-  try {
-    const response = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: 'Reply with the single word OK.', messages: [{ role: 'user', content: 'ping' }] }),
-    })
-    const data = await response.json().catch(() => null)
-    if (response.ok) {
-      statusLine = 'Connected — the assistant answered.'
-      statusTone = 'text-emerald-400'
-      toast('Assistant connected', 'success')
-    } else {
-      statusLine = data?.error?.message || 'The assistant is not available right now.'
-      statusTone = 'text-rose-400'
-    }
-  } catch {
-    statusLine = 'Could not reach the Worker. Check your connection.'
-    statusTone = 'text-rose-400'
-  }
-  if (statusEl) {
-    statusEl.textContent = statusLine
-    statusEl.className = `text-[12.5px] ${statusTone}`
-  }
-}
-
-async function requestNotifications() {
-  if (!('Notification' in window)) {
-    toast('This browser has no notification support — reminders will show as in-app toasts.', 'info')
-    return
-  }
-  let permission = Notification.permission
-  if (permission === 'default') permission = await Notification.requestPermission()
-  const granted = permission === 'granted'
-  commit((s) => {
-    s.settings.reminders.desktopNotifications = granted
-  })
-  toast(granted ? 'Desktop notifications enabled' : 'Notifications blocked — using in-app reminders instead', granted ? 'success' : 'info')
-}
-
-export function openProtectedModal(id = null) {
-  const block = id ? state.settings.protectedTime.find((b) => b.id === id) : null
-  const body = `
-    <form id="protected-form" class="space-y-4">
-      <div>
-        <label class="field-label" for="protected-label">Label</label>
-        <input required class="input-field" id="protected-label" value="${block ? escapeHtml(block.label) : ''}" placeholder="e.g. Sleep">
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="field-label" for="protected-start">From</label>
-          <input required type="time" class="input-field" id="protected-start" value="${block?.start || '23:00'}">
-        </div>
-        <div>
-          <label class="field-label" for="protected-end">Until</label>
-          <input required type="time" class="input-field" id="protected-end" value="${block?.end || '06:00'}">
-        </div>
-      </div>
-      <div>
-        <label class="field-label">Applies to</label>
-        <div class="flex flex-wrap gap-1.5">
-          ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-            .map((label, index) => {
-              const active = !block || !block.days.length ? false : block.days.includes(index)
-              return `<button type="button" class="day-toggle ${active ? 'day-active' : ''}" data-pday="${index}">${label}</button>`
-            })
-            .join('')}
-        </div>
-        <p class="text-[11.5px] text-slate-500 mt-2">Leave every day off to apply the window every day.</p>
-      </div>
-      <div class="flex gap-3 pt-1">
-        <button type="button" class="btn-ghost flex-1" data-modal-close>Cancel</button>
-        <button type="submit" class="btn-primary flex-1">${block ? 'Save' : 'Add window'}</button>
-      </div>
-    </form>`
-  openModal({
-    title: block ? 'Edit protected window' : 'Add protected window',
-    body,
-    onMount: (box) => {
-      box.querySelectorAll('[data-pday]').forEach((btn) => btn.addEventListener('click', () => btn.classList.toggle('day-active')))
-      box.querySelector('#protected-form').addEventListener('submit', (event) => {
-        event.preventDefault()
-        const payload = {
-          label: box.querySelector('#protected-label').value.trim() || 'Protected time',
-          start: box.querySelector('#protected-start').value,
-          end: box.querySelector('#protected-end').value,
-          days: [...box.querySelectorAll('[data-pday].day-active')].map((b) => Number(b.dataset.pday)),
-        }
-        commit((s) => {
-          if (block) {
-            const target = s.settings.protectedTime.find((b) => b.id === block.id)
-            Object.assign(target, payload)
-          } else {
-            s.settings.protectedTime.push({ id: uid(), ...payload })
-          }
-        })
-        closeModal()
-        toast(block ? 'Protected window updated' : 'Protected window added', 'success')
-      })
-    },
-  })
-}
-
-export function openCategoryModal() {
-  const body = `
-    <form id="category-form" class="space-y-4">
-      <div>
-        <label class="field-label" for="category-name">Name</label>
-        <input required class="input-field" id="category-name" placeholder="e.g. Maths">
-      </div>
-      <div>
-        <label class="field-label" for="category-color">Colour</label>
-        <input type="color" id="category-color" value="#7c5cff" class="w-12 h-10 rounded-lg border-none bg-transparent cursor-pointer">
-      </div>
-      <div class="flex gap-3 pt-1">
-        <button type="button" class="btn-ghost flex-1" data-modal-close>Cancel</button>
-        <button type="submit" class="btn-primary flex-1">Add category</button>
-      </div>
-    </form>`
-  openModal({
-    title: 'New category',
-    body,
-    onMount: (box) => {
-      box.querySelector('#category-form').addEventListener('submit', (event) => {
-        event.preventDefault()
-        const name = box.querySelector('#category-name').value.trim()
-        if (!name) return
-        const id = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)}-${Date.now().toString(36).slice(-4)}`
-        commit((s) => {
-          s.categories.push({ id, name, color: box.querySelector('#category-color').value })
-        })
-        closeModal()
-        toast('Category added', 'success')
-      })
-    },
-  })
-}
-
-export async function exportData() {
-  const payload = buildExport(state)
-  const text = JSON.stringify(payload, null, 2)
-  try {
-    const blob = new Blob([text], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = exportFilename()
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    toast('Backup downloaded', 'success')
-  } catch {
-    const copied = await copyText(text)
-    toast(copied ? 'Download blocked — backup copied to the clipboard instead' : 'Could not create the backup file', copied ? 'info' : 'error')
-  }
-}
-
-export async function importData(event) {
-  const file = event?.target?.files?.[0]
-  if (!file) return
-  let parsed = null
-  try {
-    parsed = JSON.parse(await file.text())
-  } catch {
-    toast('That file is not valid JSON', 'error')
-    event.target.value = ''
-    return
-  }
-  const result = validateImport(parsed)
-  if (!result.ok) {
-    toast(result.errors[0] || 'That backup could not be read', 'error')
-    event.target.value = ''
-    return
-  }
-  const ok = await confirmDialog({
-    title: 'Replace your current data?',
-    message: 'The imported backup will become your active data. A copy of your current data is saved first so nothing is lost.',
-    details: describeImport(result.summary),
-    confirmText: 'Import and replace',
-    danger: true,
-  })
-  if (!ok) {
-    event.target.value = ''
-    return
-  }
-  try {
-    localStorage.setItem('kcc_backup_pre_import', JSON.stringify(buildExport(state).data))
-  } catch {
-    /* storage may be full — the import itself still proceeds */
-  }
-  for (const warning of result.warnings) toast(warning, 'info', { timeout: 6000 })
-  replaceState(result.state)
-  toast('Backup imported', 'success')
-  event.target.value = ''
-  window.CC.switchView('dashboard')
-}
-
-export async function resetAllData() {
-  const first = await confirmDialog({
-    title: 'Reset all data?',
-    message: 'Every task, timetable block, focus session, priority and setting in this browser will be deleted. This cannot be undone.',
-    confirmText: 'Continue',
-    danger: true,
-  })
-  if (!first) return
-  const second = await confirmDialog({
-    title: 'Really delete everything?',
-    message: 'Export a backup first if you might need this data. Type nothing — just confirm to wipe.',
-    details: `${state.tasks.length} tasks · ${allTimetableBlocks(state).length} blocks · ${state.focus.sessions.length} focus sessions`,
-    confirmText: 'Delete everything',
-    danger: true,
-  })
-  if (!second) return
-  try {
-    localStorage.removeItem(STORAGE_KEY)
-  } catch {
-    /* ignore */
-  }
-  location.reload()
-}
+async function testAiConnection(){const node=document.querySelector('[data-ai-status]');node.textContent='Checking the connection…';try{const response=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:'Reply with the single word OK.',messages:[{role:'user',content:'ping'}]})});const data=await response.json().catch(()=>null);statusLine=response.ok?'Connected. Your assistant is ready.':data?.error?.message||'The assistant isn’t available right now.';statusTone=response.ok?'success':'warning'}catch{statusLine='Couldn’t reach the Worker. Built-in planning still works.';statusTone='warning'}const current=document.querySelector('[data-ai-status]');if(current){current.textContent=statusLine;current.className='form-hint '+statusTone}}
+async function requestNotifications(){if(!('Notification'in window)){toast('This browser doesn’t support notifications. In-app reminders still work.','info');return}let permission=Notification.permission;try{if(permission==='default')permission=await Notification.requestPermission()}catch{permission='denied'}const granted=permission==='granted';commit((s)=>{s.settings.reminders.permissionRequested=true;s.settings.reminders.desktopNotifications=granted},{silent:true});toast(granted?'Browser notifications enabled. You stay in control.':'Using gentle in-app reminders instead.',granted?'success':'info');renderSettings()}
+export function openProtectedModal(id=null){const block=state.settings.protectedTime.find((b)=>b.id===id);openModal({title:block?'Edit protected time':'Make this time yours.',body:`<form id="protected-form" class="form-stack"><div><label class="field-label" for="protected-label">What are you protecting?</label><input class="input-field" id="protected-label" required maxlength="60" value="${escapeHtml(block?.label||'')}" placeholder="Sleep, family time, a quiet lunch…"></div><div class="form-grid"><div><label class="field-label" for="protected-start">From</label><input class="input-field" id="protected-start" type="time" required value="${block?.start||'23:00'}"></div><div><label class="field-label" for="protected-end">Until</label><input class="input-field" id="protected-end" type="time" required value="${block?.end||'06:00'}"></div></div><div><p class="field-label">Days · leave empty for every day</p><div class="weekday-picker">${weekdayButtons(block?.days||[],'data-pday')}</div></div><p class="form-hint">A window ending earlier than it starts wraps safely past midnight. The planner will work around it.</p><div class="form-footer"><button type="button" class="btn-ghost" data-modal-close>Cancel</button><button class="btn-primary" type="submit">${block?'Save window':'Protect this time'}</button></div></form>`,onMount:(box)=>{box.querySelectorAll('[data-pday]').forEach((b)=>b.addEventListener('click',()=>{b.classList.toggle('day-active');b.setAttribute('aria-pressed',b.classList.contains('day-active'))}));box.querySelector('form').addEventListener('submit',(e)=>{e.preventDefault();const start=box.querySelector('#protected-start').value,end=box.querySelector('#protected-end').value;if(start===end){toast('Choose different start and end times.','error');return}const payload={label:box.querySelector('#protected-label').value.trim(),start,end,days:[...box.querySelectorAll('[data-pday].day-active')].map((b)=>Number(b.dataset.pday))};if(!payload.label)return;commit((s)=>{if(block)Object.assign(s.settings.protectedTime.find((b)=>b.id===id),payload);else s.settings.protectedTime.push({id:uid(),...payload})});closeModal();toast('Your time is protected.','success')})}})}
+export function openCategoryModal(id=null){const cat=state.categories.find((c)=>c.id===id);openModal({title:cat?'Edit category':'A new area of your life',body:`<form id="category-form" class="form-stack"><div><label class="field-label" for="category-name">Name</label><input class="input-field" id="category-name" required maxlength="50" value="${escapeHtml(cat?.name||'')}" placeholder="Learning, wellbeing, creative work…"></div><div><label class="field-label" for="category-color">A subtle color</label><input type="color" id="category-color" value="${cat?.color||'#b4a3f5'}"></div><div class="form-footer"><button type="button" class="btn-ghost" data-modal-close>Cancel</button><button type="submit" class="btn-primary">${cat?'Save category':'Add category'}</button></div></form>`,onMount:(box)=>box.querySelector('form').addEventListener('submit',(e)=>{e.preventDefault();const name=box.querySelector('#category-name').value.trim(),color=box.querySelector('#category-color').value;if(!name)return;commit((s)=>{if(cat)Object.assign(s.categories.find((c)=>c.id===id),{name,color});else s.categories.push({id:uid(),name,color})});closeModal();toast('Category saved.','success')})})}
+async function deleteCategory(id){const cat=state.categories.find((c)=>c.id===id),used=state.tasks.filter((t)=>t.cat===id).length+allTimetableBlocks(state).filter((b)=>b.cat===id).length;if(!await confirmDialog({title:`Delete ${cat?.name||'this category'}?`,message:`${used} items use this category. They’ll stay safe and become uncategorized.`,confirmText:'Delete category',danger:true}))return;commit((s)=>{s.categories=s.categories.filter((c)=>c.id!==id);s.tasks.forEach((t)=>{if(t.cat===id)t.cat=null});allTimetableBlocks(s).forEach((b)=>{if(b.cat===id)b.cat=null});Object.values(s.schedule.days).flat().forEach((b)=>{if(b.cat===id)b.cat=null})});toast('Category removed. Your work is preserved.','info')}
+function downloadText(text,filename){const blob=new Blob([text],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+export async function exportData(){const text=JSON.stringify(buildExport(state,{app:'Command · Personal Command Center'}),null,2);try{downloadText(text,exportFilename());toast('Your backup is ready. Keep it somewhere safe.','success')}catch{const copied=await copyText(text);toast(copied?'Download blocked. Your backup was copied instead.':'Could not create the backup. Please try again.',copied?'info':'error')}}
+export async function importData(event){const file=event?.target?.files?.[0];if(!file)return;try{if(file.size>8*1024*1024)throw new Error('This file is too large. Choose a backup smaller than 8 MB.');const result=validateImport(JSON.parse(await file.text()));if(!result.ok)throw new Error(result.errors[0]);const ok=await confirmDialog({title:'Restore this backup?',message:'Your current workspace will be replaced only after a safety copy is saved. Focus history, goals and missions are included.',details:describeImport(result.summary),confirmText:'Import and replace',danger:true});if(!ok)return;try{localStorage.setItem('kcc_backup_pre_import',JSON.stringify(buildExport(state).data))}catch{throw new Error('There isn’t enough storage for a safety copy. Export your current data and free some space before importing. Nothing was changed.')}replaceState(result.state);applyTheme();for(const warning of result.warnings)toast(warning,'info',{timeout:6000});toast('Your workspace was restored.','success');window.CC.switchView('dashboard')}catch(error){toast(error instanceof SyntaxError?'That file isn’t valid JSON. Your workspace is unchanged.':error.message||'The backup could not be read. Nothing was changed.','error',{timeout:9000})}finally{if(event?.target)event.target.value=''}}
+export async function resetAllData(){if(!await confirmDialog({title:'Start from a clean workspace?',message:'This removes missions, goals, projects, routines, focus history and preferences from this browser. A safety backup will be kept first.',confirmText:'Continue',danger:true}))return;if(!await confirmDialog({title:'One last check.',message:'Export a backup to another location if you may need this data later. Your browser’s safety copy is not a substitute for an external backup.',details:`${state.tasks.length} missions · ${state.focus.sessions.length} focus sessions · ${state.goals.length} goals`,confirmText:'Reset everything',danger:true}))return;try{localStorage.setItem('kcc_backup_before_reset',JSON.stringify(buildExport(state).data))}catch{toast('Reset stopped: a safety copy could not be saved. Export your data first.','error',{timeout:9000});return}replaceState(emptyState());applyTheme();toast('A fresh canvas. Your previous data has a safety copy.','info');window.CC.switchView('dashboard')}

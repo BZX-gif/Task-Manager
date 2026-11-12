@@ -7,8 +7,9 @@
      • the daily score is ≥ 60, OR
      • at least 45 focused minutes were logged
 
-   So a single missed minor task never kills the streak. Today stays "open"
-   until it succeeds — an unfinished morning does not break the chain.
+   `current` counts meaningful days in the recent 30-day window; a quiet day
+   never erases them. `best` remains the longest historical consecutive run.
+   Today stays open until it succeeds — an unfinished morning is not a miss.
    The rule text is exported so the UI can show it verbatim.
    ------------------------------------------------------------------------- */
 
@@ -49,20 +50,15 @@ export function computeStreak({ todayKey, history = {}, lookback = 400, recentDa
   let current = 0
   let cursor = todayKey
   let todayCounted = false
+  const momentumWindow = Math.min(lookback, 30)
 
-  for (let i = 0; i < lookback; i++) {
-    const day = history[cursor]
-    const success = isSuccessfulDay(day)
-    if (i === 0) {
-      // today does not break the streak while it is still in progress
-      if (success) {
-        current++
-        todayCounted = true
-      }
-    } else if (success) {
+  // Momentum is a count of real meaningful days, not a debt that resets to
+  // zero after a rest day. The consecutive-run record is computed separately.
+  for (let i = 0; i < momentumWindow; i++) {
+    const success = isSuccessfulDay(history[cursor])
+    if (success) {
       current++
-    } else {
-      break
+      if (i === 0) todayCounted = true
     }
     cursor = addDays(cursor, -1)
   }
@@ -82,7 +78,6 @@ export function computeStreak({ todayKey, history = {}, lookback = 400, recentDa
     prevKey = key
     if (run > best) best = run
   }
-  best = Math.max(best, current)
 
   const recent = []
   for (let i = recentDays - 1; i >= 0; i--) {

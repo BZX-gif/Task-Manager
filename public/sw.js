@@ -1,13 +1,13 @@
 /* -------------------------------------------------------------------------
    Command Center service worker
    -------------------------------------------------------------------------
-   • Pre-caches the app shell so tasks + timetable work offline.
+   • Pre-caches the app shell so the local-first workspace works offline.
    • Navigation requests: network-first, falling back to the cached shell.
    • Static assets: cache-first (they are content-addressed by version).
    • /api/* is never cached — AI responses must always be live.
    ------------------------------------------------------------------------- */
 
-const VERSION = 'v2-3-4'
+const VERSION = 'v3-0-1'
 const SHELL_CACHE = `cc-shell-${VERSION}`
 const ASSET_CACHE = `cc-assets-${VERSION}`
 
@@ -15,14 +15,8 @@ const SHELL_ASSETS = [
   '/',
   '/static/style.css',
   '/static/studio.css',
-  '/static/daylight-studio.jpg',
-  '/static/hero-atmosphere.jpg',
   '/static/tailwind.css',
   '/static/js/app.js',
-  '/static/vendor/fontawesome/css/all.min.css',
-  '/static/fonts.css',
-  '/static/fonts/sora-latin-700.woff2',
-  '/static/fonts/manrope-latin-400.woff2',
   '/static/favicon.svg',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
@@ -68,8 +62,10 @@ self.addEventListener('fetch', (event) => {
       (async () => {
         try {
           const response = await fetch(request)
-          const cache = await caches.open(SHELL_CACHE)
-          cache.put('/', response.clone())
+          if (response.ok) {
+            const cache = await caches.open(SHELL_CACHE)
+            await cache.put('/', response.clone())
+          }
           return response
         } catch {
           const cache = await caches.open(SHELL_CACHE)

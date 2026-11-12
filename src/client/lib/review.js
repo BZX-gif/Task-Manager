@@ -18,8 +18,7 @@
 import { formatDuration, minutesOfDay, weekDates, weekdayName, weekdayOf } from './dates.js'
 import { rangeDayStats } from './daystats.js'
 import { categoryInsights, focusTimeOfDay, plannedLoadByDay, strongestAndWeakest } from './insights.js'
-import { activeTimetable } from './missions.js'
-import { STREAK_RULE } from './streak.js'
+import { scheduleFor } from './planner.js'
 
 /** The week (Mon–Sun by default) containing `dateKey`. */
 export function weekRange(dateKey, weekStart = 1) {
@@ -39,12 +38,14 @@ function averageScore(stats, todayKey) {
   return Math.round(scored.reduce((sum, d) => sum + d.score, 0) / scored.length)
 }
 
-function timetableHasBuffer(state, minGap = 15) {
-  const sorted = [...activeTimetable(state)].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
-  for (let i = 1; i < sorted.length; i++) {
-    const prevEnd = minutesOfDay(sorted[i - 1].time) + (sorted[i - 1].duration || 60)
-    const gap = minutesOfDay(sorted[i].time) - prevEnd
-    if (gap >= minGap && gap <= 120) return true
+function timetableHasBuffer(state, days, minGap = 15) {
+  for (const date of days) {
+    const sorted = scheduleFor(state, date).sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+    for (let i = 1; i < sorted.length; i++) {
+      const prevEnd = minutesOfDay(sorted[i - 1].time) + (sorted[i - 1].duration || 60)
+      const gap = minutesOfDay(sorted[i].time) - prevEnd
+      if (gap >= minGap && gap <= 120) return true
+    }
   }
   return false
 }
@@ -64,7 +65,7 @@ export function weeklyReview(state, { dateKey, todayKey, now = new Date(), weekS
   const elapsedDays = stats.filter((d) => d.dateKey <= todayKey)
   const plannedMinutes = stats.reduce((sum, d) => sum + d.totalPlannedMinutes, 0)
   const elapsedPlannedMinutes = elapsedDays.reduce((sum, d) => sum + d.totalPlannedMinutes, 0)
-  const completedMinutes = stats.reduce((sum, d) => sum + d.completedMinutes + d.taskDoneMinutes, 0)
+  const completedMinutes = elapsedDays.reduce((sum, d) => sum + d.completedMinutes + d.taskDoneMinutes, 0)
   const focusedMinutes = stats.reduce((sum, d) => sum + d.focusedMinutes, 0)
   const focusSessions = stats.reduce((sum, d) => sum + d.focusSessions, 0)
   const tasksPlanned = stats.reduce((sum, d) => sum + d.tasksPlanned, 0)
@@ -85,8 +86,8 @@ export function weeklyReview(state, { dateKey, todayKey, now = new Date(), weekS
 
   const daysUpToToday = stats.filter((d) => d.dateKey <= todayKey).length
 
-  const overdue = (state.tasks || []).filter((t) => !t.done && t.date && t.date < todayKey && !t.inbox)
-  const missedTasks = (state.tasks || []).filter((t) => t.date >= from && t.date <= to && !t.done && t.date <= todayKey)
+  const overdue = (state.tasks || []).filter((t) => !t.done && t.status !== 'cancelled' && t.date && t.date < todayKey && !t.inbox)
+  const missedTasks = (state.tasks || []).filter((t) => t.date >= from && t.date <= to && !t.done && t.status !== 'cancelled' && !t.inbox && t.date <= todayKey)
 
   // ---- recommendations (deterministic rules, max 4) --------------------
   /** @type {Array<{priority:number, text:string, action?:string}>} */
@@ -107,11 +108,12 @@ export function weeklyReview(state, { dateKey, todayKey, now = new Date(), weekS
       action: 'focus',
     })
   }
-  if (focusedMinutes < focusTarget * 0.6) {
-    const missing = Math.max(0, Math.round((focusTarget * 0.6 - focusedMinutes) / 60))
+  const expectedFocus = focusTarget * (isCurrentWeek ? elapsedDays.length / 7 : 1)
+  if (focusedMinutes < expectedFocus * 0.6) {
+    const missing = Math.max(0, Math.round((expectedFocus * 0.6 - focusedMinutes) / 60))
     recommendations.push({
       priority: 70 + missing / 4,
-      text: `Focused time is ${formatDuration(focusedMinutes)} against a ${formatDuration(focusTarget)} weekly target — protect about ${missing}h of deep work next week.`,
+      text: `Focused time is ${formatDuration(focusedMinutes)} against ${formatDuration(Math.round(expectedFocus))} expected ${isCurrentWeek ? 'so far this week' : 'last week'} — protect about ${missing}h of deep work next week.`,
       action: 'focus',
     })
   }
@@ -119,7 +121,7 @@ export function weeklyReview(state, { dateKey, todayKey, now = new Date(), weekS
   if (active < 5) {
     recommendations.push({
       priority: 60 + (5 - active) * 2,
-      text: `Only ${active} active day${active === 1 ? '' : 's'} this week. Aim for 5 — streak days also count with ${STREAK_RULE.minFocusMinutes}+ focus minutes or a ${STREAK_RULE.minScore}+ score.`,
+      text: `You showed up on ${active} day${active === 1 ? '' : 's'} so far. A small, repeatable routine may be more useful than trying to fill every day.`,
       action: 'plan',
     })
   }
@@ -130,8 +132,8 @@ export function weeklyReview(state, { dateKey, todayKey, now = new Date(), weekS
       action: 'tasks',
     })
   }
-  if (!timetableHasBuffer(state)) {
-    recommendations.push({ priority: 50, text: 'No buffer in the timetable. Protect a 15-minute daily buffer to absorb overruns.', action: 'timetable' })
+  if (!timetableHasBuffer(state,days)) {
+    recommendations.push({ priority: 50, text: 'Your scheduled week has no 15-minute gap. Consider a small buffer between demanding blocks.', action: 'timetable' })
   }
   if (best && best.score >= 80) {
     recommendations.push({
@@ -181,7 +183,7 @@ export function weeklyReview(state, { dateKey, todayKey, now = new Date(), weekS
       dateKey: d.dateKey,
       score: d.score,
       focusedMinutes: d.focusedMinutes,
-      completionPct: d.totalPlannedMinutes ? Math.round(((d.completedMinutes + d.taskDoneMinutes) / d.totalPlannedMinutes) * 100) : 0,
+      completionPct: d.totalPlannedMinutes ? Math.min(100, Math.round(((d.completedMinutes + d.taskDoneMinutes) / d.totalPlannedMinutes) * 100)) : 0,
       tasksDone: d.tasksDone,
       tasksPlanned: d.tasksPlanned,
       active: d.hasAnyActivity,

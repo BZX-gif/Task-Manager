@@ -50,8 +50,8 @@ export function selectNextAction(input) {
   } = input
 
   const doneSet = new Set(ttDone)
-  const openToday = tasks.filter((t) => t.date === todayKey && !t.done)
-  const overdue = tasks.filter((t) => !t.done && t.date && t.date < todayKey && !t.inbox)
+  const openToday = tasks.filter((t) => t.date === todayKey && !t.done && !t.inbox && t.status !== 'cancelled' && t.status !== 'paused')
+  const overdue = tasks.filter((t) => !t.done && t.date && t.date < todayKey && !t.inbox && t.status !== 'cancelled' && t.status !== 'paused')
 
   /** @type {any} */
   let pick = null
@@ -70,7 +70,7 @@ export function selectNextAction(input) {
     const running = timetable.find((b) => {
       const start = minutesOfDay(b.time)
       const end = start + (b.duration || 60)
-      return nowMinutes >= start && nowMinutes < end && !doneSet.has(b.id)
+      return nowMinutes >= start && nowMinutes < end && !doneSet.has(b.id) && !doneSet.has(b.sourceId) && !b.protected && b.kind !== 'protected' && b.status !== 'skipped'
     })
     if (running) {
       pick = {
@@ -108,7 +108,7 @@ export function selectNextAction(input) {
   // 5 — nearest scheduled block that is still ahead
   if (!pick) {
     const upcomingBlock = timetable
-      .filter((b) => minutesOfDay(b.time) > nowMinutes && !doneSet.has(b.id))
+      .filter((b) => minutesOfDay(b.time) > nowMinutes && !doneSet.has(b.id) && !doneSet.has(b.sourceId) && !b.protected && b.kind !== 'protected' && b.status !== 'skipped')
       .sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))[0]
     if (upcomingBlock) {
       pick = {
