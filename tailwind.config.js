@@ -4,7 +4,7 @@
  * warning and makes the utility CSS part of the offline PWA shell.
  *
  * The theme below mirrors the previous runtime `tailwind.config` that used to
- * live inline in the HTML shell, using the restrained v2.3 palette.
+ * live inline in the HTML shell, using the restrained Command palette. Semantic CSS variables remain the source of truth.
  */
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -17,8 +17,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Sora', 'sans-serif'],
-        body: ['Manrope', 'sans-serif'],
+        display: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'sans-serif'],
+        body: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Segoe UI', 'sans-serif'],
       },
       colors: {
         base: { 950: '#0b0d11', 900: '#0f1217', 850: '#141820', 800: '#191e27', 700: '#1e242f' },

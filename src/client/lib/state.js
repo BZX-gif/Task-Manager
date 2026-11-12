@@ -11,7 +11,8 @@
        ──► v4 (mission roadmap) ──► v5 (per-mission timetables)
    ------------------------------------------------------------------------- */
 
-import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_TIMETABLE, STATE_VERSION, starterTimetableFor } from './defaults.js'
+import { DEFAULT_CATEGORIES, LEGACY_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_TIMETABLE, STATE_VERSION, starterTimetableFor } from './defaults.js'
+import { dateKey } from './dates.js'
 import { isValidKey, minutesOfDay } from './dates.js'
 import { normalizeRecurrence } from './recurrence.js'
 import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
@@ -20,6 +21,8 @@ import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
 export const STORAGE_KEY = 'kcc_state_v1'
 export const PRE_MIGRATION_BACKUP_KEY = 'kcc_backup_pre_v2'
 /** Where an unparseable payload is parked so the user can still rescue it. */
+export const PRE_V6_BACKUP_KEY = 'kcc_backup_pre_v6'
+export const PRE_CHANGE_BACKUP_KEY = 'kcc_backup_before_change'
 export const CORRUPT_BACKUP_KEY = 'kcc_backup_unreadable'
 
 export const PRIORITIES = ['high', 'medium', 'low']
@@ -64,8 +67,14 @@ export function normalizeTimetableItem(item, ctx) {
     duration: clampNumber(item?.duration, 5, 600, 60),
     cat: item?.cat ? String(item.cat) : null,
     ...(item?.missionId ? { missionId: String(item.missionId) } : {}),
+    days: Array.isArray(item?.days) ? [...new Set(item.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))] : [],
+    protected: item?.protected === true,
+    flexible: item?.flexible !== false,
+    priority: PRIORITIES.includes(item?.priority) ? item.priority : 'medium',
   }
 }
+
+export const MISSION_STATUSES = ['not_started', 'ready', 'in_progress', 'completed', 'paused', 'rescheduled', 'cancelled']
 
 export function normalizeTask(task, ctx) {
   const date = isValidKey(task?.date) ? task.date : null
@@ -80,7 +89,19 @@ export function normalizeTask(task, ctx) {
     cat: task?.cat ? String(task.cat) : null,
     notes: typeof task?.notes === 'string' ? task.notes.slice(0, 2000) : '',
     estimateMinutes: clampNumber(task?.estimateMinutes, 5, 600, 30),
-    done: task?.done === true,
+    done: task?.done === true || task?.status === 'completed',
+    status: MISSION_STATUSES.includes(task?.status) ? task.status : task?.done ? 'completed' : 'ready',
+    description: typeof task?.description === 'string' ? task.description.slice(0, 4000) : '',
+    deadline: isValidKey(task?.deadline) ? task.deadline : null,
+    goalId: task?.goalId ? String(task.goalId) : null,
+    projectId: task?.projectId ? String(task.projectId) : null,
+    milestoneId: task?.milestoneId ? String(task.milestoneId) : null,
+    horizon: ['daily', 'weekly', 'long_term', 'quick'].includes(task?.horizon) ? task.horizon : 'daily',
+    subtasks: asArray(task?.subtasks).filter(isObj).map((sub) => ({ id: String(sub.id || ctx.uid()), title: String(sub.title || 'Step').slice(0, 200), done: sub.done === true })),
+    progress: task?.progress == null ? null : clampNumber(task.progress, 0, 100, 0),
+    history: asArray(task?.history).filter(isObj).slice(-100),
+    protected: task?.protected === true,
+    flexible: task?.flexible !== false,
     inbox: task?.inbox === true || (!date && !task?.cat && task?.inbox !== false),
     createdAt: Number.isFinite(task?.createdAt) ? task.createdAt : ctx.now,
     completedAt: Number.isFinite(task?.completedAt) ? task.completedAt : null,
@@ -98,7 +119,9 @@ export function normalizeFocusSession(session) {
     id: String(session.id || uid()),
     taskId: session.taskId ? String(session.taskId) : null,
     categoryId: session.categoryId ? String(session.categoryId) : null,
-    mode: session.mode === 'break' ? 'break' : 'focus',
+    mode: ['break', 'stopwatch'].includes(session.mode) ? session.mode : 'focus',
+    goalId: session.goalId ? String(session.goalId) : null,
+    taskTitle: typeof session.taskTitle === 'string' ? session.taskTitle.slice(0, 200) : null,
     plannedMinutes: clampNumber(session.plannedMinutes, 1, 600, 25),
     focusedSeconds,
     startedAt: Number.isFinite(session.startedAt) ? session.startedAt : Date.now(),
@@ -136,6 +159,12 @@ export function normalizeSettings(raw) {
           days,
         }
       }),
+    theme: ['dark', 'light', 'system'].includes(settings.theme) ? settings.theme : 'dark',
+    accent: ['iris', 'blue', 'sage', 'amber', 'rose'].includes(settings.accent) ? settings.accent : 'iris',
+    timeFormat: settings.timeFormat === '24h' ? '24h' : '12h',
+    userName: String(settings.userName || '').slice(0, 60),
+    workingHours: { start: normalizeTime(settings.workingHours?.start, '09:00'), end: normalizeTime(settings.workingHours?.end, '18:00') },
+    defaultTaskMinutes: clampNumber(settings.defaultTaskMinutes, 5, 600, 30),
     weekStart: settings.weekStart === 0 ? 0 : 1,
     dayEnd: normalizeTime(settings.dayEnd, '23:30'),
     // The Gemini key never belongs to the browser any more (server secret).
@@ -147,16 +176,20 @@ export function normalizeSettings(raw) {
 export function emptyState(ctx = makeContext()) {
   const missions = normalizeMissions(null)
   /** Independent exam-oriented starter routine per mission. */
-  const timetables = {}
-  for (const id of Object.keys(missions.definitions)) {
-    timetables[id] = ensureIds(starterTimetableFor(id), ctx).map((item) => normalizeTimetableItem(item, ctx))
-  }
+  // A new workspace is genuinely empty. Old starter plans are migrated, not seeded.
+  const timetables = Object.fromEntries(Object.keys(missions.definitions).map((id) => [id, []]))
   const state = {
     version: STATE_VERSION,
     missions,
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
     timetables,
     tasks: [],
+    goals: [],
+    projects: [],
+    routines: [],
+    routineHistory: {},
+    schedule: { days: {}, history: [] },
+    reviews: {},
     top3: {},
     completionLog: {},
     dayPlans: {},
@@ -213,13 +246,19 @@ export function migrateState(raw, ctx = makeContext()) {
     version = 5
   }
 
+  if (version < 6) {
+    working = migrateStateV5ToV6(working, ctx)
+    applied.push('migrateStateV5ToV6')
+    version = 6
+  }
+
   const state = normalizeState(working, ctx, warnings)
   state.meta = {
     ...(isObj(working.meta) ? working.meta : {}),
     createdAt: Number.isFinite(working.meta?.createdAt) ? working.meta.createdAt : ctx.now,
     // keep the stored write time: loading is not a write
     updatedAt: Number.isFinite(working.meta?.updatedAt) ? working.meta.updatedAt : ctx.now,
-    migratedFrom: applied.length ? `v${version}→v${STATE_VERSION}` : isObj(working.meta) ? working.meta.migratedFrom ?? null : null,
+    migratedFrom: applied.length ? `v${Number.isFinite(raw.version) ? raw.version : 1}→v${STATE_VERSION}` : isObj(working.meta) ? working.meta.migratedFrom ?? null : null,
     migrations: [...asArray(working.meta?.migrations), ...applied],
   }
   state.version = STATE_VERSION
@@ -320,6 +359,13 @@ export function migrateStateV4ToV5(raw, ctx = makeContext()) {
   return next
 }
 
+/** v6 is additive. Existing schedules remain study plans; no records become goals or progress automatically. */
+export function migrateStateV5ToV6(raw, ctx = makeContext()) {
+  const categories = asArray(raw.categories).map((c) => ({ ...c }))
+  for (const category of LEGACY_CATEGORIES) if (!categories.some((c) => c?.id === category.id)) categories.push({ ...category })
+  return { ...raw, version: 6, categories, goals: asArray(raw.goals), projects: asArray(raw.projects), routines: asArray(raw.routines), routineHistory: isObj(raw.routineHistory) ? raw.routineHistory : {}, schedule: isObj(raw.schedule) ? raw.schedule : { days: {}, history: [] }, meta: { ...(isObj(raw.meta) ? raw.meta : {}), legacyStudyPlans: true } }
+}
+
 /** Shape-safe normalisation used for every load/import. */
 export function normalizeState(raw, ctx = makeContext(), warnings = []) {
   const state = emptyState(ctx)
@@ -345,8 +391,8 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
       source = rawTimetables[id] // explicit per-mission list (an empty list is honoured)
     } else if (hasLegacyTimetable && id === LEGACY_TIMETABLE_MISSION_ID) {
       source = raw.timetable // pre-v5 flat timetable → preserved as the UPSC schedule
-    } else if (!hasLegacyTimetable && !rawTimetables) {
-      source = ensureIds(starterTimetableFor(id), ctx) // nothing stored yet → exam-oriented starter
+    } else if (!hasLegacyTimetable && !rawTimetables && Array.isArray(raw.timetable)) {
+      source = []
     } else {
       source = [] // a mission missing from an existing v5 map starts clean
     }
@@ -427,13 +473,17 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
       ? {
           ...active,
           id: String(active.id || ctx.uid()),
-          mode: active.mode === 'break' ? 'break' : 'focus',
+          mode: ['break','stopwatch'].includes(active.mode) ? active.mode : 'focus',
           plannedMinutes: clampNumber(active.plannedMinutes, 1, 600, 25),
           accumulatedSeconds: Math.max(0, Number(active.accumulatedSeconds) || 0),
           running: active.running !== false,
           startedAt: Number.isFinite(active.startedAt) ? active.startedAt : ctx.now,
           lastTickAt: Number.isFinite(active.lastTickAt) ? active.lastTickAt : Number.isFinite(active.startedAt) ? active.startedAt : ctx.now,
           taskId: active.taskId ? String(active.taskId) : null,
+          goalId: active.goalId ? String(active.goalId) : null,
+          categoryId: active.categoryId ? String(active.categoryId) : null,
+          taskTitle: typeof active.taskTitle === 'string' ? active.taskTitle.slice(0,200) : null,
+          date: isValidKey(active.date) ? active.date : dateKey(new Date(Number.isFinite(active.startedAt) ? active.startedAt : ctx.now)),
           status: 'active',
         }
       : null,
@@ -506,6 +556,38 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
     }
   }
 
+  // v6 relationships are validated after all record IDs are known.
+  const text = (v, max = 4000) => typeof v === 'string' ? v.slice(0, max) : ''
+  const ref = (v, list) => list.some((item) => item.id === v) ? v : null
+  const baseEntity = (item) => ({ id: String(item.id || ctx.uid()), title: text(item.title, 200).trim() || 'Untitled', description: text(item.description), notes: text(item.notes), deadline: isValidKey(item.deadline) ? item.deadline : null, targetDate: isValidKey(item.targetDate) ? item.targetDate : null, priority: PRIORITIES.includes(item.priority) ? item.priority : 'medium', status: ['active', 'paused', 'completed', 'cancelled'].includes(item.status) ? item.status : 'active', createdAt: Number.isFinite(item.createdAt) ? item.createdAt : ctx.now, progressMode: item.progressMode === 'manual' ? 'manual' : 'auto', manualProgress: clampNumber(item.manualProgress, 0, 100, 0) })
+  state.goals = asArray(raw.goals).filter(isObj).map((item) => ({ ...baseEntity(item), category: ['Personal', 'Academic', 'Career', 'Financial', 'Fitness', 'Learning', 'Custom'].includes(item.category) ? item.category : 'Personal', milestones: asArray(item.milestones).filter(isObj).map((m) => ({ id: String(m.id || ctx.uid()), title: text(m.title, 200) || 'Milestone', done: m.done === true, targetDate: isValidKey(m.targetDate) ? m.targetDate : null })) }))
+  state.projects = asArray(raw.projects).filter(isObj).map((item) => ({ ...baseEntity(item), goalId: ref(item.goalId, state.goals), milestoneId: item.milestoneId ? String(item.milestoneId) : null, milestones: asArray(item.milestones).filter(isObj).map((m) => ({ id: String(m.id || ctx.uid()), title: text(m.title, 200) || 'Milestone', done: m.done === true, targetDate: isValidKey(m.targetDate) ? m.targetDate : null })) }))
+  const projectIds = new Set(state.projects.map((p) => p.id))
+  const milestoneIds = new Set(state.goals.flatMap((g) => g.milestones.map((m) => m.id)))
+  for (const project of state.projects) if (!project.milestoneId || !milestoneIds.has(project.milestoneId) || !state.goals.find((g) => g.id === project.goalId)?.milestones.some((m) => m.id === project.milestoneId)) project.milestoneId = null
+  for (const task of state.tasks) {
+    task.projectId = ref(task.projectId, state.projects)
+    task.goalId = ref(task.goalId, state.goals) || state.projects.find((p) => p.id === task.projectId)?.goalId || null
+    if (!milestoneIds.has(task.milestoneId) || !state.goals.find((g) => g.id === task.goalId)?.milestones.some((m) => m.id === task.milestoneId)) task.milestoneId = null
+    if (task.status === 'cancelled') task.done = false
+  }
+  state.routines = asArray(raw.routines).filter(isObj).map((item) => ({ id: String(item.id || ctx.uid()), title: text(item.title, 160) || 'Routine', type: text(item.type, 40) || 'Custom', time: normalizeTime(item.time, '08:00'), days: Array.isArray(item.days) ? [...new Set(item.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))] : [0,1,2,3,4,5,6], activities: asArray(item.activities).filter(isObj).map((a) => ({ id: String(a.id || ctx.uid()), title: text(a.title, 200) || 'Activity', duration: clampNumber(a.duration, 1, 600, 10) })), archived: item.archived === true, createdAt: Number.isFinite(item.createdAt) ? item.createdAt : ctx.now }))
+  state.routineHistory = {}
+  const routineIds = new Set(state.routines.map((r) => r.id))
+  for (const [day, entries] of Object.entries(isObj(raw.routineHistory) ? raw.routineHistory : {})) {
+    if (!isValidKey(day) || !isObj(entries)) continue
+    state.routineHistory[day] = {}
+    for (const [id, activityIds] of Object.entries(entries)) if (routineIds.has(id)) state.routineHistory[day][id] = [...new Set(asArray(activityIds).map(String))]
+  }
+  state.schedule = { days: {}, history: asArray(raw.schedule?.history).filter(isObj).slice(-40) }
+  for (const [day, blocks] of Object.entries(isObj(raw.schedule?.days) ? raw.schedule.days : {})) {
+    if (isValidKey(day) && Array.isArray(blocks)) state.schedule.days[day] = blocks.filter(isObj).map((b) => ({ ...normalizeTimetableItem(b, ctx), taskId: b.taskId ? String(b.taskId) : null, sourceId: b.sourceId ? String(b.sourceId) : null, goalId: b.goalId ? String(b.goalId) : null, projectId: b.projectId ? String(b.projectId) : null, milestoneId: b.milestoneId ? String(b.milestoneId) : null, routineId: b.routineId ? String(b.routineId) : null, activityId: b.activityId ? String(b.activityId) : null, kind: ['mission', 'break', 'routine', 'protected'].includes(b.kind) ? b.kind : 'mission', status: ['planned', 'completed', 'delayed', 'missed', 'skipped'].includes(b.status) ? b.status : 'planned' }))
+  }
+  state.reviews = {}
+  for (const [day, value] of Object.entries(isObj(raw.reviews) ? raw.reviews : {})) if (isValidKey(day) && isObj(value)) state.reviews[day] = { intention: text(value.intention, 1000), reflection: text(value.reflection, 2000), updatedAt: Number.isFinite(value.updatedAt) ? value.updatedAt : ctx.now }
+  state.meta.legacyStudyPlans = raw.meta?.legacyStudyPlans === true || (Number(raw.version) || 1) < 6
+  state.focus.active = state.focus.active ? { ...state.focus.active, mode: ['break', 'stopwatch'].includes(state.focus.active.mode) ? state.focus.active.mode : 'focus', goalId: state.focus.active.goalId ? String(state.focus.active.goalId) : null } : null
+
   return state
 }
 
@@ -539,7 +621,7 @@ export function loadState({ storage, now = Date.now(), id = uid } = {}) {
     const stored = store.getItem(STORAGE_KEY)
     if (stored) raw = JSON.parse(stored)
   } catch (error) {
-    unreadable = store.getItem(STORAGE_KEY)
+    try { unreadable = store.getItem(STORAGE_KEY) } catch { unreadable = null }
     // park a copy before the app writes anything, so nothing is silently lost
     try {
       if (unreadable) store.setItem(CORRUPT_BACKUP_KEY, unreadable)
@@ -555,6 +637,10 @@ export function loadState({ storage, now = Date.now(), id = uid } = {}) {
   const { state, applied, warnings: migrateWarnings } = migrateState(raw, ctx)
   warnings.push(...migrateWarnings)
   const migrated = applied.length > 0
+  if (Number(raw.version) < STATE_VERSION) {
+    try { if (!store.getItem(PRE_V6_BACKUP_KEY)) store.setItem(PRE_V6_BACKUP_KEY, JSON.stringify(raw)) }
+    catch { warnings.push('The upgrade backup could not be saved. Export your data before continuing.') }
+  }
   if (migrated) {
     try {
       // Keep a one-time safety copy of the pre-migration payload.
@@ -591,8 +677,10 @@ export function saveState(state, { storage, now = Date.now() } = {}) {
 export function storageUsage({ storage } = {}) {
   const store = getStorage(storage)
   if (!store) return { bytes: 0, kb: 0 }
-  const bytes = (store.getItem(STORAGE_KEY) || '').length * 2
-  return { bytes, kb: Math.round(bytes / 1024) }
+  try {
+    const bytes = (store.getItem(STORAGE_KEY) || '').length * 2
+    return { bytes, kb: Math.round(bytes / 1024) }
+  } catch { return { bytes: 0, kb: 0 } }
 }
 
 export { minutesOfDay }

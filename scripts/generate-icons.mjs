@@ -66,22 +66,8 @@ function encodePng(width, height, rgba) {
 const hexToRgb = (hex) => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
 const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
 
-const BG_FROM = hexToRgb('#141a30')
-const BG_TO = hexToRgb('#05070d')
-const STROKE = hexToRgb('#7c5cff')
-const BOLT_A = hexToRgb('#7c5cff')
-const BOLT_B = hexToRgb('#22d3ee')
-const BOLT_C = hexToRgb('#34d399')
-
-/** bolt outline in a 512×512 design space */
-const BOLT = [
-  [300, 84],
-  [170, 288],
-  [244, 288],
-  [214, 428],
-  [352, 214],
-  [274, 214],
-]
+const BG = hexToRgb('#101113')
+const MARK = hexToRgb('#b4a3f5')
 
 function insideRoundedRect(x, y, size, radius, inset = 0) {
   const min = inset
@@ -111,17 +97,10 @@ function sample(x, y, { maskable }) {
   const py = (y - pad) / inner * 512
   if (px < 0 || py < 0 || px > 512 || py > 512) return null
 
-  const t = Math.min(1, Math.max(0, (px / 512 + py / 512) / 2))
   if (!insideRoundedRect(px, py, 512, 112)) return null
-  let color = mix(BG_FROM, BG_TO, t)
-
-  const inInner = insideRoundedRect(px, py, 512, 96, 26)
-  if (!inInner && insideRoundedRect(px, py, 512, 112, 24)) {
-    color = mix(color, STROKE, 0.55)
-  }
-  if (insidePolygon(px, py, BOLT)) {
-    const bt = Math.min(1, Math.max(0, (px / 512 + py / 512) / 2))
-    color = bt < 0.55 ? mix(BOLT_A, BOLT_B, bt / 0.55) : mix(BOLT_B, BOLT_C, (bt - 0.55) / 0.45)
+  let color = BG
+  for (const [left, top, opacity] of [[112,112,1],[268,112,.55],[112,268,.55],[268,268,1]]) {
+    if (insideRoundedRect(px-left, py-top, 132, 34)) color = mix(BG, MARK, opacity)
   }
   return color
 }

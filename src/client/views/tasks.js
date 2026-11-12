@@ -1,460 +1,84 @@
-/* -------------------------------------------------------------------------
-   TASKS — full task manager + Inbox + recurring tasks
-   ------------------------------------------------------------------------- */
-
 import { FREQUENCIES, FREQUENCY_LABELS, recurrenceLabel } from '../lib/recurrence.js'
 import { isTop3, top3Candidates } from '../lib/top3.js'
 import { overdueTasks } from '../lib/score.js'
-import { addDays, formatDuration } from '../lib/dates.js'
+import { addDays, formatDuration, formatKeyLabel } from '../lib/dates.js'
 import { closeModal, confirmDialog, escapeHtml, openModal, qs, qsa, toast } from '../core/dom.js'
 import { commit, currentDayKey, ensureRecurringOccurrences, rollSeriesForward, state } from '../core/store.js'
-import { categoryColor, categoryName, categoryOptions, emptyState, priorityColor, priorityRank } from './shared.js'
-import { openFocusPickerForTask } from '../ui/focus.js'
-import { uid } from '../lib/state.js'
+import { toggleMission } from '../core/actions.js'
+import { saveDay } from '../core/actions.js'
+import { scheduleFor, scheduleConflicts } from '../lib/planner.js'
+import { goalChain, taskProgress } from '../lib/relationships.js'
+import { minutesByTask } from '../lib/focus.js'
+import { uid, MISSION_STATUSES } from '../lib/state.js'
+import { icon, pageHeading, empty, bindCommon, goalOptions, projectOptions, timeLabel } from '../ui/common.js'
+import { categoryColor, categoryName, categoryOptions, priorityRank } from './shared.js'
 
-export const FILTERS = ['today', 'upcoming', 'inbox', 'recurring', 'all', 'done']
-const FILTER_LABELS = { today: 'Today', upcoming: 'Upcoming', inbox: 'Inbox', recurring: 'Repeating', all: 'All', done: 'Completed' }
-
-let filter = 'today'
-let searchTerm = ''
-
-export function renderTasks() {
-  const section = document.getElementById('view-tasks')
-  if (!section) return
-  const previousSearch = /** @type {HTMLInputElement|null} */ (section.querySelector('[data-task-search]'))
-  const searchHadFocus = previousSearch === document.activeElement
-  const searchStart = previousSearch?.selectionStart ?? 0
-  const searchEnd = previousSearch?.selectionEnd ?? 0
-  const today = currentDayKey()
-  const list = filteredTasks(today)
-  const inboxCount = state.tasks.filter((t) => t.inbox && !t.done).length
-  const overdue = overdueTasks(state, today)
-
-  section.innerHTML = `
-    <div class="view-heading flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="view-eyebrow">YOUR WORKSPACE / TASKS</p>
-        <h2 class="section-title">Task Manager<span class="heading-period">.</span></h2>
-        <p class="section-sub">${state.tasks.filter((t) => !t.done).length} open · ${overdue.length ? `<span class="text-accent-5">${overdue.length} overdue</span>` : 'nothing overdue'} · ${inboxCount} in inbox</p>
-      </div>
-      <div class="flex gap-2">
-        <button class="btn-ghost" data-action="quick-capture"><i class="fa-solid fa-bolt mr-1.5"></i>Quick capture</button>
-        <button class="btn-primary" data-action="new-task"><i class="fa-solid fa-plus mr-1.5"></i>New Task</button>
-      </div>
-    </div>
-
-    <div class="task-toolbar flex flex-wrap items-center gap-2">
-      <div class="segmented" id="task-filter-seg" aria-label="Filter tasks">
-        ${FILTERS.map((f) => `<button data-f="${f}" aria-pressed="${filter === f}" class="${filter === f ? 'seg-active' : ''}">${FILTER_LABELS[f]}${f === 'inbox' && inboxCount ? ` (${inboxCount})` : ''}</button>`).join('')}
-      </div>
-      <div class="relative flex-1 min-w-[200px]">
-        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-        <input class="input-field !pl-9" placeholder="Search tasks…" value="${escapeHtml(searchTerm)}" data-task-search aria-label="Search tasks">
-      </div>
-    </div>
-
-    <div class="task-list-surface">
-      <div class="list-heading"><div><p>YOUR TASKS</p><h3>${FILTER_LABELS[filter]}</h3></div><span data-task-count>${list.length} task${list.length === 1 ? '' : 's'}</span></div>
-      <div data-task-list>
-        ${list.length ? list.map((t) => taskRowHtml(t, today)).join('') : emptyStateForFilter()}
-      </div>
-    </div>
-  `
-
-  qsa(section, '#task-filter-seg button').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      filter = btn.dataset.f
-      renderTasks()
-    }),
-  )
-  const search = /** @type {any} */ (qs(section, '[data-task-search]'))
-  search?.addEventListener('input', () => {
-    searchTerm = search.value
-    const listEl = section.querySelector('[data-task-list]')
-    const rows = filteredTasks(currentDayKey())
-    listEl.innerHTML = rows.length ? rows.map((t) => taskRowHtml(t, currentDayKey())).join('') : emptyStateForFilter()
-    const count = section.querySelector('[data-task-count]')
-    if (count) count.textContent = `${rows.length} task${rows.length === 1 ? '' : 's'}`
-    bindRows(section)
-  })
-  section.onclick = (event) => {
-    const button = event.target instanceof Element ? event.target.closest('[data-action]') : null
-    if (!button || !section.contains(button)) return
-    if (button.getAttribute('data-action') === 'new-task') openTaskModal()
-    else if (button.getAttribute('data-action') === 'quick-capture') window.CC?.openQuickCapture()
-    else if (button.getAttribute('data-action') === 'quick-capture-inbox') window.CC?.openQuickCapture({ inbox: true })
-  }
+export const FILTERS=['today','upcoming','inbox','recurring','all','done']
+const FILTER_LABELS={today:'Today',upcoming:'Upcoming',inbox:'Inbox',recurring:'Repeating',all:'All missions',done:'Completed'}
+const STATUS_LABELS={not_started:'Not started',ready:'Ready',in_progress:'In progress',completed:'Completed',paused:'Paused',rescheduled:'Rescheduled',cancelled:'Skipped'}
+let filter='today',searchTerm='',statusFilter='all',categoryFilter='all',horizonFilter='all',showFilters=false
+export function setMissionFilter(value){if(FILTERS.includes(value))filter=value}
+export function renderTasks(){
+  const section=document.getElementById('view-tasks');if(!section)return
+  const today=currentDayKey(),list=filteredTasks(today),inboxCount=state.tasks.filter((t)=>t.inbox&&!t.done).length
+  section.innerHTML=`${pageHeading('SMALL STEPS. REAL PROGRESS.','Your missions.','Everything you need to move forward. Nothing you don’t.',`<button class="btn-ghost" data-action="quick-capture">${icon('bolt')}Quick capture</button><button class="btn-primary" data-action="new-task">${icon('plus')}New mission</button>`)}<div class="mission-toolbar"><div class="segmented" id="task-filter-seg" aria-label="Filter missions">${FILTERS.map((f)=>`<button data-f="${f}" class="${filter===f?'seg-active':''}" aria-pressed="${filter===f}">${FILTER_LABELS[f]}${f==='inbox'&&inboxCount?` <span class="count-badge">${inboxCount}</span>`:''}</button>`).join('')}</div><button class="icon-btn ${showFilters?'is-selected':''}" data-show-filters aria-label="More filters" aria-expanded="${showFilters}">${icon('filter')}</button></div><div class="filter-row"><div class="toolbar-search">${icon('search')}<input class="input-field" placeholder="Search your missions…" value="${escapeHtml(searchTerm)}" data-task-search aria-label="Search missions"></div><span class="meta">${state.tasks.filter((t)=>!t.done&&t.status!=='cancelled').length} open missions</span></div>${showFilters?`<div class="advanced-filters"><label class="field-label">Status<select class="input-field" data-status-filter><option value="all">Any status</option>${MISSION_STATUSES.map((s)=>`<option value="${s}" ${statusFilter===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}</select></label><label class="field-label">Area<select class="input-field" data-category-filter><option value="all">All categories</option>${categoryOptions(categoryFilter)}</select></label><label class="field-label">Horizon<select class="input-field" data-horizon-filter>${[['all','Any horizon'],['daily','Daily'],['weekly','This week'],['long_term','Long term'],['quick','Quick win']].map(([v,l])=>`<option value="${v}" ${horizonFilter===v?'selected':''}>${l}</option>`).join('')}</select></label><button class="text-button" data-clear-filters>Clear filters</button></div>`:''}<div class="task-list-surface"><div class="list-heading"><div><p>YOUR NEXT STEPS</p><h3>${FILTER_LABELS[filter]}</h3></div><span data-task-count>${list.length} mission${list.length===1?'':'s'}</span></div><div data-task-list>${list.length?list.map((t)=>taskRowHtml(t,today)).join(''):emptyStateForFilter()}</div></div><div class="mission-footer">${icon('shield')}Your missions and focus history stay on this device.</div>`
+  bindCommon(section)
+  qsa(section,'#task-filter-seg button').forEach((b)=>b.addEventListener('click',()=>{filter=b.dataset.f;renderTasks()}))
+  const search=qs(section,'[data-task-search]');search.addEventListener('input',()=>{searchTerm=search.value;const rows=filteredTasks(currentDayKey());qs(section, '[data-task-list]').innerHTML=rows.length?rows.map((t)=>taskRowHtml(t,currentDayKey())).join(''):emptyStateForFilter();qs(section, '[data-task-count]').textContent=`${rows.length} mission${rows.length===1?'':'s'}`;bindRows(section)})
+  qs(section, '[data-show-filters]').addEventListener('click',()=>{showFilters=!showFilters;renderTasks()})
+  for(const [selector,setter] of /** @type {any[]} */([['[data-status-filter]',(v)=>statusFilter=v],['[data-category-filter]',(v)=>categoryFilter=v],['[data-horizon-filter]',(v)=>horizonFilter=v]]))qs(section, selector)?.addEventListener('change',(e)=>{setter(e.target.value);renderTasks()})
+  qs(section, '[data-clear-filters]')?.addEventListener('click',()=>{statusFilter=categoryFilter=horizonFilter='all';renderTasks()})
+  qsa(section, '[data-action]').forEach((b)=>b.addEventListener('click',()=>{if(b.dataset.action==='new-task')openTaskModal();else window.CC.openQuickCapture({inbox:b.dataset.action==='quick-capture-inbox'})}))
   bindRows(section)
-  if (searchHadFocus && search) {
-    search.focus()
-    search.setSelectionRange(searchStart, searchEnd)
-  }
 }
-
-function emptyStateForFilter() {
-  if (searchTerm.trim()) return emptyState({ icon: 'fa-solid fa-magnifying-glass', title: 'No matching tasks', body: 'Try a different search or switch filters.' })
-  if (filter === 'inbox') {
-    return emptyState({
-      icon: 'fa-solid fa-inbox',
-      title: 'Inbox is empty',
-      body: 'Dump quick ideas here without deciding where they belong. Sort them later.',
-      action: '<button class="btn-ghost mt-2" data-action="quick-capture-inbox">Capture something</button>',
-    })
-  }
-  if (filter === 'recurring') {
-    return emptyState({ icon: 'fa-solid fa-arrows-rotate', title: 'No repeating tasks', body: 'Create a task and set it to repeat daily, weekly or on selected days.' })
-  }
-  return emptyState({ icon: 'fa-regular fa-square-check', title: 'Nothing here', body: 'Add a task or switch filters.' })
+function filteredTasks(today){const term=searchTerm.trim().toLowerCase();let list=[...state.tasks];if(filter==='today')list=list.filter((t)=>t.date===today&&!t.inbox);else if(filter==='upcoming')list=list.filter((t)=>t.date&&t.date>today&&!t.done);else if(filter==='inbox')list=list.filter((t)=>t.inbox);else if(filter==='recurring')list=list.filter((t)=>t.recurrence);else if(filter==='done')list=list.filter((t)=>t.done);else list=list.filter((t)=>!t.inbox);if(statusFilter!=='all')list=list.filter((t)=>t.status===statusFilter);if(categoryFilter!=='all')list=list.filter((t)=>t.cat===categoryFilter);if(horizonFilter!=='all')list=list.filter((t)=>t.horizon===horizonFilter);if(term)list=list.filter((t)=>`${t.title} ${t.description||''} ${t.notes||''} ${categoryName(t.cat,'')} ${state.goals.find((g)=>g.id===t.goalId)?.title||''}`.toLowerCase().includes(term));return list.sort((a,b)=>Number(a.done)-Number(b.done)||(a.date||'9999').localeCompare(b.date||'9999')||priorityRank(a.priority)-priorityRank(b.priority)||b.createdAt-a.createdAt)}
+function emptyStateForFilter(){return searchTerm?empty('search','No matching missions.','Try another search or clear your filters.'):filter==='inbox'?empty('inbox','A clear head starts here.','Capture an idea now. Decide what to do with it later.','<button class="btn-ghost" data-action="quick-capture-inbox">Capture something</button>'):empty('missions',filter==='done'?'Your progress will live here.':'A little room for what matters.',filter==='done'?'Completed missions stay in your history.':'Add a clear next step, or choose a different filter.','<button class="btn-ghost" data-action="new-task">'+icon('plus')+'Add a mission</button>')}
+export function taskRowHtml(task,today){const overdue=!task.done&&task.status!=='cancelled'&&task.date&&task.date<today,chain=goalChain(state,task),focused=minutesByTask(state.focus.sessions,task.id),progress=taskProgress(task),subDone=task.subtasks?.filter((s)=>s.done).length||0;return `<article class="task-row ${task.done?'done':''} ${overdue?'is-overdue':''} ${task.status==='cancelled'?'is-skipped':''}" data-task-row="${escapeHtml(task.id)}"><button class="task-check ${task.done?'checked':''}" data-task-toggle="${escapeHtml(task.id)}" aria-label="${task.done?'Reopen':'Complete'} ${escapeHtml(task.title)}" aria-pressed="${task.done}" ${task.status==='cancelled'?'disabled':''}>${icon('check')}</button><span class="priority-dot priority-${task.priority}" title="${task.priority} priority"></span><button class="task-content block-details text-left" data-task-edit="${escapeHtml(task.id)}"><span class="task-title">${escapeHtml(task.title)}</span><span class="task-meta">${task.cat?`<span><i class="legend-dot" style="background:${categoryColor(task.cat)}"></i>${escapeHtml(categoryName(task.cat))}</span>`:''}<span class="${overdue?'warning':''}">${icon(task.inbox?'inbox':'calendar')}${task.inbox?'Inbox':task.date?`${overdue?'Overdue · ':''}${formatKeyLabel(task.date)}${task.time?' · '+timeLabel(task.time):''}`:'No date'}</span><span>${formatDuration(task.estimateMinutes)}</span>${task.recurrence?`<span>${icon('routines')}${escapeHtml(recurrenceLabel(task.recurrence))}</span>`:''}${chain.goal?`<span>${icon('target')}${escapeHtml(chain.goal.title)}</span>`:''}${focused?`<span>${formatDuration(focused)} focused</span>`:''}${isTop3(state,today,task.id)?'<span class="chip chip-accent">Priority</span>':''}${task.status!=='ready'&&task.status!=='completed'?`<span class="chip">${STATUS_LABELS[task.status]||task.status}</span>`:''}</span>${task.subtasks?.length?`<span class="task-sub-progress"><span class="progress-track"><span class="progress-fill" style="width:${progress}%"></span></span>${subDone}/${task.subtasks.length} steps</span>`:''}</button><div class="row-actions">${!task.done&&task.status!=='cancelled'?`<button class="icon-btn" data-task-focus="${escapeHtml(task.id)}" aria-label="Focus on ${escapeHtml(task.title)}">${icon('play')}</button>`:''}<button class="icon-btn" data-task-edit="${escapeHtml(task.id)}" aria-label="Edit ${escapeHtml(task.title)}">${icon('edit')}</button><button class="icon-btn danger-hover" data-task-delete="${escapeHtml(task.id)}" aria-label="Delete ${escapeHtml(task.title)}">${icon('trash')}</button></div></article>`}
+function bindRows(section){
+  qsa(section, '[data-task-toggle]').forEach((b)=>b.addEventListener('click',()=>toggleMission(b.dataset.taskToggle)))
+  qsa(section, '[data-task-edit]').forEach((b)=>b.addEventListener('click',()=>openTaskModal(b.dataset.taskEdit)))
+  qsa(section, '[data-task-focus]').forEach((b)=>b.addEventListener('click',()=>window.CC.openFocusMode(b.dataset.taskFocus)))
+  qsa(section, '[data-task-delete]').forEach((b)=>b.addEventListener('click',()=>deleteMission(b.dataset.taskDelete)))
 }
+async function deleteMission(id){const task=state.tasks.find((t)=>t.id===id);if(!task)return;if(!await confirmDialog({title:'Delete this mission?',message:'Its scheduled block will be removed. Focus sessions and their recorded time remain in your history.',confirmText:'Delete mission',danger:true}))return;commit((s)=>{s.tasks=s.tasks.filter((t)=>t.id!==id);if(task.seriesId===id)s.tasks.filter((t)=>t.seriesId===id).forEach((t)=>{t.recurrence=null;t.seriesId=null;t.occurrenceDate=null});for(const date of Object.keys(s.top3))s.top3[date]=s.top3[date].filter((x)=>x!==id);for(const date of Object.keys(s.schedule.days))s.schedule.days[date]=s.schedule.days[date].filter((b)=>b.taskId!==id);for(const log of Object.values(s.completionLog))log.taskDone=log.taskDone.filter((x)=>x!==id);if(s.focus.active?.taskId===id){s.focus.active.taskId=null;s.focus.active.taskTitle=task.title}});toast('Mission removed. Recorded focus time is preserved.','info')}
 
-function filteredTasks(today) {
-  const term = searchTerm.trim().toLowerCase()
-  let list = [...state.tasks]
-  if (filter === 'today') list = list.filter((t) => t.date === today && !t.inbox)
-  else if (filter === 'upcoming') list = list.filter((t) => t.date && t.date > today && !t.done)
-  else if (filter === 'inbox') list = list.filter((t) => t.inbox)
-  else if (filter === 'recurring') list = list.filter((t) => t.recurrence)
-  else if (filter === 'done') list = list.filter((t) => t.done)
-  else if (filter === 'all') list = list.filter((t) => !t.inbox)
-  if (term) list = list.filter((t) => `${t.title} ${t.notes || ''} ${categoryName(t.cat, '')}`.toLowerCase().includes(term))
-  list.sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1
-    if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1
-    if (a.date !== b.date) return a.date ? -1 : 1
-    return priorityRank(a.priority) - priorityRank(b.priority)
-  })
-  return list
+export function openTaskModal(id=null,options={}){
+  const task=state.tasks.find((t)=>t.id===id),today=currentDayKey(),date=options.date||task?.date||today
+  const projectId=options.projectId||task?.projectId||'',initialProject=state.projects.find((p)=>p.id===projectId),goalId=options.goalId||task?.goalId||initialProject?.goalId||''
+  const milestoneId=options.milestoneId||task?.milestoneId||initialProject?.milestoneId||'',recurrence=task?.recurrence
+  openModal({title:task?'A little more clarity.':'Your next meaningful step.',size:'modal-wide',body:`<form id="task-form" class="form-stack"><div><label class="field-label" for="task-title">Mission title</label><input class="input-field" id="task-title" name="title" required maxlength="200" value="${escapeHtml(task?.title||options.prefill||'')}" placeholder="What would move things forward?"></div><div><label class="field-label" for="task-description">Description · optional</label><textarea class="input-field" id="task-description" rows="2" placeholder="What does done look like?">${escapeHtml(task?.description||'')}</textarea></div><div class="form-grid"><div><label class="field-label" for="task-date">Date</label><input class="input-field" id="task-date" type="date" value="${options.inbox?'':date}"></div><div><label class="field-label" for="task-time">Start time · optional</label><input class="input-field" id="task-time" type="time" value="${task?.time||''}"></div></div><div class="form-grid"><div><label class="field-label" for="task-priority">Priority</label><select class="input-field" id="task-priority">${['high','medium','low'].map((p)=>`<option value="${p}" ${(task?.priority||'medium')===p?'selected':''}>${p[0].toUpperCase()+p.slice(1)}</option>`).join('')}</select></div><div><label class="field-label" for="task-estimate">Estimate · minutes</label><input class="input-field" id="task-estimate" type="number" min="5" max="600" step="5" required value="${task?.estimateMinutes||state.settings.defaultTaskMinutes}"></div></div><div class="form-grid"><div><label class="field-label" for="task-cat">Category</label><select class="input-field" id="task-cat">${categoryOptions(task?.cat)}</select></div><div><label class="field-label" for="task-horizon">Time horizon</label><select class="input-field" id="task-horizon">${[['daily','Daily'],['weekly','This week'],['long_term','Long term'],['quick','Quick win']].map(([v,l])=>`<option value="${v}" ${(task?.horizon||'daily')===v?'selected':''}>${l}</option>`).join('')}</select></div></div><div class="form-section"><p class="field-label">Connect the bigger picture</p><div class="form-grid"><div><label class="field-label" for="task-goal">Goal</label><select class="input-field" id="task-goal">${goalOptions(goalId)}</select></div><div><label class="field-label" for="task-project">Project</label><select class="input-field" id="task-project">${projectOptions(projectId)}</select></div></div><label class="field-label" for="task-milestone">Milestone</label><select class="input-field" id="task-milestone">${milestoneOptions(goalId,milestoneId)}</select></div><div class="form-section"><div class="section-heading"><p class="field-label">Small steps</p><span class="meta">Subtasks</span></div><div data-subtask-editor>${(task?.subtasks||[]).map(subtaskRow).join('')}</div><button type="button" class="text-button" data-add-subtask>${icon('plus')}Add a step</button></div><div class="form-grid">${task?`<div><label class="field-label" for="task-status">Status</label><select class="input-field" id="task-status">${MISSION_STATUSES.map((s)=>`<option value="${s}" ${task.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}</select></div><div><label class="field-label" for="task-progress">Manual progress · %</label><input class="input-field" id="task-progress" type="number" min="0" max="100" value="${task.progress??taskProgress(task)}" ${task.subtasks?.length?'disabled':''}></div>`:''}<div><label class="field-label" for="task-deadline">Deadline · optional</label><input class="input-field" id="task-deadline" type="date" value="${task?.deadline||''}"></div></div><div><label class="field-label" for="task-repeat">Repeat</label><select class="input-field" id="task-repeat"><option value="">Does not repeat</option>${FREQUENCIES.map((f)=>`<option value="${f}" ${recurrence?.freq===f?'selected':''}>${FREQUENCY_LABELS[f]}</option>`).join('')}</select></div><div class="${['weekdays','weekly'].includes(recurrence?.freq)?'':'hidden'}" data-weekday-picker><p class="field-label">Repeat on</p><div class="weekday-picker">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label,i)=>`<button type="button" class="day-toggle ${(recurrence?.weekdays||[1,2,3,4,5]).includes(i)?'day-active':''}" data-day="${i}" aria-pressed="${(recurrence?.weekdays||[1,2,3,4,5]).includes(i)}">${label}</button>`).join('')}</div></div><div class="${recurrence?'':'hidden'}" data-repeat-end><label class="field-label" for="task-repeat-end">Repeat until · optional</label><input class="input-field" id="task-repeat-end" type="date" value="${recurrence?.endDate||''}"></div><div><label class="field-label" for="task-notes">Private notes</label><textarea class="input-field" id="task-notes" rows="2">${escapeHtml(task?.notes||'')}</textarea></div><div class="check-stack"><label class="check-label"><input type="checkbox" id="task-top3" ${id&&isTop3(state,today,id)?'checked':''}>Make this one of today’s three priorities</label><label class="check-label"><input type="checkbox" id="task-protected" ${task?.protected?'checked':''}>Protect this scheduled time</label><label class="check-label"><input type="checkbox" id="task-flexible" ${task?.flexible!==false?'checked':''}>Allow rescheduling when plans change</label></div>${task?.history?.length?`<details class="history-details"><summary>Mission history · ${task.history.length} changes</summary>${task.history.slice(-8).reverse().map((h)=>`<p>${escapeHtml(h.action.replaceAll('_',' '))}${h.from?' · '+escapeHtml(h.from):''}${h.to?' → '+escapeHtml(h.to):''}<span>${new Date(h.at).toLocaleDateString()}</span></p>`).join('')}</details>`:''}<div class="form-footer">${task?`<button type="button" class="btn-ghost" data-task-reschedule>${icon('calendar')}Reschedule</button>`:''}<button type="button" class="btn-ghost" data-modal-close>Cancel</button><button type="submit" class="btn-primary">${task?'Save changes':'Add mission'}</button></div></form>`,onMount:(box)=>{
+    const repeat=box.querySelector('#task-repeat'),picker=box.querySelector('[data-weekday-picker]'),syncRepeat=()=>{picker.classList.toggle('hidden',!['weekdays','weekly'].includes(repeat.value));box.querySelector('[data-repeat-end]').classList.toggle('hidden',!repeat.value)};repeat.addEventListener('change',syncRepeat)
+    box.querySelectorAll('[data-day]').forEach((b)=>b.addEventListener('click',()=>{b.classList.toggle('day-active');b.setAttribute('aria-pressed',b.classList.contains('day-active'))}))
+    const bindRemove=()=>box.querySelectorAll('[data-subtask-remove]').forEach((b)=>b.onclick=()=>{b.closest('[data-subtask-row]').remove();const progress=box.querySelector('#task-progress');if(progress)progress.disabled=!!box.querySelector('[data-subtask-row]')})
+    bindRemove();box.querySelector('[data-add-subtask]').addEventListener('click',()=>{box.querySelector('[data-subtask-editor]').insertAdjacentHTML('beforeend',subtaskRow({id:uid(),title:'',done:false}));bindRemove();const progress=box.querySelector('#task-progress');if(progress)progress.disabled=true;box.querySelector('[data-subtask-editor]').lastElementChild.querySelector('input').focus()})
+    box.querySelector('#task-goal').addEventListener('change',(e)=>{box.querySelector('#task-milestone').innerHTML=milestoneOptions(e.target.value);const current=box.querySelector('#task-project').value;const compatible=state.projects.find((p)=>p.id===current&&(!e.target.value||p.goalId===e.target.value));box.querySelector('#task-project').innerHTML=projectOptions(compatible?.id||'',e.target.value)})
+    box.querySelector('#task-project').addEventListener('change',(e)=>{const p=state.projects.find((p)=>p.id===e.target.value);if(p){box.querySelector('#task-goal').value=p.goalId||'';box.querySelector('#task-milestone').innerHTML=milestoneOptions(p.goalId,p.milestoneId)}})
+    box.querySelector('[data-task-reschedule]')?.addEventListener('click',()=>window.CC.openRescheduleModal(id))
+    box.querySelector('form').addEventListener('submit',(e)=>{e.preventDefault();void submitTask(box,task)})
+    if(!task)box.querySelector('#task-title').focus()
+  }})
 }
-
-export function taskRowHtml(task, today) {
-  const isOverdue = !task.done && task.date && task.date < today
-  const inTop3 = isTop3(state, today, task.id)
-  const focused = Math.round(
-    (state.focus.sessions || []).filter((s) => s.taskId === task.id && s.mode !== 'break').reduce((sum, s) => sum + s.focusedSeconds, 0) / 60,
-  )
-  return `
-    <div class="task-row ${task.done ? 'done' : ''} ${isOverdue ? 'is-overdue' : ''}" data-task-row="${escapeHtml(task.id)}">
-      <button class="task-check ${task.done ? 'checked' : ''}" data-task-toggle="${escapeHtml(task.id)}" aria-label="Toggle ${escapeHtml(task.title)}"><i class="fa-solid fa-check"></i></button>
-      <span class="priority-dot" style="background:${priorityColor(task.priority)}"></span>
-      <div class="flex-1 min-w-0">
-        <p class="task-title text-sm font-semibold text-slate-100 truncate">${escapeHtml(task.title)}</p>
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-slate-500">
-          ${task.cat ? `<span class="flex items-center gap-1"><span class="legend-dot" style="background:${categoryColor(task.cat)}"></span>${escapeHtml(categoryName(task.cat))}</span>` : ''}
-          ${task.inbox ? '<span class="text-accent-2"><i class="fa-solid fa-inbox mr-1"></i>Inbox</span>' : ''}
-          ${task.date ? `<span class="${isOverdue ? 'text-accent-5' : ''}"><i class="fa-regular fa-calendar mr-1"></i>${isOverdue ? 'Overdue · ' : ''}${escapeHtml(task.date)}${task.time ? ` ${escapeHtml(task.time)}` : ''}</span>` : ''}
-          <span>${formatDuration(task.estimateMinutes || 30)}</span>
-          ${task.recurrence ? `<span class="text-accent"><i class="fa-solid fa-arrows-rotate mr-1"></i>${escapeHtml(recurrenceLabel(task.recurrence))}</span>` : ''}
-          ${focused ? `<span class="text-accent-2">${formatDuration(focused)} focused</span>` : ''}
-          ${inTop3 ? '<span class="top3-tag">Top 3</span>' : ''}
-        </div>
-      </div>
-      <div class="flex items-center gap-1.5">
-        ${!task.done ? `<button class="icon-btn" data-task-focus="${escapeHtml(task.id)}" title="Start focus session"><i class="fa-solid fa-play text-xs"></i></button>` : ''}
-        ${!task.done && !inTop3 ? `<button class="icon-btn" data-task-top3="${escapeHtml(task.id)}" title="Add to Top 3"><i class="fa-solid fa-ranking-star text-xs"></i></button>` : ''}
-        ${task.inbox ? `<button class="icon-btn" data-task-sort="${escapeHtml(task.id)}" title="File this task"><i class="fa-solid fa-folder-open text-xs"></i></button>` : ''}
-        <button class="icon-btn" data-task-edit="${escapeHtml(task.id)}" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
-        <button class="icon-btn" data-task-delete="${escapeHtml(task.id)}" title="Delete"><i class="fa-solid fa-trash text-xs"></i></button>
-      </div>
-    </div>`
+function subtaskRow(s){return `<div class="subtask-editor-row" data-subtask-row="${escapeHtml(s.id)}"><input type="checkbox" data-subtask-done ${s.done?'checked':''} aria-label="Step completed"><input class="input-field" data-subtask-title value="${escapeHtml(s.title)}" placeholder="A small, concrete step" aria-label="Step title" maxlength="200"><button type="button" class="icon-btn" data-subtask-remove aria-label="Remove step">${icon('close')}</button></div>`}
+function milestoneOptions(goalId,selected=''){return `<option value="">No specific milestone</option>${(state.goals.find((g)=>g.id===goalId)?.milestones||[]).map((m)=>`<option value="${escapeHtml(m.id)}" ${selected===m.id?'selected':''}>${escapeHtml(m.title)}</option>`).join('')}`}
+async function submitTask(box,existing){
+  const title=box.querySelector('#task-title').value.trim();if(!title){toast('Give your mission a title.','error');return}
+  const date=box.querySelector('#task-date').value||null,time=box.querySelector('#task-time').value||null,repeat=box.querySelector('#task-repeat').value,weekdays=[...box.querySelectorAll('[data-day].day-active')].map((b)=>Number(b.dataset.day)),endDate=box.querySelector('#task-repeat-end').value||null
+  if(time&&!date){toast('Choose a date for a timed mission.','error');return}
+  if(repeat&&['weekly','weekdays'].includes(repeat)&&!weekdays.length){toast('Choose at least one repeat day.','error');return}
+  if(endDate&&(!repeat||endDate<(date||currentDayKey()))){toast('The repeat end date must be on or after the first occurrence.','error');return}
+  const projectId=box.querySelector('#task-project').value||null,project=state.projects.find((p)=>p.id===projectId),goalId=box.querySelector('#task-goal').value||project?.goalId||null
+  const status=box.querySelector('#task-status')?.value||(date?'ready':'not_started'),subtasks=[...box.querySelectorAll('[data-subtask-row]')].map((row)=>({id:row.dataset.subtaskRow,title:row.querySelector('[data-subtask-title]').value.trim(),done:row.querySelector('[data-subtask-done]').checked})).filter((s)=>s.title)
+  const payload={title,date,time,priority:box.querySelector('#task-priority').value,cat:box.querySelector('#task-cat').value||null,estimateMinutes:Number(box.querySelector('#task-estimate').value),description:box.querySelector('#task-description').value,notes:box.querySelector('#task-notes').value,deadline:box.querySelector('#task-deadline').value||null,goalId,projectId,milestoneId:box.querySelector('#task-milestone').value||null,horizon:box.querySelector('#task-horizon').value,status,done:status==='completed',subtasks,progress:subtasks.length?null:Number(box.querySelector('#task-progress')?.value||0),protected:box.querySelector('#task-protected').checked,flexible:box.querySelector('#task-flexible').checked,inbox:!date&&!box.querySelector('#task-cat').value,recurrence:repeat?{freq:repeat,weekdays:repeat==='daily'?[]:weekdays,dayOfMonth:repeat==='monthly'?Number((date||currentDayKey()).slice(8)):null,startDate:date||currentDayKey(),endDate}:null}
+  if(payload.deadline&&date&&payload.deadline<date){toast('The deadline cannot be before the planned date.','error');return}
+  let conflicts=[]
+  if(date&&time&&status!=='cancelled'&&status!=='completed'){const blocks=scheduleFor(state,date).filter((b)=>b.taskId!==existing?.id);conflicts=scheduleConflicts([...blocks,{id:'new',title,time,duration:payload.estimateMinutes,protected:payload.protected}],state.settings.protectedTime,date)}
+  if(conflicts.length&&!await confirmDialog({title:'This time overlaps a commitment.',message:`${conflicts[0].label}. You can choose another time, or explicitly keep both. Protected time will not be removed.`,confirmText:'Keep this time'}))return
+  let newId=null;const today=currentDayKey(),wantTop3=box.querySelector('#task-top3').checked
+  commit((s)=>{let task;if(existing){task=s.tasks.find((t)=>t.id===existing.id);task.history=[...(task.history||[]),{at:Date.now(),action:'edited',from:existing.date,to:date,time}].slice(-100);if(existing.done!==payload.done){task.completedAt=payload.done?Date.now():null;if(payload.done)rollSeriesForward(task)}Object.assign(task,payload);if(payload.recurrence&&!task.seriesId){task.seriesId=task.id;task.occurrenceDate=date||today}}else{newId=uid();task={id:newId,...payload,createdAt:Date.now(),completedAt:payload.done?Date.now():null,seriesId:payload.recurrence?newId:null,occurrenceDate:payload.recurrence?date||today:null,history:[]};s.tasks.push(task)}if(payload.done&&!existing?.done){task.completedAt=Date.now();const log=s.completionLog[date||today]||(s.completionLog[date||today]={ttDone:[],taskDone:[]});if(!log.taskDone.includes(task.id))log.taskDone.push(task.id)}if(!payload.done){for(const log of Object.values(s.completionLog))log.taskDone=log.taskDone.filter((id)=>id!==task.id)}for(const key of Object.keys(s.schedule.days))if(key!==date)s.schedule.days[key]=s.schedule.days[key].filter((b)=>b.taskId!==task.id)})
+  if(date&&time&&status!=='cancelled'){const block={id:`task:${existing?.id||newId}`,taskId:existing?.id||newId,sourceId:existing?.id||newId,title,time,duration:payload.estimateMinutes,cat:payload.cat,priority:payload.priority,goalId,projectId,milestoneId:payload.milestoneId,kind:'mission',status:payload.done?'completed':'planned',protected:payload.protected,flexible:payload.flexible};saveDay(date,[...scheduleFor(state,date).filter((b)=>b.taskId!==(existing?.id||newId)),block],'',{undoable:false})}
+  if(payload.recurrence){ensureRecurringOccurrences(today);commit(()=>{},{immediate:true})}
+  if(wantTop3){const result=window.CC.addTaskToTop3(existing?.id||newId);if(!result.ok&&!isTop3(state,today,existing?.id||newId))toast(result.reason,'info')}else if(existing&&isTop3(state,today,existing.id))window.CC.removeFromTop3(existing.id)
+  closeModal();toast(existing?'Mission updated.':'A clear next step, ready when you are.','success')
 }
-
-function bindRows(section) {
-  qsa(section, '[data-task-toggle]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.taskToggle
-      /** @type {any} */
-      let followUp = null
-      let nowDone = false
-      commit((s) => {
-        const task = s.tasks.find((t) => t.id === id)
-        if (!task) return
-        task.done = !task.done
-        task.completedAt = task.done ? Date.now() : null
-        nowDone = task.done
-        if (task.done && task.recurrence) followUp = rollSeriesForward(task)
-      })
-      if (nowDone) toast('Task completed 🎉', 'success')
-      if (followUp) toast(`Next occurrence created · ${followUp.date}`, 'info')
-    }),
-  )
-  qsa(section, '[data-task-focus]').forEach((btn) => btn.addEventListener('click', () => openFocusPickerForTask(btn.dataset.taskFocus)))
-  qsa(section, '[data-task-edit]').forEach((btn) => btn.addEventListener('click', () => openTaskModal(btn.dataset.taskEdit)))
-  qsa(section, '[data-task-top3]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      const result = window.CC.addTaskToTop3(btn.dataset.taskTop3)
-      if (!result.ok) toast(result.reason || 'Could not add', 'error')
-      else toast('Added to today\'s Top 3', 'success')
-    }),
-  )
-  qsa(section, '[data-task-sort]').forEach((btn) => btn.addEventListener('click', () => openOrganiseModal(btn.dataset.taskSort)))
-  qsa(section, '[data-task-delete]').forEach((btn) =>
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.taskDelete
-      const task = state.tasks.find((t) => t.id === id)
-      if (!task) return
-      const confirmed = await confirmDialog({
-        title: 'Delete task?',
-        message: `“${task.title}” will be removed. Focus time already logged for it is kept.`,
-        confirmText: 'Delete',
-        danger: true,
-      })
-      if (!confirmed) return
-      commit((s) => {
-        s.tasks = s.tasks.filter((t) => t.id !== id)
-        for (const key of Object.keys(s.top3 || {})) {
-          s.top3[key] = s.top3[key].filter((x) => x !== id)
-          if (!s.top3[key].length) delete s.top3[key]
-        }
-      })
-      toast('Task deleted', 'info')
-    }),
-  )
-}
-
-/* ------------------------------------------------------------- task modal */
-
-export function openTaskModal(id = null, { inbox = false } = {}) {
-  const task = id ? state.tasks.find((t) => t.id === id) : null
-  const today = currentDayKey()
-  const recurrence = task?.recurrence || null
-  const body = `
-    <form id="task-form" class="space-y-4">
-      <div>
-        <label class="field-label" for="task-title">Task</label>
-        <input required class="input-field" id="task-title" name="title" placeholder="e.g. Complete Polity chapter 5" value="${task ? escapeHtml(task.title) : ''}">
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="field-label" for="task-date">Date</label>
-          <input type="date" class="input-field" id="task-date" name="date" value="${task?.date || (inbox ? '' : today)}">
-        </div>
-        <div>
-          <label class="field-label" for="task-time">Start time <span class="text-slate-600">optional</span></label>
-          <input type="time" class="input-field" id="task-time" name="time" value="${task?.time || ''}">
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="field-label" for="task-priority">Priority</label>
-          <select class="input-field" id="task-priority" name="priority">
-            ${['high', 'medium', 'low'].map((p) => `<option value="${p}" ${(task?.priority || 'medium') === p ? 'selected' : ''}>${p[0].toUpperCase() + p.slice(1)}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label class="field-label" for="task-estimate">Estimate (min)</label>
-          <input type="number" min="5" step="5" class="input-field" id="task-estimate" name="estimateMinutes" value="${task?.estimateMinutes ?? 30}">
-        </div>
-      </div>
-      <div>
-        <label class="field-label" for="task-cat">Category</label>
-        <select class="input-field" id="task-cat" name="cat">${categoryOptions(task?.cat || null)}</select>
-      </div>
-      <div>
-        <label class="field-label" for="task-repeat">Repeat</label>
-        <select class="input-field" id="task-repeat" name="repeat">
-          <option value="">Does not repeat</option>
-          ${FREQUENCIES.map((f) => `<option value="${f}" ${recurrence?.freq === f ? 'selected' : ''}>${FREQUENCY_LABELS[f]}</option>`).join('')}
-        </select>
-      </div>
-      <div class="hidden" data-weekday-picker>
-        <label class="field-label">Repeat on</label>
-        <div class="flex flex-wrap gap-1.5">
-          ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-            .map((label, index) => {
-              const active = recurrence?.weekdays?.length ? recurrence.weekdays.includes(index) : [1, 2, 3, 4, 5].includes(index)
-              return `<button type="button" class="day-toggle ${active ? 'day-active' : ''}" data-day="${index}">${label}</button>`
-            })
-            .join('')}
-        </div>
-      </div>
-      <div>
-        <label class="field-label" for="task-notes">Notes <span class="text-slate-600">optional</span></label>
-        <textarea class="input-field" id="task-notes" name="notes" rows="2" placeholder="Any details…">${task ? escapeHtml(task.notes || '') : ''}</textarea>
-      </div>
-      <label class="flex items-center gap-2.5 text-[13px] text-slate-300">
-        <input type="checkbox" id="task-top3" ${id && isTop3(state, today, id) ? 'checked' : ''} class="rounded border-white/20 bg-base-800">
-        Add to today's Top 3
-      </label>
-      <div class="flex gap-3 pt-1">
-        <button type="button" class="btn-ghost flex-1" data-modal-close>Cancel</button>
-        <button type="submit" class="btn-primary flex-1">${task ? 'Save changes' : 'Add task'}</button>
-      </div>
-    </form>`
-
-  openModal({
-    title: task ? 'Edit task' : inbox ? 'Capture to inbox' : 'New task',
-    body,
-    onMount: (box) => {
-        const repeat = box.querySelector('#task-repeat')
-        const weekdayPicker = box.querySelector('[data-weekday-picker]')
-      const syncRepeatUi = () => {
-        const needsDays = ['weekdays', 'weekly'].includes(repeat.value)
-        weekdayPicker.classList.toggle('hidden', !needsDays)
-      }
-      repeat.addEventListener('change', syncRepeatUi)
-      syncRepeatUi()
-      box.querySelectorAll('[data-day]').forEach((btn) =>
-        btn.addEventListener('click', () => btn.classList.toggle('day-active')),
-      )
-      box.querySelector('#task-form').addEventListener('submit', (event) => {
-        event.preventDefault()
-        submitTask(box, task)
-      })
-      if (!task) box.querySelector('#task-title').focus()
-    },
-  })
-}
-
-function submitTask(box, existing) {
-  const title = box.querySelector('#task-title').value.trim()
-  if (!title) {
-    toast('Give the task a title', 'error')
-    return
-  }
-  const date = box.querySelector('#task-date').value || null
-  const time = box.querySelector('#task-time').value || null
-  const priority = box.querySelector('#task-priority').value
-  const cat = box.querySelector('#task-cat').value || null
-  const estimateMinutes = Number(box.querySelector('#task-estimate').value) || 30
-  const notes = box.querySelector('#task-notes').value
-  const repeat = box.querySelector('#task-repeat').value
-  const weekdays = [...box.querySelectorAll('[data-day].day-active')].map((b) => Number(b.dataset.day))
-  const wantTop3 = box.querySelector('#task-top3').checked
-  const today = currentDayKey()
-
-  const recurrence = repeat
-    ? {
-        freq: repeat,
-        weekdays: repeat === 'daily' ? [] : weekdays,
-        dayOfMonth: repeat === 'monthly' ? Number((date || today).slice(8, 10)) : null,
-        startDate: date || today,
-        endDate: null,
-      }
-    : null
-
-  let newId = null
-  commit((s) => {
-    if (existing) {
-      const task = s.tasks.find((t) => t.id === existing.id)
-      Object.assign(task, { title, date, time, priority, cat, estimateMinutes, notes, recurrence, inbox: !date && !cat })
-      if (recurrence && !task.seriesId) {
-        task.seriesId = task.id
-        task.occurrenceDate = date || today
-      }
-    } else {
-      newId = uid()
-      s.tasks.push({
-        id: newId,
-        title,
-        date,
-        time,
-        priority,
-        cat,
-        estimateMinutes,
-        notes,
-        done: false,
-        inbox: !date && !cat,
-        createdAt: Date.now(),
-        completedAt: null,
-        recurrence,
-        seriesId: recurrence ? newId : null,
-        missionId: s.missions?.activeMissionId || 'ssc_cgl_2027',
-        occurrenceDate: recurrence ? date || today : null,
-      })
-    }
-    if (wantTop3 && newId) {
-      s.top3[today] = [...new Set([...(s.top3[today] || []), newId])].slice(0, 3)
-    }
-  })
-  let generated = 0
-  if (recurrence) {
-    // create the upcoming occurrences straight away so tomorrow's list is real
-    generated = ensureRecurringOccurrences(today).length
-    commit(() => {}, { immediate: true })
-  }
-  if (wantTop3 && existing) window.CC.addTaskToTop3(existing.id)
-
-  closeModal()
-  if (recurrence) toast(`Repeating task created · ${generated + 1} occurrence${generated ? 's' : ''} scheduled`, 'success')
-  else toast(existing ? 'Task updated' : 'Task added', 'success')
-}
-
-/* -------------------------------------------------- organise (inbox) modal */
-
-export function openOrganiseModal(taskId) {
-  const task = state.tasks.find((t) => t.id === taskId)
-  if (!task) return
-  const today = currentDayKey()
-  const body = `
-    <p class="text-[13px] text-slate-400 mb-4">File “${escapeHtml(task.title)}” so it shows up where you need it.</p>
-    <div class="space-y-3">
-      <div>
-        <label class="field-label" for="organise-cat">Category</label>
-        <select class="input-field" id="organise-cat">${categoryOptions(task.cat)}</select>
-      </div>
-      <div>
-        <label class="field-label">When</label>
-        <div class="flex flex-wrap gap-2">
-          <button class="preset-btn" data-when="${today}">Today</button>
-          <button class="preset-btn" data-when="${addDays(today, 1)}">Tomorrow</button>
-          <button class="preset-btn" data-when="custom">Custom…</button>
-        </div>
-        <input type="date" class="input-field mt-2 hidden" id="organise-date" value="${today}">
-      </div>
-      <label class="flex items-center gap-2.5 text-[13px] text-slate-300">
-        <input type="checkbox" id="organise-top3" class="rounded border-white/20 bg-base-800"> Add to today's Top 3
-      </label>
-    </div>
-    <div class="flex gap-3 pt-4">
-      <button class="btn-ghost flex-1" data-modal-close>Cancel</button>
-      <button class="btn-primary flex-1" data-organise-save>File task</button>
-    </div>`
-  openModal({
-    title: 'File this task',
-    body,
-    onMount: (box) => {
-      let chosenDate = today
-      const dateInput = box.querySelector('#organise-date')
-      box.querySelectorAll('[data-when]').forEach((btn) =>
-        btn.addEventListener('click', () => {
-          const value = btn.dataset.when
-          if (value === 'custom') {
-            dateInput.classList.remove('hidden')
-            dateInput.focus()
-            return
-          }
-          chosenDate = value
-          dateInput.value = value
-          box.querySelectorAll('[data-when]').forEach((b) => b.classList.remove('preset-active'))
-          btn.classList.add('preset-active')
-        }),
-      )
-      dateInput.addEventListener('change', () => {
-        chosenDate = dateInput.value
-      })
-      box.querySelector('[data-organise-save]').addEventListener('click', () => {
-          const cat = box.querySelector('#organise-cat').value || null
-          const toTop3 = box.querySelector('#organise-top3').checked
-        commit((s) => {
-          const target = s.tasks.find((t) => t.id === taskId)
-          if (!target) return
-          target.cat = cat
-          target.date = chosenDate
-          target.inbox = false
-          if (toTop3) {
-            const current = s.top3[today] || []
-            if (current.length < 3 && !current.includes(taskId)) s.top3[today] = [...current, taskId]
-          }
-        })
-        closeModal()
-        toast('Task filed', 'success')
-      })
-    },
-  })
-}
-
-/** Candidate helper used by the dashboard Top 3 picker. */
-export function top3CandidateList(today) {
-  return top3Candidates(state, today, { overdueIds: overdueTasks(state, today).map((t) => t.id) })
-}
-
+export function openOrganiseModal(taskId){openTaskModal(taskId)}
+export function top3CandidateList(today){return top3Candidates(state,today,{limit:200,overdueIds:overdueTasks(state,today).map((t)=>t.id)})}

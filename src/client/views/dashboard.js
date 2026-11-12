@@ -1,595 +1,80 @@
-/* -------------------------------------------------------------------------
-   DASHBOARD — "open the app, know what to do"
-   Order: Daily Score + streak + focus, then Top 3 & Do This Now, then the
-   live timetable position, then trends.
-   ------------------------------------------------------------------------- */
-
-import { formatDuration, minutesOfDay, nowMinutes as nowMinutesOf, weekdayShort } from '../lib/dates.js'
-import { describeScoreFormula } from '../lib/score.js'
-import { top3Candidates, top3Stats, TOP3_LIMIT } from '../lib/top3.js'
-import { selectNextAction } from '../lib/nextaction.js'
-import { overdueTasks } from '../lib/score.js'
-import { PRIORITY_COLORS, PRIORITY_ORDER } from '../lib/defaults.js'
-import { drawChart } from '../core/charts.js'
-import { escapeHtml, hint, qsa, toast } from '../core/dom.js'
-import { commit, currentDayKey, rollSeriesForward, state, statsFor, titlesInfo } from '../core/store.js'
-import { statusForStreakDot } from './shared.js'
-import { openFocusPickerForTask } from '../ui/focus.js'
-import { openTaskModal } from './tasks.js'
-import { openWeeklyReview } from './review.js'
-import { openRecoveryModal } from './recovery.js'
-import { formatUnlockDate } from '../lib/achievements.js'
-import { activeMission, activeTimetable } from '../lib/missions.js'
+import { state, currentDayKey, todayStats, statsFor } from '../core/store.js'
+import { escapeHtml, qs, qsa } from '../core/dom.js'
+import { addDays, formatDuration, minutesOfDay, weekdayShort } from '../lib/dates.js'
+import { scheduleFor, blockState, itemDone } from '../lib/planner.js'
+import { goalChain, goalProgress, taskProgress } from '../lib/relationships.js'
+import { top3Stats, top3Candidates } from '../lib/top3.js'
+import { overdueTasks, describeScoreFormula } from '../lib/score.js'
+import { sessionTotals } from '../lib/focus.js'
+import { drawChart, chartColors } from '../core/charts.js'
+import { icon, ring, empty, metric, timeLabel, bindCommon } from '../ui/common.js'
+import { updateClockAndGreeting } from '../ui/chrome.js'
 
 export function renderDashboard() {
   const section = document.getElementById('view-dashboard')
   if (!section) return
-  // Keep the roadmap open when background updates refresh the dashboard.
-  const roadmapOpen = section.querySelector('.mission-command')?.hasAttribute('open')
-  const now = new Date()
-  const today = currentDayKey(now)
-  const stats = statsFor(today, { now })
-  const streakInfo = window.CC?.streakInfo?.() || { current: 0, best: 0, recent: [] }
-  const titles = titlesInfo(now)
-  const discipline = titles.disciplineMonster
-  const activeId = state.missions?.activeMissionId
-  const missionTasks = state.tasks.filter((item) => !item.missionId || item.missionId === activeId)
-  // v5: each mission has its own timetable — the dashboard follows the active one.
-  const missionState = { ...state, tasks: missionTasks, timetable: activeTimetable(state) }
-  const action = currentAction(now, today, missionState)
-  const top3 = top3Stats(missionState, today)
-  const overdue = overdueTasks(missionState, today)
-  const { current, next } = currentBlocks(now, missionState)
-  const openToday = missionTasks
-    .filter((t) => t.date === today && !t.done)
-    .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
-  const week = weekTrend(now)
-
-  const mission = activeMission(state.missions)
-  const missionOptions = Object.values(state.missions.definitions)
+  const today = currentDayKey(), now = new Date(), stats = todayStats(now)
+  const blocks = scheduleFor(state,today)
+  const active = blocks.find((b) => blockState(state,b,today,now,today) === 'active')
+  const next = blocks.find((b) => minutesOfDay(b.time) > now.getHours()*60+now.getMinutes() && !itemDone(state,b,today))
+  const openTasks = state.tasks.filter((t) => t.date === today && !t.done && t.status !== 'cancelled' && !t.inbox)
+  const priority = openTasks.find((t) => (state.top3[today] || []).includes(t.id)) || openTasks[0]
+  const current = active || (priority?.time ? blocks.find((b)=>b.taskId===priority.id) : null) || next || priority
+  const linkedTask = current?.taskId ? state.tasks.find((t)=>t.id===current.taskId) : current && !current.time && current.estimateMinutes ? current : null
+  const command = current ? { title: current.title, id: linkedTask?.id || current.taskId || current.id, blockId: current.taskId ? `task:${current.taskId}` : current.id, task: !!linkedTask, time: current.time, duration: current.duration || current.estimateMinutes, cat: current.cat, priority: current.priority, goalId: current.goalId, projectId: current.projectId } : null
+  const top3 = top3Stats(state,today)
+  const overdue = overdueTasks(state,today)
+  const upcoming = blocks.filter((b) => b.id !== command?.blockId && !itemDone(state,b,today) && minutesOfDay(b.time)+(b.duration||30) > now.getHours()*60+now.getMinutes()).slice(0,4)
+  const week = Array.from({length:7},(_,i) => statsFor(addDays(today,i-6),{now}))
+  const focusTarget = state.settings.focus.targetMinutes || 180
+  const hasData = stats.hasAnyActivity
+  const candidates = top3Candidates(state,today).filter((t) => !top3.items.some((x) => x.task.id === t.id))
+  const adherence = stats.blocksElapsed ? Math.round(stats.adherence*100) : null
   section.innerHTML = `
-    <div class="dashboard-heading">
-      <div><p class="workspace-kicker"><span></span> THE PERSONAL WORKSPACE</p><h2>A little more <em>intentional.</em></h2><p>Make space for a day that feels like yours.</p></div>
-      <div class="dashboard-date"><i class="fa-regular fa-calendar" aria-hidden="true"></i> ${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+    <div class="overview-greeting"><div><p class="eyebrow">A LITTLE CLARITY. A LOT OF POSSIBILITY.</p><h1 id="overview-greeting">Good morning.</h1><p>Your day. Your priorities. Your execution.</p></div><div class="date-block"><p class="date-day">${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</p><p class="date-clock" id="overview-clock"></p></div></div>
+    ${overdue.length ? `<div class="recovery-banner">${icon('recover')}<span>A fresh start is always possible. ${overdue.length} earlier mission${overdue.length===1?' is':'s are'} still open.</span><button class="text-button" data-common="recover">Recover my day ${icon('arrow')}</button></div>` : ''}
+    <div class="overview-top">
+      <article class="card command-card"><div class="orbital-art" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p class="eyebrow"><span class="status-dot"></span>${active ? 'IN THE MOMENT' : command ? 'YOUR NEXT MOVE' : 'TODAY’S COMMAND'}</p>
+      <h2>${command ? escapeHtml(command.title) : 'Make room for<br>what matters.'}</h2>
+      <p class="command-description">${command ? escapeHtml(command.task ? (goalChain(state,linkedTask).goal?.title || goalChain(state,linkedTask).project?.title || 'One mission. Your full attention.') : 'A little structure. A clear next step.') : 'A clear plan starts with one small step.<br>What would make today feel meaningful?'}</p>
+      ${command ? `<div class="command-meta">${command.time ? `<span>${icon('clock')}${timeLabel(command.time,true)}</span>` : ''}<span>${icon('focus')}${formatDuration(command.duration || 30)}</span>${command.priority ? `<span class="chip chip-accent">${escapeHtml(command.priority)} priority</span>` : ''}${active ? `<span id="command-remaining">${formatDuration(Math.max(0,minutesOfDay(command.time)+command.duration-now.getHours()*60-now.getMinutes()))} remaining</span>` : ''}</div>` : ''}
+      <div class="command-actions">${command ? `<button class="btn-primary" data-command-start="${escapeHtml(command.id)}" data-is-task="${!!command.task}">${icon('play')}${state.focus.active ? 'Resume focus' : active ? 'Start focus' : 'Begin mission'}</button>${command.task ? `<button class="btn-ghost" data-command-complete="${escapeHtml(command.id)}">${icon('check')}Complete</button><button class="text-button" data-command-delay="${escapeHtml(command.id)}">Reschedule ${icon('arrow')}</button>` : `<button class="btn-ghost" data-command-block="${escapeHtml(command.id)}">${icon('check')}Complete block</button>`}` : `<button class="btn-primary" data-common="plan">${icon('sun')}Plan my day</button><button class="btn-ghost" data-common="new-task">${icon('plus')}Add a mission</button>`}</div></article>
+      <article class="card score-card"><div class="card-header"><h3>Daily execution score</h3><button class="text-button" data-score-info aria-label="How your score is calculated">${icon('info')}</button></div><div class="score-main">${ring(stats.score,'of 100',!hasData)}<div class="score-copy"><strong>${!hasData ? 'A fresh canvas.' : stats.score >= 80 ? 'Finding your rhythm.' : stats.score >= 40 ? 'Progress, in motion.' : 'One step at a time.'}</strong><p>${!hasData ? 'Your real progress<br>will appear here.' : 'Built on the commitments<br>you made to yourself.'}</p></div></div><div class="score-components">${scorePart('Missions',stats.tasksPlanned ? stats.tasksDone/stats.tasksPlanned : null,`${stats.tasksDone}/${stats.tasksPlanned}`)}${scorePart('Priorities',top3.total ? top3.done/top3.total : null,`${top3.done}/${top3.total}`)}${scorePart('Focus',stats.focusedMinutes/focusTarget,`${stats.focusedMinutes}m`)}${scorePart('Adherence',adherence == null ? null : adherence/100,adherence == null ? '—' : `${adherence}%`)}</div><p class="score-footnote">${icon('shield')}Honest numbers. Never a judgment.</p></article>
     </div>
-
-    <div class="dashboard-intro">
-    <div class="today-hero">
-      <div class="hero-content">
-        <p class="today-eyebrow"><span class="live-indicator"></span> A FRESH START, EVERY DAY</p>
-        <h2 class="today-headline">A clearer mind.<br /><span>A better day.</span></h2>
-        <p class="today-subline">${stats.hasData && stats.score === 100 ? 'A day to be proud of. Take a moment to appreciate how far you’ve come.' : 'A little structure goes a long way. Take a breath, choose what matters, and begin.'}</p>
-        <div class="today-actions flex flex-wrap gap-2">
-          <button class="btn-primary hero-primary" data-action="new-task"><i class="fa-solid fa-plus mr-1.5"></i> Add a task</button>
-          <button class="hero-link" data-action="focus"><i class="fa-solid fa-play" aria-hidden="true"></i> Start a focus session</button>
-        </div>
-      </div>
-      <div class="hero-bottom"><span><i class="fa-solid fa-crosshairs" aria-hidden="true"></i> CURRENT MISSION <strong>${escapeHtml(mission.exam)} ${mission.year}</strong></span><span class="hero-bottom-right">ONE DAY AT A TIME <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i></span></div>
-    </div>
-    <aside class="daily-brief" aria-label="Today's brief">
-      <div class="brief-heading"><span>THE DAILY BRIEF</span><i class="fa-solid fa-asterisk" aria-hidden="true"></i></div>
-      <div class="brief-date">${now.toLocaleDateString([], { weekday: 'long' })}<span>${now.toLocaleDateString([], { month: 'long', day: 'numeric' })}</span></div>
-      <div class="brief-divider"></div>
-      <div class="brief-next"><span>${current ? 'HAPPENING NOW' : next ? 'COMING UP' : 'YOUR SCHEDULE'}</span><strong>${current || next ? escapeHtml((current || next).title) : 'A little room to breathe'}</strong><small>${current || next ? `${escapeHtml((current || next).time)} · ${escapeHtml(categoryName((current || next).cat))}` : 'No upcoming blocks today'}</small></div>
-      <button class="brief-link" data-action="view-timetable">Open schedule <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
-    </aside>
-    </div>
-
-    <div class="overview-stats" aria-label="Today's overview">
-      <button class="overview-stat" data-action="view-tasks"><span class="stat-icon stat-icon-purple"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Open tasks</span><strong>${openToday.length}</strong><small>to do today</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
-      <button class="overview-stat" data-action="view-timetable"><span class="stat-icon stat-icon-blue"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Scheduled</span><strong>${missionState.timetable.length}</strong><small>blocks planned</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
-      <button class="overview-stat" data-action="view-tasks"><span class="stat-icon stat-icon-peach"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Priorities</span><strong>${top3.done}<span> / ${top3.total}</span></strong><small>completed</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
-      <button class="overview-stat" data-action="view-progress"><span class="stat-icon stat-icon-green"><i class="fa-solid fa-fire" aria-hidden="true"></i></span><span class="stat-copy"><span class="stat-label">Day streak</span><strong>${streakInfo.current}</strong><small>days in a row</small></span><i class="fa-solid fa-arrow-up-right-from-square stat-arrow" aria-hidden="true"></i></button>
-    </div>
-
-    <div class="dashboard-section-heading"><div><p>01 / THE DAY AHEAD</p><h3>Where to begin</h3></div><button class="section-text-button" data-action="recover">Recover my day <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
-
-    <!-- Top 3 + Do This Now -->
-    <div class="dashboard-priorities grid grid-cols-1 lg:grid-cols-2 gap-5">
-      <div class="glass-card top3-card p-5" data-card="top3">
-        <div class="flex items-center justify-between mb-1">
-          <h3 class="section-title text-base flex items-center gap-2"><span class="top3-badge">Today's priorities</span></h3>
-          <span class="text-[11px] text-slate-500">${top3.done}/${top3.total} done</span>
-        </div>
-        <p class="text-[12px] text-slate-500 mb-4">A little intention goes a long way. Pick up to three.</p>
-        <div class="space-y-2.5" data-top3-list>
-          ${top3ListHtml(top3)}
-        </div>
-        ${top3.total < TOP3_LIMIT
-          ? `<div class="mt-4 pt-4 border-t border-white/5">
-               <label class="field-label">Add a priority</label>
-               <div class="flex flex-col sm:flex-row gap-2">
-                 <select class="input-field flex-1" data-top3-picker>
-                   <option value="">Choose an open task…</option>
-                   ${top3Candidates(missionState, today, { overdueIds: overdue.map((t) => t.id) })
-                     .map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`)
-                     .join('')}
-                 </select>
-                 <button class="btn-primary whitespace-nowrap" data-top3-add>Add to Top 3</button>
-                 <button class="btn-ghost whitespace-nowrap" data-action="new-task">New task</button>
-               </div>
-             </div>`
-          : ''}
-      </div>
-
-      <div class="glass-card now-card p-5" data-card="next-action">
-        <p class="text-[11px] uppercase tracking-[0.25em] font-bold text-accent-2 mb-2">YOUR NEXT STEP</p>
-        <h3 class="font-display font-bold text-white text-xl leading-snug" data-next-title>${escapeHtml(action.title)}</h3>
-        <div class="flex flex-wrap items-center gap-2 mt-2 text-[12px] text-slate-400">
-          <span class="chip">${escapeHtml(action.reason)}</span>
-          ${action.categoryId ? `<span class="chip">${escapeHtml(categoryName(action.categoryId))}</span>` : ''}
-          ${action.minutes ? `<span class="chip"><i class="fa-regular fa-clock mr-1"></i>${formatDuration(action.minutes)}</span>` : ''}
-          ${action.startsAt ? `<span class="chip">starts ${escapeHtml(action.startsAt)}</span>` : ''}
-        </div>
-        ${action.protectedLabel ? `<p class="text-[12px] text-amber-300 mt-3"><i class="fa-solid fa-moon mr-1.5"></i>This falls inside your protected “${escapeHtml(action.protectedLabel)}” window — pick it up after.</p>` : ''}
-        <div class="flex flex-wrap gap-2.5 mt-5">
-          ${action.kind !== 'clear'
-            ? `<button class="btn-primary" data-next-start><i class="fa-solid fa-play mr-1.5"></i>Start Focus</button>
-               ${action.task ? `<button class="btn-ghost" data-next-done><i class="fa-solid fa-check mr-1.5"></i>Mark done</button>` : ''}
-               ${action.block ? `<button class="btn-ghost" data-next-block><i class="fa-solid fa-table-cells-large mr-1.5"></i>Timetable</button>` : ''}`
-            : `<button class="btn-ghost" data-action="new-task"><i class="fa-solid fa-plus mr-1.5"></i>Plan something</button>`}
-        </div>
-        <p class="text-[11.5px] text-slate-500 mt-4">A thoughtful suggestion based on your plans and priorities.</p>
-      </div>
-    </div>
-
-    <details class="mission-command glass-card">
-      <summary><span class="mission-summary-icon"><i class="fa-solid fa-route" aria-hidden="true"></i></span><span class="mission-summary-copy"><span>YOUR ROADMAP</span><strong>${escapeHtml(mission.exam)} ${mission.year}</strong><small>${escapeHtml(mission.targetRole)} · ${escapeHtml(mission.target)}</small></span><span class="mission-summary-action">View roadmap <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span></summary>
-      <div class="mission-details">
-        <label class="field-label">Switch mission<select class="input-field mt-2 w-full" data-mission-switch aria-label="Current mission">${missionOptions.map((m) => `<option value="${escapeHtml(m.id)}" ${m.id === mission.id ? 'selected' : ''}>${escapeHtml(m.exam)} ${m.year}</option>`).join('')}</select></label>
-        <div class="mission-roadmap">${missionOptions.map((m) => `<div class="mission-roadmap-item ${m.id === mission.id ? 'is-active' : ''}"><p>${m.id === mission.id ? '● ACTIVE' : '○ UPCOMING'} · ${m.year}</p><strong>${escapeHtml(m.exam)}</strong><small>${escapeHtml(m.targetRole)} · ${escapeHtml(m.target)}</small></div>`).join('')}</div>
-      </div>
-    </details>
-
-    <div class="dashboard-section-heading"><div><p>02 / YOUR MOMENTUM</p><h3>Progress, in perspective</h3></div><button class="section-text-button" data-action="review">Weekly review <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
-    <!-- Progress · Consistency · Achievement -->
-    <div class="dashboard-progress">
-      <div class="glass-card p-5" data-card="score">
-        <div class="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Today's Score ${hint(describeScoreFormula().join(' · '))}</p>
-            <p class="score-number">
-              ${stats.hasData ? stats.score : '–'}<span class="text-lg text-slate-500">/100</span>
-            </p>
-          </div>
-          <div class="text-right">
-            ${stats.hasData
-              ? `<span class="chip ${stats.onTrack ? 'chip-good' : 'chip-warn'}">${stats.onTrack ? 'On track' : `Behind pace (${stats.pace})`}</span>`
-              : '<span class="chip">No data yet</span>'}
-            <p class="text-[11px] text-slate-500 mt-2">${stats.overdueCount ? `${stats.overdueCount} overdue task${stats.overdueCount > 1 ? 's' : ''}` : 'Nothing overdue'}</p>
-          </div>
-        </div>
-        <div class="progress-track mt-4"><div class="progress-fill" style="width:${stats.hasData ? stats.score : 0}%"></div></div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4" data-score-parts>
-          ${scorePartsHtml(stats)}
-        </div>
-
-      </div>
-
-      <div class="dashboard-support">
-        <div class="glass-card p-5" data-card="streak">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Consistency</p>
-            <i class="fa-solid fa-fire text-accent-4"></i>
-          </div>
-          <p class="font-display font-extrabold text-white text-3xl">${streakInfo.current}<span class="text-base text-slate-500"> day${streakInfo.current === 1 ? '' : 's'}</span></p>
-          <p class="text-[12px] text-slate-500 mt-1">Best streak: ${streakInfo.best} days</p>
-          <div class="flex gap-1.5 mt-3">
-            ${streakInfo.recent.map(statusForStreakDot).join('')}
-          </div>
-          <p class="text-[11.5px] text-slate-500 mt-3 leading-relaxed">
-            A day counts with <span class="text-slate-300">all Top 3 done</span>, <span class="text-slate-300">score 60+</span> or <span class="text-slate-300">45+ focused minutes</span>.
-          </p>
-        </div>
-
-        <div class="glass-card p-5 discipline-dash-card ${discipline.unlocked ? 'is-unlocked' : ''}" data-card="discipline">
-          ${disciplineCardHtml(discipline)}
-        </div>
-      </div>
-    </div>
-
-    <!-- Right now / queue -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <div class="glass-card p-5 lg:col-span-2">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="section-title">Right Now</h3>
-          <span class="text-[11px] text-slate-500">${now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-        </div>
-        ${current
-          ? `<div class="tt-row active-now mb-3" style="--cat-color:${categoryColor(current.cat)}">
-               <div class="tt-time">${escapeHtml(current.time)}</div>
-               <div class="min-w-0">
-                 <p class="tt-title truncate">${escapeHtml(current.title)}</p>
-                 <p class="text-[11px] text-slate-500">${escapeHtml(categoryName(current.cat))} · ${current.duration || 60} min · ${endsIn(current, now)} left</p>
-               </div>
-               <div class="flex items-center gap-2">
-                 <span class="dot bg-emerald-400 animate-pulse-slow" style="width:10px;height:10px"></span>
-                 <button class="icon-btn" data-focus-block="${escapeHtml(current.id)}" title="Focus on this block"><i class="fa-solid fa-stopwatch text-xs"></i></button>
-               </div>
-             </div>`
-          : `<div class="empty-state !py-6"><i class="fa-regular fa-clock"></i><p class="text-sm">No block scheduled right now</p></div>`}
-        ${next
-          ? `<p class="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-2 mt-4">Up Next</p>
-             <div class="tt-row" style="--cat-color:${categoryColor(next.cat)}">
-               <div class="tt-time">${escapeHtml(next.time)}</div>
-               <div class="min-w-0"><p class="tt-title truncate">${escapeHtml(next.title)}</p><p class="text-[11px] text-slate-500">${escapeHtml(categoryName(next.cat))} ${next.duration ? `· ${next.duration} min` : ''}</p></div>
-               <i class="fa-solid fa-arrow-right text-slate-600"></i>
-             </div>`
-          : ''}
-      </div>
-
-      <div class="glass-card p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="section-title text-base">Open Tasks</h3>
-          <button class="icon-btn" data-action="new-task" title="Add task"><i class="fa-solid fa-plus"></i></button>
-        </div>
-        <div class="space-y-2.5 max-h-[300px] overflow-y-auto scroll-thin pr-1">
-          ${openToday.length
-            ? openToday.slice(0, 8).map((t) => taskLineHtml(t, today)).join('')
-            : `<div class="empty-state !py-8"><i class="fa-regular fa-square-check"></i><p class="text-sm">Nothing open for today</p><button class="btn-ghost mt-3 !text-xs" data-action="new-task">Add a task</button></div>`}
-        </div>
-        ${overdue.length
-          ? `<div class="mt-4 pt-3 border-t border-white/5">
-               <p class="text-[11px] uppercase tracking-wider font-bold text-accent-5 mb-2">Overdue (${overdue.length})</p>
-               ${overdue.slice(0, 3).map((t) => taskLineHtml(t, today)).join('')}
-             </div>`
-          : ''}
-      </div>
-    </div>
-
-    <!-- Trends -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <div class="glass-card p-5 lg:col-span-2">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="section-title">Last 7 Days</h3>
-          <div class="flex items-center gap-3 text-[11px] text-slate-500">
-            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#5b93e6"></span>Score</span>
-            <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#57b28c"></span>Focus min</span>
-          </div>
-        </div>
-        <div class="h-[220px]"><canvas id="dashWeekChart"></canvas></div>
-      </div>
-      <div class="glass-card p-5">
-        <h3 class="section-title text-base mb-4">Categories this week</h3>
-        <div class="space-y-3">
-          ${week.categories
-            .map(
-              (c) => `
-            <div>
-              <div class="flex items-center gap-2.5 mb-1.5">
-                <span class="legend-dot" style="background:${c.color}"></span>
-                <span class="text-sm text-slate-300 flex-1 truncate">${escapeHtml(c.name)}</span>
-                <span class="text-xs text-slate-500">${c.completionPct}%</span>
-              </div>
-              <div class="progress-track !h-1.5"><div class="progress-fill" style="width:${c.completionPct}%"></div></div>
-            </div>`,
-            )
-            .join('')}
-        </div>
-        <div class="mt-5 pt-4 border-t border-white/5">
-          <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-2">Today's Quote</p>
-          <p class="text-sm text-slate-300 italic leading-relaxed" id="dash-quote"></p>
-        </div>
-      </div>
-    </div>
-  `
-
-  if (roadmapOpen) section.querySelector('.mission-command')?.setAttribute('open', '')
-  bindDashboard(section, { today, action, discipline })
-  drawWeekChart(week)
-  if (window.CC?.refreshQuoteInline) window.CC.refreshQuoteInline()
+    <div class="overview-middle"><article class="card priority-card"><div class="card-header"><div><h3>Today’s priorities <span class="count-badge">${top3.total}/3</span></h3><p class="meta" style="margin-top:5px">The few things that make a difference.</p></div><button class="text-button" data-common="day">My Day ${icon('upRight')}</button></div>
+      ${top3.total ? top3.items.map(({task},i) => priorityRow(task,i)).join('') : empty('target','Less, but better.','Choose up to three missions that define a good day.',`<button class="text-button" data-common="new-task">${icon('plus')}Add your first priority</button>`)}
+      ${top3.total < 3 ? `<div class="priority-bottom">${candidates.length ? `<select class="input-field" data-priority-picker aria-label="Choose a priority">${candidates.map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`).join('')}</select><button class="btn btn-secondary" data-priority-add>${icon('plus')}Add priority</button>` : `<button class="text-button" data-common="new-task">${icon('plus')}Add a priority</button>`}</div>` : ''}
+    </article><article class="card up-next-card"><div class="card-header"><h3>Coming up</h3><button class="text-button" data-common="schedule" aria-label="Open schedule">${icon('upRight')}</button></div>${upcoming.length ? `<div class="timeline-mini">${upcoming.map((b) => `<div class="timeline-mini-row ${blockState(state,b,today,now,today)==='active'?'is-active':''}"><span class="timeline-mini-time">${timeLabel(b.time)}</span><span class="timeline-mini-dot"></span><div class="timeline-mini-info"><strong>${escapeHtml(b.title)}</strong><p>${formatDuration(b.duration)}${b.protected?' · Protected':''}</p>${b.priority === 'high' ? '<span class="chip chip-accent">High priority</span>' : ''}</div></div>`).join('')}</div>` : empty('calendar','Room to breathe.','No upcoming commitments. Make space for focused work or a well-earned break.',`<button class="text-button" data-common="plan">Plan your afternoon ${icon('arrow')}</button>`)}</article></div>
+    <div class="metric-strip">${metric('missions','Missions completed',`${stats.tasksDone}<small> / ${stats.tasksPlanned}</small>`,`${openTasks.length} remaining today`)}${metric('focus','Focused time',`${stats.focusedMinutes}<small> min</small>`,`${Math.min(100,Math.round(stats.focusedMinutes/focusTarget*100))}% of your daily intention`)}${metric('calendar','Schedule adherence',adherence == null ? '—' : `${adherence}<small>%</small>`,`${stats.blocksDone} of ${stats.blocksElapsed} elapsed blocks`)}${metric('routines','Consistency',`${week.filter((d) => d.hasAnyActivity).length}<small> / 7 days</small>`,'Showing up counts. Keep going.')}</div>
+    <div class="overview-bottom"><article class="card week-chart-card"><div class="card-header"><div><h3>Your week, in perspective</h3><p class="meta" style="margin-top:5px">Small steps. Visible progress.</p></div><div class="chart-legend"><span><i></i>Execution score</span></div><button class="text-button" data-common="progress" aria-label="Open analytics">${icon('upRight')}</button></div><div class="chart-wrap"><canvas id="overviewWeekChart" role="img" aria-label="Daily execution scores for the last seven days"></canvas></div>${!week.some((d)=>d.hasAnyActivity)?'<p class="meta" style="text-align:center;margin-top:8px">Your first session is the beginning of this story.</p>':''}</article><article class="card quick-actions-card"><div class="card-header"><h3>A little momentum</h3>${icon('bolt')}</div>${[['new-task','plus','Add a mission'],['focus','focus','Start a focus session'],['plan','sun','Plan my day'],['goal','target','Set a meaningful goal'],['capture','inbox','Quick capture']].map(([a,i,l])=>`<button class="quick-action" data-common="${a}">${icon(i)}${l}${icon('chevron')}</button>`).join('')}</article></div>
+    <div class="overview-goal-banner">${icon('target')}<span>${state.goals.length ? `${state.goals.length} meaningful goal${state.goals.length===1?'':'s'}. Every mission is a step toward something bigger.` : 'Connect what you do today to who you want to become.'}</span><button class="text-button" data-common="goals">${state.goals.length?'Explore your goals':'Create your first goal'} ${icon('arrow')}</button></div>`
+  bindCommon(section)
+  qsa(section, '[data-priority-toggle]').forEach((b)=>b.addEventListener('click',()=>window.CC.toggleMission(b.dataset.priorityToggle)))
+  qsa(section, '[data-priority-edit]').forEach((b)=>b.addEventListener('click',()=>window.CC.openTaskModal(b.dataset.priorityEdit)))
+  qsa(section, '[data-priority-up]').forEach((b)=>b.addEventListener('click',()=>window.CC.movePriority(b.dataset.priorityUp,-1)))
+  qsa(section, '[data-priority-down]').forEach((b)=>b.addEventListener('click',()=>window.CC.movePriority(b.dataset.priorityDown,1)))
+  qsa(section, '[data-priority-delay]').forEach((b)=>b.addEventListener('click',()=>window.CC.openRescheduleModal(b.dataset.priorityDelay)))
+  qs(section, '[data-priority-add]')?.addEventListener('click',()=>window.CC.addTaskToTop3(qs(section, '[data-priority-picker]').value))
+  qs(section, '[data-command-start]')?.addEventListener('click',(e)=>{const b=e.currentTarget; b.dataset.isTask==='true'?window.CC.openFocusMode(b.dataset.commandStart):window.CC.openFocusRoom()})
+  qs(section, '[data-command-complete]')?.addEventListener('click',(e)=>window.CC.toggleMission(e.currentTarget.dataset.commandComplete))
+  qs(section, '[data-command-delay]')?.addEventListener('click',(e)=>window.CC.openRescheduleModal(e.currentTarget.dataset.commandDelay))
+  qs(section, '[data-command-block]')?.addEventListener('click',(e)=>window.CC.toggleScheduleItem(e.currentTarget.dataset.commandBlock,today))
+  qs(section, '[data-score-info]')?.addEventListener('click',()=>window.CC.openScoreInfo())
+  const colors = chartColors()
+  drawChart('overviewWeekChart',{type:'bar',data:{labels:week.map((d)=>weekdayShort(new Date(d.dateKey+'T12:00:00').getDay())),datasets:[{label:'Execution score',data:week.map((d)=>d.hasAnyActivity?d.score:0),backgroundColor:week.map((d)=>d.dateKey===today?colors.accent:colors.soft),borderRadius:5,maxBarThickness:27}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>week[c.dataIndex].hasAnyActivity?`Score: ${c.raw}/100`:'No activity recorded'}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:colors.muted,font:{size:10}}},y:{min:0,max:100,border:{display:false},grid:{color:colors.border},ticks:{stepSize:50,color:colors.muted,font:{size:9}}}}}})
+  updateClockAndGreeting()
 }
+function scorePart(label,ratio,detail) { return `<div class="score-component"><label>${label}<span>${detail}</span></label><div class="progress-track"><div class="progress-fill" style="width:${ratio==null?0:Math.min(100,Math.round(ratio*100))}%"></div></div></div>` }
+export function priorityRow(task,index,{reorder=true}={}) { const chain=goalChain(state,task); return `<div class="priority-row ${task.done?'is-done':''}"><span class="priority-index">0${index+1}</span><button class="task-check ${task.done?'checked':''}" data-priority-toggle="${escapeHtml(task.id)}" aria-label="${task.done?'Reopen':'Complete'} ${escapeHtml(task.title)}" aria-pressed="${task.done}">${icon('check')}</button><div class="priority-info"><strong>${escapeHtml(task.title)}</strong><p>${task.priority==='high'?'<span class="accent">High priority</span>':'Medium priority'}<span>·</span>${escapeHtml(chain.goal?.title || chain.project?.title || formatDuration(task.estimateMinutes))}</p>${task.subtasks?.length?`<div class="subtask-progress"><div class="progress-track"><div class="progress-fill" style="width:${taskProgress(task)}%"></div></div>${taskProgress(task)}%</div>`:''}</div><div class="row-actions">${reorder?`<button class="icon-btn optional-action" data-priority-up="${escapeHtml(task.id)}" aria-label="Move priority up" ${index===0?'disabled':''}>${icon('down','rotate-180')}</button><button class="icon-btn optional-action" data-priority-down="${escapeHtml(task.id)}" aria-label="Move priority down" ${index>=(state.top3[currentDayKey()]?.length||0)-1?'disabled':''}>${icon('down')}</button>`:''}<button class="icon-btn" data-priority-edit="${escapeHtml(task.id)}" aria-label="Edit ${escapeHtml(task.title)}">${icon('edit')}</button><button class="icon-btn" data-priority-delay="${escapeHtml(task.id)}" aria-label="Reschedule ${escapeHtml(task.title)}">${icon('calendar')}</button></div></div>` }
 
-/* --------------------------------------------------------------- sections */
-
-function disciplineCardHtml(d) {
-  const def = d.definition
-  if (d.unlocked) {
-    return `
-      <div class="discipline-header">
-        <span class="discipline-icon is-unlocked"><i class="fa-solid fa-award" aria-hidden="true"></i></span>
-        <div>
-          <p class="discipline-name">${escapeHtml(def.name)}</p>
-          <p class="discipline-sub">${escapeHtml(def.subtitle)}</p>
-        </div>
-        <span class="chip chip-good ml-auto">UNLOCKED ✓</span>
-      </div>
-      <div class="mt-4">
-        <p class="text-[12px] text-slate-400">10+ perfect days achieved</p>
-        <div class="progress-track mt-2 !h-2"><div class="progress-fill discipline-fill" style="width:100%"></div></div>
-        <p class="text-[11px] text-slate-500 mt-2">Current streak: ${d.current} days · Best: ${d.best} days</p>
-        ${d.unlockedAt ? `<p class="text-[11px] text-slate-500 mt-1">Unlocked ${escapeHtml(formatUnlockDate(d.unlockedAt))}</p>` : ''}
-      </div>
-    `
-  }
-
-  const pct = Math.round((d.progress / d.total) * 100)
-  return `
-    <div class="discipline-header">
-      <span class="discipline-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
-      <div>
-        <p class="discipline-name">${escapeHtml(def.name)}</p>
-        <p class="discipline-sub">${escapeHtml(def.subtitle)}</p>
-      </div>
-    </div>
-    <div class="mt-4">
-      <div class="flex items-center justify-between">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Current Streak</p>
-        <p class="text-[12px] text-slate-400">${d.progress} / ${d.total} perfect days</p>
-      </div>
-      <p class="font-display font-extrabold text-white text-3xl mt-1">${d.current}<span class="text-base text-slate-500"> day${d.current === 1 ? '' : 's'}</span></p>
-      <div class="progress-track mt-3 !h-2"><div class="progress-fill discipline-fill" style="width:${pct}%"></div></div>
-      <div class="flex gap-1 mt-3">
-        ${d.recent.map((day) => `<span class="streak-dot ${day.perfect ? 'is-perfect' : ''} ${day.isToday ? 'is-today' : ''}" style="background:${day.perfect ? '#fbbf24' : 'rgba(76,99,77,0.15)'}" title="${day.dateKey} · ${day.perfect ? 'Perfect ✓' : 'Not perfect'}"></span>`).join('')}
-      </div>
-      <p class="text-[12px] text-slate-400 mt-3">${d.remaining === 0 ? 'Complete today to keep the streak!' : `${d.remaining} perfect day${d.remaining === 1 ? '' : 's'} to go`}</p>
-      <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">100% tasks + 100% timetable for 10 consecutive days. Zero-task days don't count.</p>
-    </div>
-  `
-}
-
-function scorePartsHtml(stats) {
-  return stats.scoreParts
-    .map((part) => {
-      const value = part.key === 'focus' ? formatDuration(stats.focusedMinutes) : part.detail
-      const percent = part.available ? Math.round(part.ratio * 100) : 0
-      return `
-        <div class="score-part ${part.available ? '' : 'opacity-40'}">
-          <p class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">${part.label}</p>
-          <p class="font-display font-bold text-white text-lg">${value}</p>
-          <div class="progress-track !h-1 mt-1.5"><div class="progress-fill" style="width:${percent}%"></div></div>
-        </div>`
-    })
-    .join('')
-}
-
-function top3ListHtml(top3) {
-  if (!top3.total) {
-    return `<div class="empty-state !py-6"><i class="fa-solid fa-ranking-star"></i><p class="text-sm">No priorities chosen yet</p><p class="text-[12px] text-slate-500">Pick the three tasks that define a good day.</p></div>`
-  }
-  return top3.items
-    .map(({ task }, index) => {
-      const minutes = Math.round(
-        (state.focus.sessions || []).filter((s) => s.taskId === task.id && s.mode !== 'break').reduce((sum, s) => sum + s.focusedSeconds, 0) / 60,
-      )
-      return `
-      <div class="top3-row ${task.done ? 'is-done' : ''}">
-        <span class="top3-index">${index + 1}</span>
-        <button class="task-check ${task.done ? 'checked' : ''}" data-top3-toggle="${escapeHtml(task.id)}" aria-label="Toggle ${escapeHtml(task.title)}"><i class="fa-solid fa-check"></i></button>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-semibold text-slate-100 truncate">${escapeHtml(task.title)}</p>
-          <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
-            ${task.cat ? `<span>${escapeHtml(categoryName(task.cat))}</span>` : ''}
-            <span><i class="fa-regular fa-clock mr-1"></i>${formatDuration(task.estimateMinutes || 30)}</span>
-            ${minutes ? `<span class="text-accent-2">${formatDuration(minutes)} focused</span>` : ''}
-          </div>
-        </div>
-        <div class="flex items-center gap-1">
-          ${!task.done ? `<button class="icon-btn" data-top3-focus="${escapeHtml(task.id)}" title="Start focus session"><i class="fa-solid fa-play text-xs"></i></button>` : ''}
-          <button class="icon-btn" data-top3-edit="${escapeHtml(task.id)}" title="Edit task"><i class="fa-solid fa-pen text-xs"></i></button>
-          <button class="icon-btn" data-top3-remove="${escapeHtml(task.id)}" title="Remove from Top 3"><i class="fa-solid fa-xmark text-xs"></i></button>
-        </div>
-      </div>`
-    })
-    .join('')
-}
-
-function taskLineHtml(task, today) {
-  const isOverdue = task.date && task.date < today && !task.done
-  return `
-    <div class="flex items-center gap-2.5 ${task.done ? 'opacity-50' : ''}">
-      <button class="task-check ${task.done ? 'checked' : ''}" data-task-toggle="${escapeHtml(task.id)}" aria-label="Toggle task"><i class="fa-solid fa-check"></i></button>
-      <span class="priority-dot" style="background:${PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium}"></span>
-      <div class="flex-1 min-w-0">
-        <p class="text-[13px] text-slate-200 truncate ${task.done ? 'line-through' : ''}">${escapeHtml(task.title)}</p>
-        <p class="text-[11px] text-slate-500 truncate">
-          ${isOverdue ? `<span class="text-accent-5">Overdue ${escapeHtml(task.date)}</span>` : ''}
-          ${!isOverdue && task.cat ? escapeHtml(categoryName(task.cat)) : ''}
-          ${!isOverdue && !task.cat ? 'No category' : ''}
-        </p>
-      </div>
-      ${!task.done ? `<button class="icon-btn" data-task-focus="${escapeHtml(task.id)}" title="Start focus session"><i class="fa-solid fa-play text-xs"></i></button>` : ''}
-    </div>`
-}
-
-/* ---------------------------------------------------------------- binding */
-
-function bindDashboard(section, { today, action, discipline }) {
-  section.querySelector('[data-mission-switch]')?.addEventListener('change', (event) => {
-    const missionId = event.target.value
-    commit((s) => { s.missions.activeMissionId = missionId; for (const m of Object.values(s.missions.definitions)) m.status = m.id === missionId ? 'active' : 'future' })
-    renderDashboard()
-  })
-  qsa(section, '[data-action]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const kind = btn.dataset.action
-      if (kind === 'new-task') openTaskModal()
-      else if (kind === 'review') openWeeklyReview()
-      else if (kind === 'recover') openRecoveryModal()
-      else if (kind === 'focus') window.CC.openFocusMode(undefined)
-      else if (kind === 'view-tasks') window.CC.switchView('tasks')
-      else if (kind === 'view-timetable') window.CC.switchView('timetable')
-      else if (kind === 'view-progress') window.CC.switchView('progress')
-    })
-  })
-
-  qsa(section, '[data-top3-toggle]').forEach((btn) =>
-    btn.addEventListener('click', () => toggleTask(btn.dataset.top3Toggle)),
-  )
-  qsa(section, '[data-top3-remove]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.top3Remove
-      commit((s) => {
-        s.top3[today] = (s.top3[today] || []).filter((x) => x !== id)
-        if (!s.top3[today].length) delete s.top3[today]
-      })
-      toast('Removed from Top 3', 'info')
-    }),
-  )
-  qsa(section, '[data-top3-edit]').forEach((btn) => btn.addEventListener('click', () => openTaskModal(btn.dataset.top3Edit)))
-  qsa(section, '[data-top3-focus]').forEach((btn) => btn.addEventListener('click', () => openFocusPickerForTask(btn.dataset.top3Focus)))
-  qsa(section, '[data-task-toggle]').forEach((btn) => btn.addEventListener('click', () => toggleTask(btn.dataset.taskToggle)))
-  qsa(section, '[data-task-focus]').forEach((btn) => btn.addEventListener('click', () => openFocusPickerForTask(btn.dataset.taskFocus)))
-
-  section.querySelector('[data-top3-add]')?.addEventListener('click', () => {
-    const select = section.querySelector('[data-top3-picker]')
-    const id = select?.value
-    if (!id) {
-      toast('Pick a task first', 'error')
-      return
-    }
-    const result = window.CC.addTaskToTop3(id)
-    if (!result.ok) toast(result.reason || 'Could not add to Top 3', 'error')
-    else toast('Added to today\'s Top 3', 'success')
-  })
-
-  section.querySelector('[data-next-start]')?.addEventListener('click', () => {
-    if (action.task) openFocusPickerForTask(action.task.id)
-    else if (action.block) openFocusPickerForTask(null)
-    else window.CC.openFocusMode(undefined)
-  })
-  section.querySelector('[data-next-done]')?.addEventListener('click', () => {
-    if (action.task) toggleTask(action.task.id)
-  })
-  section.querySelector('[data-next-block]')?.addEventListener('click', () => window.CC.switchView('timetable'))
-  section.querySelector('[data-focus-block]')?.addEventListener('click', () => window.CC.openFocusMode(undefined))
-
-  section.querySelector('[data-discipline-view]')?.addEventListener('click', () => {
-    window.CC?.switchView('settings')
-  })
-}
-
-function toggleTask(id) {
-  const task = state.tasks.find((t) => t.id === id)
-  if (!task) return
-  /** @type {any} */
-  let followUp = null
-  commit((s) => {
-    const target = s.tasks.find((t) => t.id === id)
-    target.done = !target.done
-    target.completedAt = target.done ? Date.now() : null
-    if (target.done && target.recurrence) followUp = rollSeriesForward(target)
-  })
-  if (task.done) toast(`“${task.title}” completed 🎉`, 'success')
-  if (followUp) toast(`Next occurrence created · ${followUp.date}`, 'info')
-}
-
-/* ------------------------------------------------------------- live pieces */
-
-function currentBlocks(now, scope = state) {
-  const nowMin = nowMinutesOf(now)
-  const sorted = [...scope.timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
-  const log = state.completionLog[currentDayKey(now)] || { ttDone: [] }
-  let current = null
-  let next = null
-  for (const block of sorted) {
-    const start = minutesOfDay(block.time)
-    const end = start + (block.duration || 60)
-    if (nowMin >= start && nowMin < end && !log.ttDone.includes(block.id)) current = block
-    if (nowMin < start && !next && !log.ttDone.includes(block.id)) next = block
-  }
-  return { current, next }
-}
-
-function currentAction(now, today, scope = state) {
-  const nowMin = nowMinutesOf(now)
-  const log = state.completionLog[today] || { ttDone: [] }
-  return selectNextAction({
-    tasks: scope.tasks,
-    timetable: scope.timetable,
-    ttDone: log.ttDone,
-    top3Ids: state.top3?.[today] || [],
-    todayKey: today,
-    nowMinutes: nowMin,
-    protectedBlocks: state.settings.protectedTime || [],
-  })
-}
-
-function weekTrend(now) {
-  const today = currentDayKey(now)
-  const rows = []
-  let focusTotal = 0
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(now)
-    date.setDate(date.getDate() - i)
-    const key = currentDayKey(date)
-    const stats = statsFor(key, { now })
-    focusTotal += stats.focusedMinutes
-    rows.push({ key, label: weekdayShort(date.getDay()), score: stats.score, focus: stats.focusedMinutes })
-  }
-  const categories = [...new Set(activeTimetable(state).map((b) => b.cat).filter(Boolean))]
-  const categoryRows = (state.categories.length ? state.categories : [])
-    .map((cat) => {
-      const blocks = activeTimetable(state).filter((b) => b.cat === cat.id)
-      let planned = 0
-      let done = 0
-      for (const row of rows) {
-        const log = state.completionLog[row.key] || { ttDone: [] }
-        for (const block of blocks) {
-          planned++
-          if (log.ttDone.includes(block.id)) done++
-        }
-      }
-      return { ...cat, completionPct: planned ? Math.round((done / planned) * 100) : 0, planned }
-    })
-    .filter((c) => categories.includes(c.id))
-  return { rows, focusTotal, categories: categoryRows }
-}
-
-function drawWeekChart(week) {
-  drawChart('dashWeekChart', {
-    type: 'line',
-    data: {
-      labels: week.rows.map((r) => r.label),
-      datasets: [
-        {
-          label: 'Score',
-          data: week.rows.map((r) => r.score),
-          borderColor: '#61836c',
-          backgroundColor: 'rgba(97,131,108,0.09)',
-          fill: true,
-          tension: 0.4,
-          pointRadius: 3,
-          yAxisID: 'y',
-        },
-        {
-          label: 'Focus minutes',
-          data: week.rows.map((r) => r.focus),
-          borderColor: '#57b28c',
-          borderDash: [4, 4],
-          tension: 0.4,
-          pointRadius: 2,
-          fill: false,
-          yAxisID: 'y1',
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { min: 0, max: 100, grid: { color: 'rgba(39,53,44,0.09)' }, ticks: { color: '#7c8499' } },
-        y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#7c8499', callback: (v) => `${v}m` } },
-        x: { grid: { display: false }, ticks: { color: '#7c8499' } },
-      },
-    },
-  })
-}
-
-/* -------------------------------------------------------------- small bits */
-
-function categoryName(id) {
-  return state.categories.find((c) => c.id === id)?.name || 'Uncategorised'
-}
-
-function categoryColor(id) {
-  return state.categories.find((c) => c.id === id)?.color || '#5b93e6'
-}
-
-function endsIn(block, now) {
-  const end = minutesOfDay(block.time) + (block.duration || 60)
-  const left = Math.max(0, end - nowMinutesOf(now))
-  return formatDuration(left)
+export function renderMyDay() {
+  const section=document.getElementById('view-day'); if(!section)return
+  const today=currentDayKey(), stats=todayStats(), top3=top3Stats(state,today), blocks=scheduleFor(state,today)
+  const tasks=state.tasks.filter((t)=>t.date===today&&!t.inbox&&t.status!=='cancelled').sort((a,b)=>Number(a.done)-Number(b.done)||(a.time||'99').localeCompare(b.time||'99'))
+  section.innerHTML=`<div class="page-heading"><div><p class="eyebrow">${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}).toUpperCase()}</p><h1>Make today count.</h1><p>Not everything. Just the things that matter.</p></div><div class="heading-actions"><button class="btn-ghost" data-common="recover">${icon('recover')}Recover my day</button><button class="btn-primary" data-common="plan">${icon('sun')}Plan my day</button></div></div><div class="overview-middle"><article class="card priority-card"><div class="card-header"><h3>Your three priorities</h3><span class="chip chip-accent">${top3.done}/${top3.total} complete</span></div>${top3.items.length?top3.items.map(({task},i)=>priorityRow(task,i)).join(''):empty('target','Choose your direction.','Pick three missions that would make today meaningful.')}${top3.total<3?`<button class="btn-ghost" style="margin-top:16px" data-common="new-task">${icon('plus')}Add a priority</button>`:''}<div class="notice" style="margin-top:22px">${icon('leaf')}Leave room for being human. A good plan has space to breathe.</div></article><article class="card"><div class="card-header"><h3>The day at a glance</h3>${icon('sun')}</div><div class="schedule-summary"><div><span>Missions completed</span><strong>${stats.tasksDone} / ${stats.tasksPlanned}</strong></div><div><span>Time intentionally focused</span><strong>${formatDuration(stats.focusedMinutes)}</strong></div><div><span>Time blocks planned</span><strong>${blocks.length}</strong></div><div><span>Daily execution score</span><strong>${stats.hasAnyActivity?stats.score+' / 100':'Not enough data'}</strong></div></div><button class="btn-ghost" style="width:100%;margin-top:24px" data-common="focus">${icon('focus')}Enter the Focus Room</button></article></div><article class="card"><div class="card-header"><div><h3>Today’s missions</h3><p class="meta">${tasks.filter((t)=>!t.done).length} open · ${tasks.filter((t)=>t.done).length} complete</p></div><button class="text-button" data-common="new-task">${icon('plus')}Add mission</button></div>${tasks.length?tasks.map((t)=>priorityRow(t,tasks.indexOf(t),{reorder:false})).join(''):empty('missions','A little intention goes a long way.','Add a mission, estimate your time, and give it a place in your day.',`<button class="btn-primary" data-common="new-task">${icon('plus')}Add a mission</button>`)}</article>`
+  bindCommon(section)
+  qsa(section, '[data-priority-toggle]').forEach((b)=>b.addEventListener('click',()=>window.CC.toggleMission(b.dataset.priorityToggle)))
+  qsa(section, '[data-priority-edit]').forEach((b)=>b.addEventListener('click',()=>window.CC.openTaskModal(b.dataset.priorityEdit)))
+  qsa(section, '[data-priority-delay]').forEach((b)=>b.addEventListener('click',()=>window.CC.openRescheduleModal(b.dataset.priorityDelay)))
+  qsa(section, '[data-priority-up],[data-priority-down]').forEach((b)=>b.addEventListener('click',()=>{const id=b.dataset.priorityUp||b.dataset.priorityDown;window.CC.movePriority(id,b.dataset.priorityUp?-1:1)}))
 }

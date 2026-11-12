@@ -1,116 +1,39 @@
-/* -------------------------------------------------------------------------
-   ROUTER — view switching + resilient re-rendering
-   ------------------------------------------------------------------------- */
-
-import { el, qsa } from '../core/dom.js'
+import { el, qsa, escapeHtml } from '../core/dom.js'
 import { emit, on } from '../core/bus.js'
-import { renderDashboard } from '../views/dashboard.js'
-import { renderTimetable } from '../views/timetable.js'
+import { destroyAllCharts } from '../core/charts.js'
+import { renderDashboard, renderMyDay } from '../views/dashboard.js'
+import { renderSchedule } from '../views/schedule.js'
 import { renderTasks } from '../views/tasks.js'
+import { renderGoals } from '../views/goals.js'
+import { renderProjects } from '../views/projects.js'
+import { renderRoutines } from '../views/routines.js'
+import { renderFocusRoom } from '../views/focus-room.js'
 import { renderProgress } from '../views/progress.js'
+import { renderReview } from '../views/review.js'
 import { renderAssistant } from '../views/assistant.js'
 import { renderSettings } from '../views/settings.js'
-import { setMobileNav } from './chrome.js'
+import { setMobileNav, updateBreadcrumb } from './chrome.js'
+import { icon } from './icons.js'
 
-export const VIEWS = ['dashboard', 'timetable', 'tasks', 'progress', 'assistant', 'settings']
-
-const RENDERERS = {
-  dashboard: renderDashboard,
-  timetable: renderTimetable,
-  tasks: renderTasks,
-  progress: renderProgress,
-  assistant: renderAssistant,
-  settings: renderSettings,
+export const VIEWS = ['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress','review','assistant','settings']
+const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,schedule:renderSchedule,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,assistant:renderAssistant,settings:renderSettings}
+let currentView='dashboard',refreshTimer=null
+export function getCurrentView(){return currentView}
+export function switchView(view){
+  if(!VIEWS.includes(view))return
+  if(view!==currentView)destroyAllCharts()
+  currentView=view
+  for(const name of VIEWS)el(`view-${name}`)?.classList.toggle('hidden',name!==view)
+  qsa(document,'.nav-item').forEach((button)=>{const active=button.dataset.view===view;button.classList.toggle('active-nav',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
+  qsa(document,'.dock-item[data-view]').forEach((button)=>{const active=button.dataset.view===view;button.classList.toggle('is-active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
+  setMobileNav(false);updateBreadcrumb(view);renderCurrentView()
+  const section=el(`view-${view}`);if(section){section.style.animation='none';void section.offsetWidth;section.style.animation=''}
+  try{window.scrollTo({top:0,behavior:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})}catch{/* jsdom */}
+  emit('view:changed',{view})
 }
-
-let currentView = 'dashboard'
-let refreshTimer = null
-
-/** Restart the CSS `viewEnter` animation without touching layout or JS timers. */
-function replayViewEntrance(section) {
-  if (!section || !section.style) return
-  section.style.animation = 'none'
-  // Reading a layout value flushes the removal so the animation can re-trigger.
-  void section.offsetWidth
-  section.style.animation = ''
+export function renderCurrentView(){
+  const renderer=RENDERERS[currentView];if(!renderer)return
+  try{renderer()}catch(error){console.error(`[router] ${currentView} failed to render`,error);const section=el(`view-${currentView}`);if(section)section.innerHTML=`<div class="card empty-state">${icon('info')}<p>This view couldn’t be opened.</p><p>Your saved data is safe. Try another section, or export a backup from Settings.</p><button class="btn-ghost" data-retry-view>Try again</button></div>`;section?.querySelector('[data-retry-view]')?.addEventListener('click',()=>renderCurrentView())}
 }
-
-export function getCurrentView() {
-  return currentView
-}
-
-export function switchView(view) {
-  if (!VIEWS.includes(view)) return
-  currentView = view
-  for (const name of VIEWS) {
-    const section = el(`view-${name}`)
-    if (section) section.classList.toggle('hidden', name !== view)
-  }
-  qsa(document, '.nav-item').forEach((btn) => {
-    const active = btn.dataset.view === view
-    btn.classList.toggle('active-nav', active)
-    btn.setAttribute('aria-current', active ? 'page' : 'false')
-  })
-  qsa(document, '.nav-pill').forEach((btn) => btn.classList.toggle('active-pill', btn.dataset.view === view))
-  qsa(document, '.dock-item').forEach((btn) => {
-    const active = btn.dataset.view === view
-    btn.classList.toggle('is-active', active)
-    if (active) btn.setAttribute('aria-current', 'page')
-    else btn.removeAttribute('aria-current')
-  })
-  setMobileNav(false)
-  renderCurrentView()
-  // The view swap above is synchronous; CSS owns the entrance. Re-showing a
-  // section that was already visible needs the animation restarted by hand.
-  replayViewEntrance(el(`view-${view}`))
-  try {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  } catch {
-    /* jsdom / older browsers */
-  }
-  emit('view:changed', { view })
-}
-
-export function renderCurrentView() {
-  const renderer = RENDERERS[currentView]
-  if (!renderer) return
-  try {
-    renderer()
-  } catch (error) {
-    console.error(`[router] ${currentView} failed to render`, error)
-    const section = el(`view-${currentView}`)
-    if (section) {
-      section.innerHTML = `
-        <div class="glass-card p-6 text-center">
-          <i class="fa-solid fa-triangle-exclamation text-accent-4 text-2xl mb-3"></i>
-          <p class="text-slate-300 font-semibold mb-1">This view could not be rendered</p>
-          <p class="text-[13px] text-slate-500">Your data is safe. Reload the page — if it keeps happening, export a backup from Settings.</p>
-        </div>`
-    }
-  }
-}
-
-/** Coalesced refresh — safe to call from timers and event handlers. */
-export function refreshCurrentView(delay = 0) {
-  if (refreshTimer) clearTimeout(refreshTimer)
-  refreshTimer = setTimeout(() => {
-    refreshTimer = null
-    renderCurrentView()
-  }, delay)
-}
-
-export function initRouter() {
-  qsa(document, '[data-view]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const view = btn.dataset.view
-      if (view === 'focus') {
-        // Focus Mode is an overlay, not a tab
-        window.CC?.openFocusMode(undefined)
-        setMobileNav(false)
-        return
-      }
-      switchView(view)
-    })
-  })
-  on('store:change', () => refreshCurrentView())
-}
+export function refreshCurrentView(delay=0){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{refreshTimer=null;renderCurrentView()},delay)}
+export function initRouter(){qsa(document,'[data-view]').forEach((button)=>button.addEventListener('click',()=>switchView(button.dataset.view)));on('store:change',()=>refreshCurrentView())}

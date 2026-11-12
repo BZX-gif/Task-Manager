@@ -24,7 +24,19 @@ export let state = null
 const listeners = new Set()
 let saveTimer = null
 let statsCache = new Map()
-let status = { migrated: false, warnings: [], fresh: true, corrupted: false }
+let status = { migrated: false, warnings: [], fresh: true, corrupted: false, storageAvailable: true }
+let storageWarningShown = false
+
+function persistState() {
+  const ok = saveState(state)
+  status = { ...status, storageAvailable: ok }
+  if (!ok && !storageWarningShown) {
+    storageWarningShown = true
+    toast('Browser storage is unavailable or full. Changes work in this tab only — export a backup before closing it.', 'error', { timeout: 12000 })
+  }
+  if (ok) storageWarningShown = false
+  return ok
+}
 
 /** The browser storage used by the app (localStorage, or a stub in tests). */
 function getStorage() {
@@ -50,7 +62,7 @@ export function initStore({ now = new Date() } = {}) {
       /* storage full or unavailable — the warning toast still fires */
     }
   }
-  status = { migrated: loaded.migrated, warnings: loaded.warnings, fresh: loaded.fresh, corrupted: !!loaded.corrupted }
+  status = { migrated: loaded.migrated, warnings: loaded.warnings, fresh: loaded.fresh, corrupted: !!loaded.corrupted, storageAvailable: true }
 
   materializeDayPlan(state, today)
   const { created } = materializeOccurrences({ tasks: state.tasks, todayKey: today, horizonDays: 7, uid })
@@ -69,7 +81,7 @@ export function initStore({ now = new Date() } = {}) {
   syncDailyProgress(state, today, now, { full: true })
   syncTitles(state, today, now)
 
-  saveState(state)
+  persistState()
   invalidate()
   return state
 }
@@ -89,12 +101,12 @@ export function save({ immediate = false } = {}) {
   if (saveTimer) clearTimeout(saveTimer)
   if (immediate) {
     saveTimer = null
-    saveState(state)
+    persistState()
     return
   }
   saveTimer = setTimeout(() => {
     saveTimer = null
-    saveState(state)
+    persistState()
   }, 350)
 }
 
@@ -102,14 +114,15 @@ export function flush() {
   if (saveTimer) {
     clearTimeout(saveTimer)
     saveTimer = null
-    saveState(state)
+    persistState()
   }
 }
 
 /** Mutate state, persist, invalidate caches and notify views. */
-export function commit(mutator, { immediate = false, silent = false } = {}) {
+export function commit(mutator, { immediate = false, silent = false, timer = false } = {}) {
   const prevUnlocked = state?.titles?.disciplineMonster?.unlocked || false
   if (typeof mutator === 'function') mutator(state)
+  if (timer) { save({ immediate }); invalidate(); emit('focus:tick', state.focus?.active); return }
   materializeDayPlan(state, currentDayKey())
   // light sync for today only (performance) + title evaluation
   try {

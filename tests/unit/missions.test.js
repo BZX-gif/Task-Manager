@@ -13,7 +13,7 @@ test('fresh state starts on SSC and retains complete roadmap', () => {
 test('v3 migration preserves records and adds default mission context', () => {
   const old = { version: 3, tasks: [{ id: 'old-task', title: 'Historical' }], timetable: [{ id: 'old-block', title: 'Old block' }], categories: [] }
   const { state, applied } = migrateState(old, { now: 123, uid: () => 'new' })
-  assert.equal(state.version, 5)
+  assert.equal(state.version, 6)
   assert.ok(applied.includes('migrateStateV3ToV4'))
   assert.ok(applied.includes('migrateStateV4ToV5'))
   assert.equal(state.tasks[0].id, 'old-task')

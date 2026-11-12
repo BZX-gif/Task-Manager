@@ -31,16 +31,17 @@ test('daily score follows the documented weights', () => {
     overdueTaskCount: 0,
   })
 
-  // tasks .25*30 + top3 .333*25 + focus .5*20 + schedule .333*20 = 32.5 over weight 95
-  assert.equal(result.base, 34)
-  assert.equal(result.score, 34)
+  // v6 adherence counts ended blocks, not a block still in progress.
+  // tasks .25*30 + top3 .333*25 + focus .5*20 + schedule .5*20 over weight 95
+  assert.equal(result.base, 38)
+  assert.equal(result.score, 38)
   assert.equal(result.penalty, 0)
   assert.equal(result.pace, 49) // 690/1410
   assert.equal(result.onTrack, false, 'strongly behind pace at 11:30')
   const tasks = result.parts.find((p) => p.key === 'tasks')
   assert.equal(tasks.detail, '1/4')
   const schedule = result.parts.find((p) => p.key === 'schedule')
-  assert.equal(schedule.detail, '1/3') // only elapsed blocks count
+  assert.equal(schedule.detail, '1/2') // the 11:00–12:00 block is still running at 11:30
   const top3 = result.parts.find((p) => p.key === 'top3')
   assert.equal(top3.detail, '1/3')
 })
@@ -155,7 +156,7 @@ test('streak does not break while today is still in progress', () => {
   assert.equal(streak.recent.at(-1).isToday, true)
 })
 
-test('streak counts today once it succeeds and breaks on a real miss', () => {
+test('momentum keeps earlier meaningful days after a quiet day', () => {
   const history = {
     '2026-09-10': { score: 90, top3Total: 3, top3Done: 3, focusedMinutes: 0 },
     '2026-09-11': { score: 10, top3Total: 0, top3Done: 0, focusedMinutes: 0 }, // missed day
@@ -165,7 +166,7 @@ test('streak counts today once it succeeds and breaks on a real miss', () => {
     '2026-09-15': { score: 90, top3Total: 3, top3Done: 3, focusedMinutes: 0 },
   }
   const streak = computeStreak({ todayKey: '2026-09-15', history })
-  assert.equal(streak.current, 4)
+  assert.equal(streak.current, 5, 'the quiet day does not erase the other five real days')
   assert.equal(streak.todayCounted, true)
-  assert.equal(streak.best, 4)
+  assert.equal(streak.best, 4, 'the historical consecutive-run record is still honest')
 })

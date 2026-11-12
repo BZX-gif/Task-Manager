@@ -88,7 +88,7 @@ test('worker serves the shell, static assets and the ai endpoint', async () => {
   // static assets are served by Cloudflare's asset layer (before the worker),
   // so verify they are present in the build output the worker deploys with
   const shellAssets = ['static/js/app.js', 'static/tailwind.css', 'static/style.css', 'static/studio.css', 'static/favicon.svg', 'manifest.webmanifest', 'icons/apple-touch-icon.png']
-  const optionalAssets = ['sw.js', 'static/vendor/fontawesome/css/all.min.css', 'icons/apple-touch-icon.png', 'static/fonts.css', 'static/fonts/sora-latin-700.woff2']
+  const optionalAssets = ['sw.js', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png']
   for (const asset of [...shellAssets, ...optionalAssets]) {
     const content = await readFile(path.join(root, 'dist', asset)).catch(() => null)
     assert.ok(content && content.length > 0, `${asset} should exist in dist/`)
@@ -103,7 +103,7 @@ test('worker serves the shell, static assets and the ai endpoint', async () => {
   }
   assert.match(html, /theme-color/, 'theme colour for the installed app')
   assert.match(html, /apple-mobile-web-app-capable/)
-  assert.doesNotMatch(html, /fonts\.googleapis\.com/, 'fonts are self-hosted')
+  assert.doesNotMatch(html, /fonts\.googleapis\.com|fontawesome|@fontsource/, 'no remote font or icon-font requests')
   const sw = await readFile(path.join(root, 'dist', 'sw.js'), 'utf8')
   assert.match(sw, /cc-shell-/, 'service worker versions its caches')
   assert.match(sw, /\/api\//, 'service worker never caches API calls')
@@ -127,62 +127,65 @@ test('the app boots and renders the dashboard', async () => {
   await settle(60)
   assert.equal(errors.length, 0, `boot errors: ${errors.join(' | ')}`)
   assert.ok($('#view-dashboard').innerHTML.length > 500, 'dashboard rendered content')
-  assert.match(window.document.getElementById('greeting-text').textContent, /Kulshresth/)
-  const seeded = state()
-  assert.ok(seeded.timetables.ssc_cgl_2027.length >= 10, "the active mission's default timetable is present")
-  assert.equal(seeded.version, 5)
+  assert.match(window.document.getElementById('greeting-text').textContent, /Good morning|Good afternoon|Good evening|A quiet moment|Time to wind down/)
+  const fresh = state()
+  assert.equal(fresh.timetables.ssc_cgl_2027.length, 0, 'a fresh workspace has no invented commitments')
+  assert.equal(fresh.tasks.length, 0)
+  assert.equal(fresh.version, 6)
 })
 
-test('the overview keeps its roadmap and actions usable across refreshes', async () => {
-  assert.equal($$('.overview-stat').length, 4)
-  const roadmap = $('.mission-command')
-  roadmap.setAttribute('open', '')
+test('the overview keeps its metrics and actions usable across refreshes', async () => {
+  assert.equal($$('.metric-strip .metric').length, 4)
+  assert.ok($('.command-card'), 'today command card exists')
+  assert.ok($('.score-card'), 'daily score card exists')
   window.CC.refreshCurrentView()
   await settle()
-  assert.ok($('.mission-command').hasAttribute('open'), 'roadmap stays open on refresh')
-  assert.ok($('[data-mission-switch]'), 'mission switch remains available')
-  click('.today-hero [data-action="new-task"]')
+  assert.equal($$('.metric-strip .metric').length, 4, 'metrics survive refresh')
+  click('.quick-actions-card [data-common="new-task"]')
   await settle()
-  assert.ok($('[data-modal-box]'), 'hero action opens task creation')
+  assert.ok($('[data-modal-box]'), 'quick action opens mission creation')
   window.CC.closeModal()
   await settle()
 })
 
 test('overview shortcuts and mobile dock navigate to the right workspace', () => {
-  click('.overview-stat[data-action="view-timetable"]')
-  assert.equal($('#view-timetable').classList.contains('hidden'), false)
-  assert.equal($('#mobile-dock [data-view="timetable"]').getAttribute('aria-current'), 'page')
+  click('.up-next-card [data-common="schedule"]')
+  assert.equal($('#view-schedule').classList.contains('hidden'), false)
+  assert.equal($('.nav-item[data-view="schedule"]').getAttribute('aria-current'), 'page')
   click('#mobile-dock [data-view="tasks"]')
   assert.equal($('#view-tasks').classList.contains('hidden'), false)
   assert.equal($('#mobile-dock [data-view="tasks"]').getAttribute('aria-current'), 'page')
-  assert.equal($('#mobile-dock [data-view="timetable"]').hasAttribute('aria-current'), false)
+  assert.equal($('#mobile-dock [data-view="focus"]').hasAttribute('aria-current'), false)
   click('#mobile-dock [data-view="dashboard"]')
   assert.equal($('#view-dashboard').classList.contains('hidden'), false)
 })
 
-test('dashboard artwork is included in the offline shell', async () => {
-  const image = await readFile(path.join(root, 'dist', 'static', 'hero-atmosphere.jpg'))
+test('the original PWA identity is included in the offline shell', async () => {
   const sw = await readFile(path.join(root, 'dist', 'sw.js'), 'utf8')
-  assert.ok(image.length > 0)
-  assert.match(sw, /hero-atmosphere\.jpg/)
+  for (const icon of ['icons/icon-192.png', 'icons/icon-512.png', 'static/favicon.svg', 'manifest.webmanifest']) {
+    const image = await readFile(path.join(root, 'dist', icon))
+    assert.ok(image.length > 0, `${icon} is bundled`)
+    assert.ok(sw.includes(icon), `${icon} is precached`)
+  }
+  assert.doesNotMatch(sw, /hero-atmosphere|daylight-studio|fontawesome|fonts\.css/, 'removed artwork/font dependencies are not precached')
 })
 
-test('daily brief shows the current day and opens the schedule', () => {
-  assert.ok($('.daily-brief .brief-date').textContent.trim().length > 0)
-  assert.ok($('.daily-brief .brief-next strong').textContent.trim().length > 0)
-  click('.daily-brief [data-action="view-timetable"]')
-  assert.equal($('#view-timetable').classList.contains('hidden'), false)
+test('the overview shows the current day and opens the schedule', () => {
+  assert.ok($('.date-block .date-day').textContent.trim().length > 0)
+  assert.ok($('.command-card h2').textContent.trim().length > 0)
+  click('.up-next-card [data-common="schedule"]')
+  assert.equal($('#view-schedule').classList.contains('hidden'), false)
   window.CC.switchView('dashboard')
 })
 
-test('the studio artwork and styling are bundled for offline use', async () => {
-  const image = await readFile(path.join(root, 'dist', 'static', 'daylight-studio.jpg'))
-  const css = await readFile(path.join(root, 'dist', 'static', 'studio.css'), 'utf8')
+test('the design system is bundled for offline use without remote fonts', async () => {
+  const css = await readFile(path.join(root, 'dist', 'static', 'style.css'), 'utf8')
+  const studio = await readFile(path.join(root, 'dist', 'static', 'studio.css'), 'utf8')
   const sw = await readFile(path.join(root, 'dist', 'sw.js'), 'utf8')
-  assert.ok(image.length > 0)
-  assert.match(css, /daylight-studio\.jpg/)
-  assert.match(sw, /daylight-studio\.jpg/)
+  assert.ok(css.length > 0 && studio.length > 0)
+  assert.match(sw, /static\/style\.css/)
   assert.match(sw, /studio\.css/)
+  assert.doesNotMatch(css + studio, /@import|url\(['"]?https?:|daylight-studio\.jpg/, 'styles are local and original')
 })
 
 test('mobile navigation closes with its accessibility state in sync', () => {
@@ -199,8 +202,8 @@ test('task search offers a clear empty state without breaking inbox actions', as
   const search = $('[data-task-search]')
   search.value = 'a task that does not exist'
   search.dispatchEvent(new window.Event('input', { bubbles: true }))
-  assert.match($('[data-task-list]').textContent, /No matching tasks/)
-  assert.match($('[data-task-count]').textContent, /0 tasks/)
+  assert.match($('[data-task-list]').textContent, /No matching missions/)
+  assert.match($('[data-task-count]').textContent, /0 missions/)
   search.value = ''
   search.dispatchEvent(new window.Event('input', { bubbles: true }))
   click('[data-f="inbox"]')
@@ -232,33 +235,41 @@ test('quick capture starts with the right inbox state and traps tab focus', () =
   const close = box.querySelector('[data-modal-close]')
   close.focus()
   close.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }))
-  assert.equal(window.document.activeElement.textContent.trim(), 'Add task')
+  assert.equal(window.document.activeElement.textContent.trim(), 'Add mission')
   window.CC.closeModal()
 })
 
-test('keyboard shortcuts do not fire while interacting with a select', () => {
-  window.CC.switchView('dashboard')
-  const select = $('[data-top3-picker]')
+test('keyboard shortcuts do not fire while interacting with a select', async () => {
+  window.CC.openTaskModal()
+  await settle()
+  const select = $('#task-priority')
   select.focus()
   const key = new window.KeyboardEvent('keydown', { key: 'f', bubbles: true, cancelable: true })
   select.dispatchEvent(key)
   assert.equal(key.defaultPrevented, false)
   assert.equal(window.CC.hasRunningSession(), false)
+  window.CC.closeModal()
+  await settle()
 })
 
 test('the daily score card explains its own formula', async () => {
-  const scoreCard = $('[data-card="score"]')
+  const scoreCard = $('.score-card')
   assert.ok(scoreCard, 'score card exists')
-  assert.match(scoreCard.textContent, /Today's Score/)
-  assert.match(scoreCard.textContent, /\/100/)
-  assert.equal($$('[data-score-parts] .score-part').length, 4, 'four transparent components')
-  assert.match(scoreCard.innerHTML, /Tasks .*Top 3 .*Focus .*Schedule/s)
+  assert.match(scoreCard.textContent, /Daily execution score/)
+  assert.match(scoreCard.querySelector('.score-ring').getAttribute('aria-label'), /of 100|No score/)
+  assert.equal($$('.score-component').length, 4, 'four transparent components')
+  assert.match(scoreCard.innerHTML, /Missions.*Priorities.*Focus.*Adherence/s)
+  click('[data-score-info]')
+  await settle()
+  assert.match($('[data-modal-box]').textContent, /nothing hidden|weights|components/i)
+  window.CC.closeModal()
+  await settle()
 })
 
 test('Top 3 can be filled, toggled and limited to three', async () => {
   // create three tasks through quick capture
   for (const title of ['Polity PYQs', 'Geography map practice', 'Current affairs']) {
-    click('#quick-add-btn')
+    window.CC.openQuickCapture()
     await settle()
     const input = $('[data-modal-box] #capture-title')
     input.value = title
@@ -278,35 +289,32 @@ test('Top 3 can be filled, toggled and limited to three', async () => {
   const fourth = window.CC.addTaskToTop3(tasks[3]?.id || 'nope')
   assert.equal(fourth.ok, false)
 
-  const rows = $$('.top3-row')
+  const rows = $$('.priority-card .priority-row')
   assert.equal(rows.length, 3, 'three priority rows rendered')
-  click($('.top3-row .task-check'))
+  click($('.priority-card .priority-row .task-check'))
   await settle()
   assert.match($('#view-dashboard').innerHTML, /1\/3 done|1\/3/, 'completion is tracked')
 })
 
-test('"Do this now" recommends a real task and can start a focus session', async () => {
-  const title = $('[data-next-title]').textContent.trim()
+test('today command recommends real work and can start a focus session', async () => {
+  const title = $('.command-card h2').textContent.trim()
   assert.ok(title.length > 0)
-  assert.notEqual(title, 'Everything planned is done', 'there is an actionable item')
+  assert.ok($('[data-command-start]'), 'there is an actionable item')
 
-  click('[data-next-start]')
+  click('[data-command-start]')
   await settle()
-  const isPicker = !!$('[data-modal-box]')
-  if (isPicker) {
-    click($('[data-modal-box] [data-start-min]'))
+  if ($('#view-focus') && !$('#view-focus').classList.contains('hidden') && !$('[data-focus-pause]')) {
+    click('[data-room-start]')
     await settle()
   }
-  assert.ok($('.focus-overlay'), 'focus overlay opened')
-  assert.match($('.focus-overlay').textContent, /Focus Mode/)
-  // the Focus Launch briefing leads straight into the Focus Core
   const enter = $('#focus-launch-enter')
   if (enter) {
     click(enter)
     await settle()
-    assert.ok($('.focus-clock'), 'the Focus Core is on screen')
-    assert.match($('#focus-phase').textContent, /WARMING UP/, 'a fresh mission starts in the warm-up phase')
   }
+  assert.ok($('.focus-overlay'), 'focus overlay opened')
+  assert.ok($('.focus-clock'), 'the Focus Core is on screen')
+  assert.match($('#focus-phase').textContent, /WARMING UP/, 'a fresh mission starts in the warm-up phase')
 })
 
 test('focus session: pause, resume, link a task and complete into analytics', async () => {
@@ -320,6 +328,7 @@ test('focus session: pause, resume, link a task and complete into analytics', as
   // pretend 15 minutes of genuine focus have passed, then finish the session
   const live = state()
   const active = { ...live.focus.active }
+  live.settings.focus.autoCompleteTask = true
   live.focus.active.accumulatedSeconds = 900
   live.focus.active.plannedMinutes = 15
   live.focus.active.lastTickAt = Date.now()
@@ -343,28 +352,37 @@ test('focus minutes flow into the daily score and progress view', async () => {
   window.CC.switchView('progress')
   await settle()
   const progress = $('#view-progress').textContent
-  assert.match(progress, /Progress Analytics/)
+  assert.match(progress, /See how far you’ve come/)
   assert.match(progress, /Focused time/)
   assert.match(progress, /15m/, 'the 15 focused minutes are shown')
-  assert.match(progress, /Category breakdown/)
-  assert.ok($('#progress-heatmap').children.length > 0, 'heatmap rendered')
+  assert.match(progress, /Where your attention went/)
+  assert.ok($('#analytics-heatmap').children.length > 0, 'heatmap rendered')
 })
 
-test('timetable blocks toggle and update adherence', async () => {
-  window.CC.switchView('timetable')
+test('schedule blocks toggle and update adherence', async () => {
+  window.CC.switchView('schedule')
   await settle()
-  const firstCheck = $('.tt-row .task-check')
-  assert.ok(firstCheck, 'a timetable row exists')
+  click('[data-add-block]')
+  await settle()
+  $('#block-name').value = 'Integration block'
+  $('#block-start').value = '12:00'
+  $('#block-length').value = '30'
+  $('#schedule-block-form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }))
+  await settle()
+  const firstCheck = $('[data-block-toggle]')
+  assert.ok(firstCheck, 'a schedule block exists')
   click(firstCheck)
   await settle()
   const log = state().completionLog[window.CC.todayKey()]
   assert.equal(log.ttDone.length, 1, 'block marked complete')
-  click($('.tt-row .task-check'))
+  click($('[data-block-toggle]'))
   await settle()
   assert.equal(state().completionLog[window.CC.todayKey()].ttDone.length, 0, 'and unmarked again')
 })
 
 test('recurring tasks generate occurrences exactly once', async () => {
+  window.CC.switchView('tasks')
+  await settle()
   click('[data-action="new-task"]')
   await settle()
   const box = '[data-modal-box]'
@@ -392,35 +410,33 @@ test('recurring tasks generate occurrences exactly once', async () => {
   assert.equal(new Set(keys).size, keys.length, 'no duplicate occurrences')
 })
 
-test('weekly review modal renders real numbers and recommendations', async () => {
-  window.CC.switchView('dashboard')
-  await settle()
+test('weekly review renders real numbers and recommendations', async () => {
   window.CC.openWeeklyReview()
   await settle()
-  const modal = $('[data-modal-box]').textContent
-  assert.match(modal, /Weekly Review/)
-  assert.match(modal, /Focused/)
-  assert.match(modal, /Completion/)
-  assert.match(modal, /Recommendations/)
-  assert.match(modal, /Best day|Not enough data/)
-  window.CC.closeModal()
+  const review = $('#view-review').textContent
+  assert.match(review, /Your weekly review/i)
+  assert.match(review, /Focused time/)
+  assert.match(review, /Plan follow-through/)
+  assert.match(review, /A few things worth noticing/)
+  assert.match(review, /strongest day|No activity|Nothing critical|showed up/)
+  window.CC.switchView('dashboard')
   await settle()
-  assert.equal($('[data-modal-box]'), null, 'modal closed')
 })
 
 test('recover my day proposes a plan without touching the timetable', async () => {
-  const before = JSON.stringify(state().timetables.ssc_cgl_2027)
+  const today = window.CC.todayKey()
+  const before = JSON.stringify(state().schedule.days[today] || [])
   window.CC.openRecoveryModal({ nowMinutes: 14 * 60 })
   await settle()
   const modal = $('[data-modal-box]')
-  assert.match(modal.textContent, /Recover My Day/)
-  assert.match(modal.textContent, /(Missed|Free time left)/)
-  assert.equal(JSON.stringify(state().timetables.ssc_cgl_2027), before, 'nothing applied until the user confirms')
+  assert.match(modal.textContent, /Recover my day|fresh way forward/i)
+  assert.match(modal.textContent, /(Mission|Start|Minutes)/)
+  assert.equal(JSON.stringify(state().schedule.days[today] || []), before, 'nothing applied until the user confirms')
   const apply = $('[data-apply]')
   if (apply && !apply.disabled) {
     click(apply)
     await settle()
-    assert.notEqual(JSON.stringify(state().timetables.ssc_cgl_2027), before, 'applying reschedules missed blocks')
+    assert.notEqual(JSON.stringify(state().schedule.days[today] || []), before, 'applying reschedules missed blocks')
   }
   window.CC.closeModal()
 })
@@ -453,10 +469,10 @@ test('settings: export → import round-trip and validation', async () => {
   window.CC.switchView('settings')
   await settle()
   const settings = $('#view-settings').textContent
-  assert.match(settings, /Gemini Assistant/)
-  assert.match(settings, /Protected Time/)
+  assert.match(settings, /Assistant/)
+  assert.match(settings, /Protected time/)
   assert.match(settings, /Reminders/)
-  assert.match(settings, /Export JSON/)
+  assert.match(settings, /Export/)
 
   const backupModule = await import(path.join(root, 'src', 'client', 'lib', 'backup.js'))
   const payload = backupModule.buildExport(state())
@@ -475,7 +491,7 @@ test('settings: export → import round-trip and validation', async () => {
   await settle(80)
   click('[data-confirm]')
   await settle(80)
-  assert.ok(toasts.some((t) => /imported/i.test(t)), `import toast seen (${toasts.join(' | ')})`)
+  assert.ok(toasts.some((t) => /restored|imported/i.test(t)), `import toast seen (${toasts.join(' | ')})`)
 })
 
 test('quick capture works from the keyboard shortcut and files to the inbox', async () => {

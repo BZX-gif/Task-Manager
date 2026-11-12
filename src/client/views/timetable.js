@@ -6,15 +6,17 @@ import { formatDuration, minutesOfDay, toHHMM } from '../lib/dates.js'
 import { activeMission, activeTimetable, timetableSlot } from '../lib/missions.js'
 import { protectedConflicts } from '../lib/protected.js'
 import { computeDueReminders } from '../lib/reminders.js'
-import { closeModal, confirmDialog, escapeHtml, openModal, qsa, toast } from '../core/dom.js'
+import { closeModal, confirmDialog, escapeHtml, openModal, qsa, toast, qs } from '../core/dom.js'
 import { commit, currentDayKey, minutesNow, state, statsFor, syncScoreHistory } from '../core/store.js'
 import { categoryColor, categoryName, categoryOptions, emptyState } from './shared.js'
-import { openRecoveryModal } from './recovery.js'
+import { openRecoveryModal } from './planner.js'
+import { icon } from '../ui/icons.js'
+import { dayStats } from '../lib/daystats.js'
 
 let showDone = true
 
 export function renderTimetable() {
-  const section = document.getElementById('view-timetable')
+  const section = document.getElementById('view-schedule')
   if (!section) return
   const now = new Date()
   const today = currentDayKey(now)
@@ -30,23 +32,12 @@ export function renderTimetable() {
   const upcomingReminder = computeDueReminders({ state, todayKey: today, nowMinutes: nowMin, now, maxPerRun: 1 })[0] || null
 
   section.innerHTML = `
-    <div class="view-heading flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="view-eyebrow">YOUR WORKSPACE / SCHEDULE</p>
-        <h2 class="section-title">Daily Timetable <span class="chip ml-2 align-middle">${escapeHtml(mission.exam)} ${mission.year}</span></h2>
-        <p class="section-sub">${now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })} · ${escapeHtml(mission.exam)} schedule · tap a block to mark it complete</p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button class="btn-ghost" data-action="recover"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Recover My Day</button>
-        <button class="btn-ghost" data-action="toggle-done"><i class="fa-solid fa-eye${showDone ? '' : '-slash'} mr-1.5"></i>${showDone ? 'Hide done' : 'Show done'}</button>
-        <button class="btn-ghost" data-action="reset"><i class="fa-solid fa-rotate-left mr-1.5"></i>Reset today</button>
-        <button class="btn-primary" data-action="add"><i class="fa-solid fa-plus mr-1.5"></i>Add Block</button>
-      </div>
-    </div>
-
+    <div class="page-heading"><div><p class="eyebrow">YOUR REUSABLE STUDY PLANS</p><h1>A familiar structure.</h1><p>${escapeHtml(mission.exam)} ${mission.year} · recurring template, not a dated calendar.</p></div><div class="heading-actions"><button class="btn-ghost" data-study-back>${icon('left')}Back to calendar</button><button class="btn-primary" data-action="add">${icon('plus')}Add template block</button></div></div>
+    <div class="filter-row"><label class="field-label">Study plan<select class="input-field" data-mission-switch>${Object.values(state.missions.definitions).map((m)=>`<option value="${escapeHtml(m.id)}" ${m.id===mission.id?'selected':''}>${escapeHtml(m.exam)} ${m.year}</option>`).join('')}</select></label><div class="heading-actions"><button class="btn-ghost btn-small" data-action="toggle-done">${showDone?'Hide':'Show'} completed</button><button class="btn-ghost btn-small" data-action="reset">Reset today’s check-ins</button></div></div>
+    <div class="notice" style="margin-bottom:20px">${icon('info')}These blocks repeat on their selected days. Calendar edits create a dated override and never silently rewrite this template. New workspaces start empty; migrated study plans are preserved.</div>
     ${conflicts.length
       ? `<div class="glass-card p-4 border-l-4 border-amber-400/60 flex items-start gap-3">
-           <i class="fa-solid fa-triangle-exclamation text-accent-4 mt-0.5"></i>
+           ${icon('info')}
            <div class="text-[13px] text-slate-300">
              <p class="font-semibold text-amber-200">${conflicts.length} block${conflicts.length > 1 ? 's overlap' : ' overlaps'} your protected time</p>
              <p class="text-slate-400 mt-1">${conflicts.slice(0, 3).map((c) => `${escapeHtml(c.time)} ${escapeHtml(c.title)} (${c.overlapMinutes} min inside “${escapeHtml(c.protectedLabel)}”)`).join(' · ')}</p>
@@ -57,7 +48,7 @@ export function renderTimetable() {
 
     ${upcomingReminder
       ? `<div class="glass-card p-3.5 flex items-center gap-3 text-[13px]">
-           <i class="fa-solid fa-bell text-accent-2"></i>
+           ${icon('bell')}
            <span class="text-slate-300"><span class="font-semibold text-white">${escapeHtml(upcomingReminder.title)}</span> — ${escapeHtml(upcomingReminder.body)}</span>
          </div>`
       : ''}
@@ -91,8 +82,8 @@ export function renderTimetable() {
           ? visibleBlocks
               .map((item) => blockRowHtml(item, log, nowMin))
               .join('')
-          : sorted.length ? emptyState({ icon: 'fa-regular fa-circle-check', title: 'All blocks are complete', body: 'Show completed blocks to see your full schedule.' }) : emptyState({
-              icon: 'fa-regular fa-calendar',
+          : sorted.length ? emptyState({ icon: 'check', title: 'All blocks are complete', body: 'Show completed blocks to see your full schedule.' }) : emptyState({
+              icon: 'calendar',
               title: `No ${escapeHtml(mission.exam)} blocks yet`,
               body: `Add your ${escapeHtml(mission.exam)} daily structure — the dashboard, reminders and recovery planner use this mission's timetable.`,
               action: '<button class="btn-primary mt-2" data-action="add">Add your first block</button>',
@@ -101,6 +92,8 @@ export function renderTimetable() {
     </div>
   `
 
+  qs(section, '[data-study-back]').addEventListener('click',()=>window.CC.switchView('schedule'))
+  qs(section, '[data-mission-switch]').addEventListener('change',(e)=>commit((s)=>{s.missions.activeMissionId=e.target.value;for(const m of Object.values(s.missions.definitions))m.status=m.id===e.target.value?'active':'future'}))
   qsa(section, '[data-action]').forEach((btn) =>
     btn.addEventListener('click', () => {
       const action = btn.dataset.action
@@ -172,17 +165,17 @@ function blockRowHtml(item, log, nowMin) {
         </span>
       </button>
       <div class="flex items-center gap-1.5">
-        ${isNow ? `<button class="icon-btn" data-block-focus="${escapeHtml(item.id)}" title="Start a focus session"><i class="fa-solid fa-stopwatch text-xs"></i></button>` : ''}
-        <button class="icon-btn" data-block-edit="${escapeHtml(item.id)}" title="Edit block"><i class="fa-solid fa-pen text-xs"></i></button>
-        <button class="icon-btn" data-block-delete="${escapeHtml(item.id)}" title="Delete block"><i class="fa-solid fa-trash text-xs"></i></button>
-        <button class="task-check ${isDone ? 'checked' : ''}" data-block-toggle="${escapeHtml(item.id)}" aria-label="${isDone ? 'Mark unfinished' : 'Mark complete'}: ${escapeHtml(item.title)}" aria-pressed="${isDone}"><i class="fa-solid fa-check"></i></button>
+        ${isNow ? `<button class="icon-btn" data-block-focus="${escapeHtml(item.id)}" title="Start a focus session">${icon('focus')}</button>` : ''}
+        <button class="icon-btn" data-block-edit="${escapeHtml(item.id)}" title="Edit block">${icon('edit')}</button>
+        <button class="icon-btn" data-block-delete="${escapeHtml(item.id)}" title="Delete block">${icon('trash')}</button>
+        <button class="task-check ${isDone ? 'checked' : ''}" data-block-toggle="${escapeHtml(item.id)}" aria-label="${isDone ? 'Mark unfinished' : 'Mark complete'}: ${escapeHtml(item.title)}" aria-pressed="${isDone}">${icon('check')}</button>
       </div>
     </div>`
 }
 
 export function toggleBlock(id) {
   const today = currentDayKey()
-  const stats = statsFor(today)
+  const stats = dayStats(state,today,{todayKey:today})
   const block = activeTimetable(state).find((b) => b.id === id)
   let nowDone = false
   commit((s) => {
@@ -223,7 +216,7 @@ export function openBlockModal(id = null) {
   const block = id ? activeTimetable(state).find((b) => b.id === id) : null
   const body = `
     <form id="block-form" class="space-y-4">
-      <p class="text-[12px] text-slate-400 -mt-1"><i class="fa-solid fa-flag mr-1.5 text-accent-2"></i>Saved to the <span class="text-slate-200 font-semibold">${escapeHtml(mission.exam)} ${mission.year}</span> timetable — every mission keeps its own schedule.</p>
+      <p class="text-[12px] text-slate-400 -mt-1">${icon('target')}Saved to the <span class="text-slate-200 font-semibold">${escapeHtml(mission.exam)} ${mission.year}</span> timetable — every mission keeps its own schedule.</p>
       <div>
         <label class="field-label" for="block-title">Title</label>
         <input required class="input-field" id="block-title" name="title" placeholder="e.g. Deep study block" value="${block ? escapeHtml(block.title) : ''}">
@@ -294,4 +287,11 @@ function nextFreeTime() {
     if (nowMin < end) return toHHMM(Math.min(end, 23 * 60 + 45))
   }
   return toHHMM(Math.min(nowMin, 23 * 60 + 45))
+}
+
+/** Legacy study plans remain available inside the new calendar. */
+export function renderStudyPlans() {
+  renderTimetable()
+  const back=document.querySelector('[data-study-back]')
+  if(back){back.innerHTML=icon('left')+'Day view';back.addEventListener('click',()=>{/** @type {any} */(document.querySelector('[data-calendar-mode="day"]'))?.click()},{once:true})}
 }

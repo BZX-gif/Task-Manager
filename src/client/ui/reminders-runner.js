@@ -37,9 +37,21 @@ export function checkReminders(now = new Date()) {
   return fresh
 }
 
+function reminderAction(reminder) {
+  const cc = window.CC
+  if (!cc) return undefined
+  if (reminder.kind === 'planning') return { label: 'Plan', onClick: () => cc.openDayPlanner() }
+  if (reminder.kind === 'review') return { label: 'Review', onClick: () => cc.openWeeklyReview() }
+  if (reminder.kind === 'routine') return { label: 'Open', onClick: () => cc.switchView('routines') }
+  if (reminder.kind === 'overdue' || reminder.kind === 'top3') return { label: 'Open', onClick: () => cc.switchView('tasks') }
+  if (reminder.kind === 'task' && reminder.taskId) return { label: 'Open', onClick: () => cc.openTaskModal(reminder.taskId) }
+  if (reminder.kind === 'timetable') return { label: 'Schedule', onClick: () => cc.switchView('schedule') }
+  return undefined
+}
+
 function deliver(reminder) {
   const toastType = reminder.kind === 'overdue' ? 'error' : reminder.kind === 'timetable' ? 'timer' : 'info'
-  toast(`${reminder.title} — ${reminder.body}`, toastType, { timeout: reminder.kind === 'overdue' ? 8000 : 6000 })
+  toast(`${reminder.title} — ${reminder.body}`, toastType, { timeout: reminder.kind === 'overdue' ? 8000 : 6000, action: reminderAction(reminder) })
   try {
     const wantsDesktop = state.settings?.reminders?.desktopNotifications
     if (wantsDesktop && 'Notification' in window && Notification.permission === 'granted') {

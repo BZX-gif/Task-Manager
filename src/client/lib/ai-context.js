@@ -17,6 +17,9 @@ import { overdueTasks } from './score.js'
 import { selectNextAction } from './nextaction.js'
 import { top3Stats } from './top3.js'
 import { sessionTotals } from './focus.js'
+import { scheduleFor, itemDone, scheduleConflicts } from './planner.js'
+import { goalProgress } from './relationships.js'
+import { routineDue, routineDone } from './routines.js'
 
 export const MAX_CONTEXT_CHARS = 1800
 
@@ -34,22 +37,22 @@ export function buildAiContext(state, options = {}) {
   const inMission = (item) => !item.missionId || item.missionId === activeId
   // v5: the assistant only ever sees the active mission's day plan (snapshot
   // for today, that mission's timetable otherwise) — never another mission's.
-  const scopedState = { ...state, tasks: (state.tasks || []).filter(inMission), timetable: dayPlanFor(state, todayKey) }
+  const scopedState = { ...state, meta: { ...state.meta, legacyStudyPlans: true }, tasks: (state.tasks || []).filter(inMission), timetable: dayPlanFor(state, todayKey) }
   const stats = dayStats(scopedState, todayKey, { todayKey, now })
   const top3 = top3Stats(scopedState, todayKey)
   const today = scopedState.tasks.filter((t) => t.date === todayKey)
   const overdue = overdueTasks(scopedState, todayKey)
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  const blocks = [...scopedState.timetable].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const blocks = [...scheduleFor(scopedState,todayKey)].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
   const log = state.completionLog?.[todayKey] || { ttDone: [] }
   const currentBlock = blocks.find((b) => nowMin >= minutesOfDay(b.time) && nowMin < minutesOfDay(b.time) + (b.duration || 60))
   const nextBlock = blocks.find((b) => minutesOfDay(b.time) > nowMin)
 
   const next = selectNextAction({
     tasks: scopedState.tasks,
-    timetable: scopedState.timetable,
-    ttDone: log.ttDone || [],
+    timetable: blocks,
+    ttDone: blocks.filter((b)=>itemDone(scopedState,b,todayKey)).map((b)=>b.sourceId||b.id),
     top3Ids: state.top3?.[todayKey] || [],
     todayKey,
     nowMinutes: nowMin,
@@ -57,24 +60,27 @@ export function buildAiContext(state, options = {}) {
   })
 
   const yesterday = addDays(todayKey, -1)
-  const yesterdayStats = dayStats(state, yesterday, { todayKey, now })
+  const yesterdayStats = dayStats(scopedState, yesterday, { todayKey, now })
   const weekTotals = { focused: 0, planned: 0, completed: 0 }
   for (let i = 0; i < 7; i++) {
     const key = addDays(todayKey, -i)
-    const day = dayStats(state, key, { todayKey, now })
+    const day = dayStats(scopedState, key, { todayKey, now })
     weekTotals.focused += day.focusedMinutes
     weekTotals.planned += day.totalPlannedMinutes
     weekTotals.completed += day.completedMinutes + day.taskDoneMinutes
   }
 
   const lines = [
-    ...(mission ? [`ACTIVE MISSION: ${mission.exam} ${mission.year} → ${mission.targetRole} → ${mission.target}. Do not recommend other roadmap missions unless explicitly asked.`] : []),
+    ...(mission && (state.meta?.legacyStudyPlans || Object.values(state.timetables||{}).some((list)=>list.length) || scopedState.tasks.some((t)=>t.missionId)) ? [`ACTIVE MISSION: ${mission.exam} ${mission.year} → ${mission.targetRole} → ${mission.target}. Do not recommend other roadmap missions unless explicitly asked.`] : []),
     `Date: ${todayKey} (${weekdayName(new Date(`${todayKey}T12:00:00`).getDay())}), time ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
     `Daily score: ${stats.hasData ? `${stats.score}/100` : 'not enough data yet'} (pace ${stats.pace})`,
     `Top 3 (${top3.done}/${top3.total}): ${top3.items.map((i) => `${i.task.title}${i.task.done ? ' ✓' : ''}`).join('; ') || 'none chosen'}`,
     `Today's tasks (${today.length}): ${today.map((t) => `${t.title} [${t.done ? 'done' : 'open'}, ${t.priority}${t.time ? `, ${t.time}` : ''}${t.estimateMinutes ? `, ${t.estimateMinutes}m` : ''}]`).join('; ') || 'none'}`,
     `Timetable now: ${currentBlock ? `${currentBlock.title} (${currentBlock.time}, ${currentBlock.duration}m)` : 'nothing scheduled'}; next: ${nextBlock ? `${nextBlock.title} at ${nextBlock.time}` : 'nothing left today'}`,
-    `Timetable today: ${blocks.map((b) => `${b.time} ${b.title}${log.ttDone?.includes(b.id) ? '✓' : ''}`).join(' | ').slice(0, 700)}`,
+    `Schedule today: ${blocks.map((b) => `${b.time} ${b.title}${itemDone(state,b,todayKey) ? '✓' : ''}`).join(' | ').slice(0, 500)}`,
+    `Conflicts: ${scheduleConflicts(blocks,state.settings.protectedTime,todayKey).map((c)=>c.label).join('; ') || 'none'}`,
+    `Goals: ${(state.goals||[]).filter((g)=>g.status==='active').slice(0,4).map((g)=>`${g.title} (${goalProgress(state,g)}%; milestones: ${g.milestones.map((m)=>m.title+(m.done?' ✓':'')).join(', ')||'none'})`).join('; ') || 'none'}`,
+    `Routines due: ${(state.routines||[]).filter((r)=>routineDue(r,todayKey)).map((r)=>`${r.title} ${routineDone(state,r,todayKey)?'done':'open'}`).join('; ') || 'none'}`,
     `Focused today: ${formatDuration(sessionTotals(state.focus?.sessions || [], todayKey).focusedMinutes)}; yesterday: ${yesterdayStats.focusedMinutes}m; this week: ${formatDuration(weekTotals.focused)}`,
     `This week: planned ${formatDuration(weekTotals.planned)}, completed ${formatDuration(weekTotals.completed)}`,
     `Overdue (${overdue.length}): ${overdue.slice(0, 5).map((t) => t.title).join('; ') || 'none'}`,
@@ -92,7 +98,7 @@ export function buildAiContext(state, options = {}) {
 export const AI_SYSTEM_PROMPT = `You are the productivity assistant inside a personal Command Center app.
 Be concise, warm, practical and specific. Prefer short numbered plans with time estimates (in minutes) over long prose.
 Always ground your answer in the context you are given: use the user's real categories, tasks, timetable and numbers.
-Never invent tasks, categories or numbers that are not in the context. Never mention being an AI model, never output code, keys or internal details.
+Never invent tasks, categories or numbers that are not in the context. Never mention being an AI model, never output code, keys or internal details. You cannot modify the schedule or any data: propose changes and explicitly ask the user to review and approve them. Do not shame missed days or manipulate scores.
 When the user asks for a plan, finish with one clear first action starting with "Start with".`
 
 /**
@@ -100,13 +106,13 @@ When the user asks for a plan, finish with one clear first action starting with 
  * @type {Array<{id:string,label:string,icon:string,needsTask?:boolean,prompt:string}>}
  */
 export const AI_COMMANDS = [
-  { id: 'plan-day', label: 'Plan My Day', icon: 'fa-calendar-day', prompt: 'Plan my day using my real remaining time. Give a time-blocked plan with minutes and one clear first action.' },
-  { id: 'next', label: 'What Should I Do Next?', icon: 'fa-arrow-right', prompt: 'What should I do next, right now? Pick one thing, explain why in one line, then give the shortest path to finish it.' },
-  { id: 'fix-timetable', label: 'Fix My Timetable', icon: 'fa-table-cells-large', prompt: 'Review my timetable and suggest concrete fixes: overlaps, no buffers, unrealistic blocks, protected-time conflicts. Give a short corrected list.' },
-  { id: 'review-week', label: 'Review My Week', icon: 'fa-clipboard-list', prompt: 'Review my week from the data: what worked, what slipped, and the two changes that would help most next week.' },
-  { id: 'tomorrow', label: "Make Tomorrow's Plan", icon: 'fa-sun', prompt: "Make tomorrow's plan: the three priorities in order, a realistic schedule, and what to skip." },
-  { id: 'breakdown', label: 'Break Down This Task', icon: 'fa-diagram-project', needsTask: true, prompt: 'Break this task into 3-6 concrete subtasks with time estimates, in the order I should do them.' },
-  { id: 'behind', label: 'Why Am I Falling Behind?', icon: 'fa-triangle-exclamation', prompt: 'Diagnose why I am falling behind using my completion, focus and overdue data. Be direct, no flattery, then give the fix.' },
+  { id: 'plan-day', label: 'Plan My Day', icon: 'calendar', prompt: 'Plan my day using my real remaining time. Give a time-blocked plan with minutes and one clear first action.' },
+  { id: 'next', label: 'What Should I Do Next?', icon: 'arrow', prompt: 'What should I do next, right now? Pick one thing, explain why in one line, then give the shortest path to finish it.' },
+  { id: 'fix-timetable', label: 'Fix My Timetable', icon: 'schedule', prompt: 'Review my timetable and suggest concrete fixes: overlaps, no buffers, unrealistic blocks, protected-time conflicts. Give a short corrected list.' },
+  { id: 'review-week', label: 'Review My Week', icon: 'review', prompt: 'Review my week from the data: what worked, what slipped, and the two changes that would help most next week.' },
+  { id: 'tomorrow', label: "Make Tomorrow's Plan", icon: 'sun', prompt: "Make tomorrow's plan: the three priorities in order, a realistic schedule, and what to skip." },
+  { id: 'breakdown', label: 'Break Down This Task', icon: 'projects', needsTask: true, prompt: 'Break this task into 3-6 concrete subtasks with time estimates, in the order I should do them.' },
+  { id: 'behind', label: 'Recover My Day', icon: 'recover', prompt: 'Help me recover today using my real remaining time, urgent missions and protected windows. Suggest what to keep, postpone or drop. Be supportive and never apply changes.' },
 ]
 
 export function commandById(id) {
@@ -125,7 +131,7 @@ export function buildCommandPrompt(id, { task = null } = {}) {
 /** Where to find the first free slot for a task (used by the planner hints). */
 export function nextFreeSlot(state, todayKey, now = new Date(), durationMinutes = 30) {
   const nowMin = now.getHours() * 60 + now.getMinutes()
-  const blocks = [...dayPlanFor(state, todayKey)].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  const blocks = [...scheduleFor(state, todayKey)].sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
   let cursor = nowMin + 5
   for (const block of blocks) {
     const start = minutesOfDay(block.time)

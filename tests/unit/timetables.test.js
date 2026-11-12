@@ -27,7 +27,7 @@ test('v4 → v5 preserves the legacy timetable as the UPSC mission schedule', ()
     { version: 4, timetable: [{ id: 'legacy-1', time: '09:00', title: 'Legacy block', duration: 60, cat: 'upsc' }] },
     ctx(),
   )
-  assert.equal(state.version, 5)
+  assert.equal(state.version, 6)
   assert.ok(applied.includes('migrateStateV4ToV5'))
   assert.equal(state.timetable, undefined, 'the flat v4 timetable is gone')
   assert.equal(state.timetables.upsc_cse_2028[0].id, 'legacy-1', 'legacy block ids survive the move')
@@ -84,6 +84,7 @@ test('reminders and protected-time conflicts follow the active mission', () => {
 
 test('dashboard stats, recovery and AI context read the active mission timetable', () => {
   const state = emptyState(ctx())
+  state.meta.legacyStudyPlans = true // exercise the preserved study-plan mode
   state.timetables.ssc_cgl_2027 = [
     { id: 's1', time: '09:00', title: 'SSC maths', duration: 60, cat: 'ssc' },
     { id: 's2', time: '10:00', title: 'SSC reasoning', duration: 60, cat: 'ssc' },
@@ -122,7 +123,7 @@ test('dashboard stats, recovery and AI context read the active mission timetable
 /* ------------------------------------------------------- starter content */
 
 test('the SSC starter timetable is genuinely SSC CGL-oriented', () => {
-  const state = emptyState(ctx())
+  const state = migrateState({ version: 4 }, ctx()).state
   const blocks = state.timetables.ssc_cgl_2027
   const titles = blocks.map((b) => b.title).join('\n')
   assert.match(titles, /Quantitative Aptitude/i)
@@ -147,7 +148,7 @@ test('the SSC starter timetable is genuinely SSC CGL-oriented', () => {
 })
 
 test('the RAS starter timetable is genuinely RAS-oriented', () => {
-  const state = emptyState(ctx())
+  const state = migrateState({ version: 4 }, ctx()).state
   const blocks = state.timetables.ras_2028
   const titles = blocks.map((b) => b.title).join('\n')
   assert.match(titles, /RAJASTHAN GK/i)
@@ -165,7 +166,7 @@ test('the RAS starter timetable is genuinely RAS-oriented', () => {
 })
 
 test('the UPSC timetable keeps the pre-v5 schedule content and timings', () => {
-  const state = emptyState(ctx())
+  const state = migrateState({ version: 4 }, ctx()).state
   const upsc = state.timetables.upsc_cse_2028
   assert.deepEqual(upsc.map((b) => b.title), DEFAULT_TIMETABLE.map((b) => b.title), 'UPSC content is the historical schedule verbatim')
   assert.deepEqual(upsc.map((b) => b.time), DEFAULT_TIMETABLE.map((b) => b.time), 'UPSC timings are preserved exactly')
@@ -177,7 +178,7 @@ test('the UPSC timetable keeps the pre-v5 schedule content and timings', () => {
     ctx(),
   )
   assert.equal(migrated.timetables.upsc_cse_2028.length, 1, 'the legacy schedule replaces the starter, nothing merges')
-  assert.deepEqual(migrated.timetables.upsc_cse_2028[0], { id: 'legacy-7', time: '07:07', title: 'My edited UPSC block', duration: 45, cat: 'upsc' })
+  assert.deepEqual({ id: migrated.timetables.upsc_cse_2028[0].id, time: migrated.timetables.upsc_cse_2028[0].time, title: migrated.timetables.upsc_cse_2028[0].title, duration: migrated.timetables.upsc_cse_2028[0].duration, cat: migrated.timetables.upsc_cse_2028[0].cat }, { id: 'legacy-7', time: '07:07', title: 'My edited UPSC block', duration: 45, cat: 'upsc' })
 })
 
 /* --------------------------------------------------------- day-plan isolation */
@@ -220,6 +221,7 @@ test('completing a block never completes an equivalent block in another mission'
   assert.equal(new Set(allIds).size, allIds.length, 'no block id is shared between missions')
 
   const state = emptyState(ctx())
+  state.meta.legacyStudyPlans = true // exercise the preserved study-plan mode
   state.timetables.ssc_cgl_2027 = [{ id: 'ssc-q', time: '09:00', title: 'Quant practice', duration: 60, cat: 'ssc' }]
   state.timetables.ras_2028 = [{ id: 'ras-q', time: '09:00', title: 'Quant practice', duration: 60, cat: 'ras' }]
   state.timetables.upsc_cse_2028 = [{ id: 'upsc-q', time: '09:00', title: 'Quant practice', duration: 60, cat: 'upsc' }]
@@ -240,6 +242,7 @@ test('completing a block never completes an equivalent block in another mission'
 
 test('score, adherence and elapsed counts never mix missions', () => {
   const state = emptyState(ctx())
+  state.meta.legacyStudyPlans = true // exercise the preserved study-plan mode
   state.timetables.ssc_cgl_2027 = [
     { id: 's1', time: '09:00', title: 'SSC one', duration: 60, cat: 'ssc' },
     { id: 's2', time: '10:00', title: 'SSC two', duration: 60, cat: 'ssc' },

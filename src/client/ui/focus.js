@@ -25,6 +25,7 @@ import {
   finalizeSession,
   minutesByTask,
   pauseSession,
+  isSessionComplete,
   plannedSeconds,
   progressRatio,
   reconcileStaleSession,
@@ -35,7 +36,8 @@ import {
 } from '../lib/focus.js'
 import { MISSION_PHASES, finalMinuteStage, milestoneCrossed, missionPhase, momentumChain } from '../lib/mission.js'
 import { closeModal, escapeHtml, el, openModal, toast } from '../core/dom.js'
-import { commit, currentDayKey, rollSeriesForward, state, streak, syncScoreHistory, todayStats } from '../core/store.js'
+import { commit, currentDayKey, save, state, streak, syncScoreHistory, todayStats } from '../core/store.js'
+import { toggleMission } from '../core/actions.js'
 import { uid } from '../lib/state.js'
 import { emit } from '../core/bus.js'
 
@@ -87,7 +89,7 @@ export function initFocus({ onTick } = {}) {
     commit((s) => {
       s.focus.active = session
     }, { immediate: true, silent: true })
-    toast('A focus session was left running for hours — it has been closed and credited for the time you actually focused.', 'info', { timeout: 7000 })
+    toast('A session left open for hours was paused. Only checkpointed time is kept; unrecorded idle time is not counted.', 'info', { timeout: 7000 })
   }
 
   startTicker(onTick)
@@ -116,12 +118,12 @@ function startTicker(onTick) {
       const nowMs = Date.now()
       commit((s) => {
         s.focus.active = tickSession(s.focus.active, nowMs)
-      }, { silent: true })
+      }, { silent: true, timer: true })
       const next = state.focus.active || session
       const planned = plannedSeconds(next)
       const elapsed = elapsedSeconds(next, nowMs)
       const previous = lastTickSessionId === next.id ? lastTickElapsed : 0
-      if (planned > 0 && Math.floor(previous) < Math.floor(planned) && Math.floor(elapsed) >= Math.floor(planned)) {
+      if (next.mode !== 'stopwatch' && planned > 0 && Math.floor(previous) < Math.floor(planned) && Math.floor(elapsed) >= Math.floor(planned)) {
         onFocusTimeReached()
       }
       lastTickElapsed = elapsed
@@ -140,7 +142,7 @@ function saveTick() {
   if (nowMs - lastSave < 10000) return
   lastSave = nowMs
   // persist the accumulated seconds regularly (never on every single tick)
-  commit(() => {}, { immediate: true, silent: true })
+  save({ immediate: true })
 }
 
 function guardUnload(event) {
@@ -154,7 +156,7 @@ function onFocusTimeReached() {
   const session = activeSession()
   if (!session) return
   if (session.mode === 'break') {
-    toast('Break finished — back to it! 💪', 'timer', { timeout: 8000 })
+    toast('Break finished. Come back when you’re ready.', 'timer', { timeout: 8000 })
     return
   }
   playChime()
@@ -202,9 +204,12 @@ export function notifyDesktop(title, body) {
  * @param {number|null} [minutes]
  * @param {'focus'|'break'|string} [mode]
  */
-export function startFocus(taskId = null, minutes = null, mode = 'focus') {
+export function startFocus(taskId = null, minutes = null, mode = 'focus', goalId = null) {
+  if (state.focus.active) { openFocusMode(); return }
   const planned = Math.max(1, Math.round(minutes || state.settings.focus.defaultMinutes || 25))
-  const session = createSession({ id: uid(), taskId, plannedMinutes: planned, mode: mode === 'break' ? 'break' : 'focus', now: Date.now() })
+  const session = createSession({ id: uid(), taskId, goalId: goalId || state.tasks.find((t) => t.id === taskId)?.goalId || null, plannedMinutes: planned, mode: mode === 'break' || mode === 'stopwatch' ? mode : 'focus', now: Date.now() })
+  session.categoryId = categoryForTask(taskId)
+  session.taskTitle = state.tasks.find((t) => t.id === taskId)?.title || null
   resetPresentationMemory()
   launchState = null
   ceremony = null
@@ -214,11 +219,11 @@ export function startFocus(taskId = null, minutes = null, mode = 'focus') {
     s.focus.active = session
   }, { immediate: true })
   renderFocusOverlay()
-  const label = mode === 'break' ? 'Break' : 'Mission'
+  const label = mode === 'break' ? 'Break' : mode === 'stopwatch' ? 'Stopwatch' : 'Mission'
   toast(`${label} started · ${planned} min`, 'success')
-  if (mode === 'focus') requestNotificationPermissionQuietly()
 }
 
+/* Permission is requested only by the explicit Settings button. */
 function requestNotificationPermissionQuietly() {
   try {
     if (state.settings?.reminders?.desktopNotifications && 'Notification' in window && Notification.permission === 'default') {
@@ -264,7 +269,7 @@ export function stopFocus({ quiet = false } = {}) {
   if (!session) return
   const record = finalizeSession(session, Date.now(), 'stopped')
   commit((s) => {
-    if (record.focusedSeconds >= 60) s.focus.sessions.push({ ...record, categoryId: categoryForTask(record.taskId) })
+    if (record.focusedSeconds >= 60) s.focus.sessions.push({ ...record, categoryId: categoryForTask(record.taskId) || record.categoryId, goalId: state.tasks.find((t) => t.id === record.taskId)?.goalId || record.goalId, taskTitle: state.tasks.find((t) => t.id === record.taskId)?.title || record.taskTitle })
     s.focus.active = null
   }, { immediate: true })
   syncScoreHistory(currentDayKey())
@@ -286,7 +291,7 @@ export function completeFocus() {
   const record = finalizeSession(session, Date.now(), 'completed')
   const minutes = Math.round(record.focusedSeconds / 60)
   commit((s) => {
-    if (record.focusedSeconds >= 30) s.focus.sessions.push({ ...record, categoryId: categoryForTask(record.taskId) })
+    if (record.focusedSeconds >= 60) s.focus.sessions.push({ ...record, categoryId: categoryForTask(record.taskId) || record.categoryId, goalId: state.tasks.find((t) => t.id === record.taskId)?.goalId || record.goalId, taskTitle: state.tasks.find((t) => t.id === record.taskId)?.title || record.taskTitle })
     s.focus.active = null
   }, { immediate: true })
   syncScoreHistory(currentDayKey())
@@ -296,16 +301,9 @@ export function completeFocus() {
   const linkedTask = record.taskId ? state.tasks.find((t) => t.id === record.taskId) : null
   const task = linkedTask && !linkedTask.done ? linkedTask : null
   let taskMarked = false
-  if (task && state.settings.focus.autoCompleteTask) {
+  if (task && state.settings.focus.autoCompleteTask && record.mode === 'focus' && isSessionComplete(session, Date.now())) {
     // finishing a focus session on a task finishes the task (Settings → Focus)
-    commit((s) => {
-      const target = s.tasks.find((t) => t.id === task.id)
-      if (target) {
-        target.done = true
-        target.completedAt = Date.now()
-        rollSeriesForward(target)
-      }
-    })
+    toggleMission(task.id)
     taskMarked = true
   }
 
@@ -320,7 +318,7 @@ export function completeFocus() {
   ceremony = {
     record,
     minutes,
-    logged: record.focusedSeconds >= 30,
+    logged: record.focusedSeconds >= 60,
     task: task ? { id: task.id, title: task.title } : null,
     taskMarked,
     linkedTitle: linkedTask ? linkedTask.title : null,
@@ -331,6 +329,12 @@ export function completeFocus() {
     streak: streak().current,
   }
   renderFocusOverlay()
+
+  if (state.settings.focus.autoStartBreaks) {
+    const count = sessionTotals(state.focus.sessions, currentDayKey()).completedSessions
+    startFocus(null, count > 0 && count % state.settings.focus.longBreakEvery === 0 ? state.settings.focus.longBreakMinutes : state.settings.focus.breakMinutes, 'break')
+    return
+  }
 
   if (task && taskMarked) {
     toast(`Session complete · ${formatDuration(minutes)} on “${task.title}” — task done 🎉`, 'success')
@@ -345,14 +349,7 @@ export function completeFocus() {
 function markCeremonyTaskDone() {
   if (!ceremony || !ceremony.task) return
   const taskId = ceremony.task.id
-  commit((s) => {
-    const target = s.tasks.find((t) => t.id === taskId)
-    if (target) {
-      target.done = true
-      target.completedAt = Date.now()
-      rollSeriesForward(target)
-    }
-  })
+  toggleMission(taskId)
   ceremony.taskMarked = true
   syncScoreHistory(currentDayKey())
   renderFocusOverlay()
@@ -511,7 +508,7 @@ function overlayShell(inner, { extraClass = '' } = {}) {
         <span class="fz-orb fz-orb-3"></span>
         <span class="focus-vignette"></span>
       </div>
-      <button class="focus-exit" data-focus-close aria-label="Minimise focus mode"><i class="fa-solid fa-compress"></i></button>
+      <button class="focus-exit" data-focus-close aria-label="Minimise focus mode"></button>
       <div class="focus-panel">${inner}</div>
     </div>`
 }
@@ -533,7 +530,7 @@ function setupHtml() {
       ${tasks.map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`).join('')}
     </select>
     <div class="flex flex-col sm:flex-row gap-3 justify-center">
-      <button class="btn-primary focus-enter" id="focus-start"><i class="fa-solid fa-play mr-2"></i>Launch mission</button>
+      <button class="btn-primary focus-enter" id="focus-start">Launch mission</button>
       <button class="btn-ghost" data-focus-close>Cancel</button>
     </div>
     <p class="text-[11.5px] text-slate-500 mt-5">Tip: press <kbd class="kbd">Esc</kbd> to minimise — the timer keeps running.</p>
@@ -550,7 +547,7 @@ function launchHtml(launch) {
     <p class="focus-launch-sub">Everything else can wait.</p>
     <div class="fz-count font-display" id="focus-launch-count" aria-hidden="true">3</div>
     <div class="flex flex-col sm:flex-row gap-3 justify-center mt-2">
-      <button class="btn-primary focus-enter" id="focus-launch-enter"><i class="fa-solid fa-bolt mr-2"></i>Enter the zone</button>
+      <button class="btn-primary focus-enter" id="focus-launch-enter">Enter the zone</button>
       <button class="btn-ghost" data-focus-launch-back>Change plan</button>
     </div>
     <p class="text-[11.5px] text-slate-500 mt-4">Starts on its own — press <kbd class="kbd">Enter</kbd> to skip the countdown.</p>
@@ -568,7 +565,7 @@ function sessionHtml(session) {
   const before = linked ? minutesByTask(state.focus.sessions, linked.id) : 0
   const chain = momentumChain(state.focus.sessions, currentDayKey(), { includeCurrent: !isBreak })
   return overlayShell(`
-    <p class="focus-eyebrow">${isBreak ? 'Focus Mode · Break' : 'Focus Mode'}</p>
+    <p class="focus-eyebrow">${isBreak ? 'Focus Room · Break' : session.mode === 'stopwatch' ? 'Focus Room · Stopwatch' : 'Focus Room'}</p>
     <div class="focus-phase-chip" id="focus-phase-chip">
       <span class="focus-phase-dot" aria-hidden="true"></span>
       <span id="focus-phase">${missionPhase(progressRatio(session, Date.now()), session.mode).label}</span>
@@ -593,17 +590,18 @@ function sessionHtml(session) {
 
     <div class="focus-controls">
       ${session.running
-        ? '<button class="btn-primary focus-primary" data-focus-pause><i class="fa-solid fa-pause mr-2"></i>Pause</button>'
-        : '<button class="btn-primary focus-primary" data-focus-resume><i class="fa-solid fa-play mr-2"></i>Resume</button>'}
-      <button class="btn-ghost" data-focus-plus="5">+5 min</button>
-      <button class="btn-ghost focus-complete-btn" data-focus-complete><i class="fa-solid fa-flag-checkered mr-2"></i>Complete</button>
-      <button class="btn-ghost focus-end-btn" data-focus-stop><i class="fa-solid fa-stop mr-2"></i>End</button>
-      <button class="btn-ghost" data-focus-close><i class="fa-solid fa-compress mr-2"></i>Minimise</button>
+        ? '<button class="btn-primary focus-primary" data-focus-pause>Pause</button>'
+        : '<button class="btn-primary focus-primary" data-focus-resume>Resume</button>'}
+      ${session.mode !== 'stopwatch' ? '<button class="btn-ghost" data-focus-plus="5">+5 min</button>' : ''}
+      <button class="btn-ghost focus-complete-btn" data-focus-complete>Complete</button>
+      <button class="btn-ghost focus-end-btn" data-focus-stop>End</button>
+      <button class="btn-ghost" data-focus-close>Minimise</button>
+      <button class="icon-btn" data-focus-fullscreen aria-label="Toggle full screen">⛶</button>
     </div>
-    <div class="focus-secondary">
+    ${session.mode !== 'stopwatch' ? '<div class="focus-secondary">' : ''}
       <button class="nav-pill ${isBreak ? 'preset-active' : ''}" data-focus-break="${BREAK_PRESETS[0]}">5 min break</button>
       ${!isBreak ? `<button class="nav-pill" data-focus-switch-task>${linked ? 'Change task' : 'Link a task'}</button>` : ''}
-    </div>
+    ${session.mode !== 'stopwatch' ? '</div>' : ''}
     ${!isBreak ? `
       <div class="${linked ? 'hidden ' : ''}mt-4 w-full" data-focus-task-picker>
         <label class="field-label text-left" for="focus-task-switch">Link this mission to a task</label>
@@ -644,8 +642,8 @@ function stopConfirmHtml(session) {
     <p class="fz-quote mt-5">That is still real work.</p>
     ${focused < 60 ? '<p class="text-[11.5px] text-slate-500 mt-1">Sessions under a minute aren’t logged, so analytics stay meaningful.</p>' : ''}
     <div class="focus-controls mt-6">
-      <button class="btn-primary focus-primary" data-focus-resume-session><i class="fa-solid fa-play mr-2"></i>Keep focusing</button>
-      <button class="btn-ghost focus-end-btn" data-focus-end-now><i class="fa-solid fa-stop mr-2"></i>End session</button>
+      <button class="btn-primary focus-primary" data-focus-resume-session>Keep focusing</button>
+      <button class="btn-ghost focus-end-btn" data-focus-end-now>End session</button>
     </div>
     ${announceRegion()}
   `, { extraClass: 'focus-ended' })
@@ -665,23 +663,24 @@ function ceremonyHtml(c) {
       </div>
       ${c.logged ? `<p class="fz-reward font-display">+${c.minutes} FOCUS ${c.minutes === 1 ? 'MINUTE' : 'MINUTES'}</p>` : ''}
       <div class="fz-stat-chips">
-        <span class="fz-chip"><i class="fa-solid fa-stopwatch text-accent-2 mr-1.5"></i>Today · <strong>${formatDuration(c.focusedToday)}</strong> focused</span>
-        <span class="fz-chip"><i class="fa-solid fa-gauge-high text-accent mr-1.5"></i>Score <strong>${c.scoreAfter}/100</strong>${c.scoreDelta > 0 ? ` <span class="fz-chip-pos">+${c.scoreDelta}</span>` : ''}</span>
-        ${c.top3 ? `<span class="fz-chip"><i class="fa-solid fa-list-ol text-accent-2 mr-1.5"></i>Top 3 · <strong>${c.top3.done}/${c.top3.total}</strong></span>` : ''}
-        ${c.streak > 0 ? `<span class="fz-chip"><i class="fa-solid fa-fire text-accent-4 mr-1.5"></i><strong>${c.streak}</strong> day streak</span>` : ''}
+        <span class="fz-chip">Today · <strong>${formatDuration(c.focusedToday)}</strong> focused</span>
+        <span class="fz-chip">Score <strong>${c.scoreAfter}/100</strong>${c.scoreDelta > 0 ? ` <span class="fz-chip-pos">+${c.scoreDelta}</span>` : ''}</span>
+        ${c.top3 ? `<span class="fz-chip">Top 3 · <strong>${c.top3.done}/${c.top3.total}</strong></span>` : ''}
+        <span class="fz-chip"><strong>${c.streak}</strong> meaningful days · 30d</span>
       </div>
-      ${c.task && c.taskMarked ? `<p class="fz-taskline mt-4"><i class="fa-solid fa-circle-check text-accent-3 mr-1.5"></i>“${escapeHtml(c.task.title)}” marked done</p>` : ''}
+      ${c.task && c.taskMarked ? `<p class="fz-taskline mt-4">“${escapeHtml(c.task.title)}” marked done</p>` : ''}
       ${c.task && !c.taskMarked ? `
         <div class="mt-4 flex flex-col items-center gap-1.5">
           <p class="text-[13px] text-slate-400">Mission target: “${escapeHtml(c.task.title)}”</p>
-          <button class="btn-ghost" data-ceremony-task><i class="fa-solid fa-check mr-2"></i>Mark task done</button>
+          <button class="btn-ghost" data-ceremony-task>Mark task done</button>
         </div>` : ''}
       ${!c.task && title ? `<p class="fz-taskline mt-4">“${escapeHtml(title)}” is already done — nicely finished anyway.</p>` : ''}
       ${!c.logged ? '<p class="text-[11.5px] text-slate-500 mt-4">Sessions under a minute aren’t logged, so analytics stay meaningful.</p>' : ''}
       <p class="fz-quote mt-4">“You finished what you started.”</p>
       <div class="focus-controls mt-6">
         <button class="btn-primary focus-primary" data-focus-close>DONE</button>
-        <button class="btn-ghost" data-ceremony-again><i class="fa-solid fa-rotate-right mr-2"></i>Start another mission</button>
+        <button class="btn-ghost" data-ceremony-again>Start another mission</button>
+        ${!c.isBreak ? '<button class="btn-ghost" data-focus-next-break>Take a break</button>' : ''}
       </div>
     </div>
     ${announceRegion('Session complete. Well done.')}
@@ -844,6 +843,7 @@ function bindSession(root, session) {
     stopFocus()
   })
   root.querySelector('[data-focus-plus]')?.addEventListener('click', () => addFocusMinutes(5))
+  root.querySelector('[data-focus-next-break]')?.addEventListener('click', () => { const count = sessionTotals(state.focus.sessions,currentDayKey()).completedSessions; closeFocusOverlay(); startFocus(null,count % state.settings.focus.longBreakEvery === 0 ? state.settings.focus.longBreakMinutes : state.settings.focus.breakMinutes,'break') })
   root.querySelector('[data-focus-break]')?.addEventListener('click', (event) => {
     const minutes = Number(event.currentTarget.dataset.focusBreak) || 5
     commit((s) => {
@@ -896,8 +896,10 @@ export function paintTimer() {
   const timeEl = el('focus-time')
   if (!session || !timeEl) return
   const nowMs = Date.now()
-  const remaining = remainingSeconds(session, nowMs)
-  const ratio = progressRatio(session, nowMs)
+  const stopwatch = session.mode === 'stopwatch'
+  const remaining = stopwatch ? elapsedSeconds(session, nowMs) : remainingSeconds(session, nowMs)
+  const ratio = stopwatch ? 0 : progressRatio(session, nowMs)
+  if (stopwatch) { const phase=document.getElementById('focus-phase');if(phase)phase.textContent='OPEN ENDED';const percent=document.getElementById('focus-percent');if(percent)percent.textContent='No time limit';const elapsed=document.getElementById('focus-elapsed');if(elapsed)elapsed.textContent='Focused '+formatClock(remaining);const energy=document.getElementById('focus-energy');if(energy)energy.classList.add('hidden') }
   const pct = Math.floor(ratio * 100)
   const isBreak = session.mode === 'break'
   const overlay = document.querySelector('.focus-overlay')
@@ -941,10 +943,9 @@ export function paintTimer() {
   const panel = document.querySelector('.focus-panel')
   if (panel) panel.classList.toggle('is-paused', !session.running)
 
-  applyFinalMinute(overlay, session, remaining)
-  applyGoalReached(overlay, session, remaining)
+  if (!stopwatch) { applyFinalMinute(overlay, session, remaining); applyGoalReached(overlay, session, remaining) }
 
-  if (!isBreak && session.running) {
+  if (!isBreak && !stopwatch && session.running) {
     const crossed = milestoneCrossed(lastRatio, ratio)
     if (crossed) showMilestone(overlay, crossed)
   }
@@ -981,7 +982,7 @@ function applyGoalReached(overlay, session, remaining) {
 function showMilestone(overlay, milestone) {
   const chip = el('focus-milestone')
   if (chip) {
-    chip.innerHTML = `<span class="fz-milestone-chip"><i class="fa-solid fa-bolt" aria-hidden="true"></i>${escapeHtml(milestone.text)}</span>`
+    chip.innerHTML = `<span class="fz-milestone-chip">${escapeHtml(milestone.text)}</span>`
     chip.classList.remove('is-visible')
     void chip.offsetWidth
     chip.classList.add('is-visible')

@@ -10,12 +10,12 @@ import {
   computeDisciplineStreak,
   evaluateTitles,
 } from '../../src/client/lib/achievements.js'
-import { emptyState, makeContext } from '../../src/client/lib/state.js'
+import { emptyState, makeContext, migrateState } from '../../src/client/lib/state.js'
 import { activeTimetable } from '../../src/client/lib/missions.js'
 
 function makeState(overrides = {}) {
   const ctx = makeContext({ now: Date.now(), id: (() => { let i = 0; return () => `id-${i++}` })() })
-  const state = emptyState(ctx)
+  const state = migrateState({ version: 4 }, ctx).state
   Object.assign(state, overrides)
   if (!state.dailyProgress) state.dailyProgress = {}
   if (!state.titles) state.titles = { disciplineMonster: { unlocked: false, unlockedAt: null, unlockedAtTs: null, seen: false, bestStreak: 0, currentStreak: 0 } }

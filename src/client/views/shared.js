@@ -4,6 +4,7 @@
 
 import { PRIORITY_COLORS, PRIORITY_ORDER } from '../lib/defaults.js'
 import { escapeHtml } from '../core/dom.js'
+import { icon as svgIcon } from '../ui/icons.js'
 import { state } from '../core/store.js'
 import { STATUS_STYLES } from '../ui/status.js'
 
@@ -39,10 +40,10 @@ export function statusForStreakDot(day) {
 }
 
 /** Empty state block used across views. */
-export function emptyState({ icon = 'fa-regular fa-clipboard', title = 'Nothing here yet', body = '', action = '' } = {}) {
+export function emptyState({ icon = 'clipboard', title = 'Nothing here yet', body = '', action = '' } = {}) {
   return `
     <div class="empty-state">
-      <i class="${icon}"></i>
+      ${svgIcon(icon.includes('calendar') ? 'calendar' : icon.includes('inbox') ? 'inbox' : 'check')}
       <p class="text-sm font-medium text-slate-300">${escapeHtml(title)}</p>
       ${body ? `<p class="text-[12.5px] text-slate-500 max-w-sm">${escapeHtml(body)}</p>` : ''}
       ${action}

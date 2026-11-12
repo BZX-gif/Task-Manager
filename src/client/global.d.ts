@@ -13,12 +13,27 @@ interface Window {
     switchView(view: string): void
     refreshAll(): void
     refreshCurrentView(delay?: number): void
-    openTaskModal(id?: string | null): void
+    openTaskModal(id?: string | null, options?: { date?: string; inbox?: boolean; prefill?: string; goalId?: string | null; projectId?: string | null; milestoneId?: string | null }): void
     openQuickCapture(options?: { inbox?: boolean; prefill?: string }): void
     closeQuickCapture(): void
     openWeeklyReview(options?: { offset?: number }): void
     openRecoveryModal(options?: { nowMinutes?: number }): void
     closeModal(): void
+    openDayPlanner(options?: { date?: string }): void
+    openGoalModal(id?: string | null): void
+    openGoalDetail(id: string): void
+    openProjectModal(id?: string | null, options?: { goalId?: string | null; milestoneId?: string | null }): void
+    openProjectDetail(id: string): void
+    openRoutineModal(id?: string | null): void
+    openRescheduleModal(id: string): void
+    openFocusRoom(): void
+    openScoreInfo(): void
+    openCommandPalette(): void
+    toggleMission(id: string): boolean
+    movePriority(id: string, direction: number): boolean
+    toggleScheduleItem(id: string, date?: string): void
+    removeFromTop3(id: string): boolean
+    runLocalCommand(id: string): void
     /** no arg = picker · task id = start immediately · running session = bring it back */
     openFocusMode(taskId?: string | null): void
     pauseFocus(): void

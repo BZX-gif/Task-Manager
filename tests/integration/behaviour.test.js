@@ -81,7 +81,7 @@ test('a legacy v1 payload boots into v2 with every record intact', async () => {
     await settle(120)
     const state = window.CC.getState()
 
-    assert.equal(state.version, 5)
+    assert.equal(state.version, 6)
     assert.equal(state.tasks.length >= 2, true, 'tasks preserved')
     assert.ok(state.tasks.some((t) => t.title === 'Revise Polity' && t.done === true))
     assert.equal(state.timetables.upsc_cse_2028.length, 1, 'the legacy timetable is preserved as the UPSC schedule')
@@ -106,7 +106,7 @@ test('a legacy v1 payload boots into v2 with every record intact', async () => {
 test('an unreadable payload is rescued, reported and never silently dropped', async () => {
   const { window, errors, toasts, $ } = await boot({ seed: '{not json' })
   try {
-    assert.ok(window.CC.getState().timetables.ssc_cgl_2027.length > 0, 'falls back to defaults')
+    assert.equal(window.CC.getState().timetables.ssc_cgl_2027.length, 0, 'corrupt data never creates fictional commitments')
     assert.equal(window.localStorage.getItem('kcc_backup_unreadable'), '{not json', 'a copy is parked under a rescue key')
     assert.ok(toasts.some((t) => /could not be read/i.test(t)), `the user is told (${toasts.join(' | ')})`)
     assert.equal($('#view-dashboard').innerHTML.length > 100, true)
@@ -177,7 +177,7 @@ test('changes are persisted and visible after a restart', async () => {
     await settle(100)
     const tasks = second.window.CC.getState().tasks
     assert.ok(tasks.some((t) => t.title === 'Persistence check'))
-    assert.match(second.$('[data-card="top3"]').textContent, /Persistence check/)
+    assert.match(second.$('.priority-card').textContent, /Persistence check/)
   } finally {
     window.close()
     second?.window.close()
@@ -193,7 +193,7 @@ test('reminders fire once, and only for what is due', async () => {
     const today = window.CC.todayKey()
     const soon = new Date(Date.now() + 5 * 60_000)
     const time = `${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`
-    state.settings.reminders = { ...state.settings.reminders, enabled: true, beforeMinutes: 10, top3NudgeAt: '' }
+    state.settings.reminders = { ...state.settings.reminders, enabled: true, beforeMinutes: 10, top3NudgeAt: '', planningAt: '', reviewAt: '', routines: false }
     state.timetables.ssc_cgl_2027 = [
       { id: 'soon', time, title: 'Geography revision', duration: 60, cat: 'upsc' },
       { id: 'later', time: '23:45', title: 'Late block', duration: 10, cat: 'upsc' },
@@ -238,17 +238,19 @@ test('protected time blocks are honoured by the recovery planner', async () => {
     window.CC.openRecoveryModal({ nowMinutes: 22 * 60 + 30 })
     await settle(60)
     const modal = window.document.querySelector('[data-modal-box]').textContent
-    assert.match(modal, /Recover My Day/)
+    assert.match(modal, /Recover my day|fresh way forward/i)
     assert.match(modal, /protected/i, 'protected windows are explained')
-    // 22:30 start with a 23:00 protected window leaves under 20 minutes of room
-    assert.match(modal, /could not be rescheduled|could not reschedule/i)
+    // 22:30 start with a 23:00 protected window leaves under 30 minutes of room
+    assert.match(modal, /don’t fit today|Move to tomorrow/i)
     window.CC.closeModal()
 
     // timetable conflict warning
     state.timetables.ssc_cgl_2027.push({ id: 'late', time: '23:15', title: 'Late night block', duration: 30, cat: 'upsc' })
-    window.CC.switchView('timetable')
+    window.CC.switchView('schedule')
     await settle(60)
-    const view = window.document.querySelector('#view-timetable').textContent
+    window.document.querySelector('[data-calendar-mode="plans"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    await settle(60)
+    const view = window.document.querySelector('#view-schedule').textContent
     assert.match(view, /protected time/i, 'overlap warning is shown')
     assert.match(view, /Sleep/)
   } finally {
@@ -266,17 +268,21 @@ test('focus entry points and mobile navigation work', async () => {
     element.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
   }
   try {
-    // sidebar "Start Focus" opens the picker overlay
+    // sidebar "Start a session" opens the dedicated Focus Room
     $('#focus-mini-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
     await settle()
-    assert.ok($('.focus-overlay'), 'sidebar button opens focus mode')
+    assert.equal($('#view-focus').classList.contains('hidden'), false, 'sidebar button opens the Focus Room')
+    assert.ok($('[data-room-start]'), 'the room asks for target + length first')
+    window.CC.openFocusMode()
+    await settle()
+    assert.ok($('.focus-overlay'), 'the immersive picker is available')
     assert.ok($('#focus-start'), 'the picker asks for target + length first')
     window.document.querySelector('.focus-exit').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
     await settle()
     assert.equal($('.focus-overlay'), null, 'minimise closes the overlay')
 
     // custom length is an inline field, not window.prompt
-    $('#focus-mini-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    window.CC.openFocusMode()
     await settle()
     $('[data-custom]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
     await settle()
@@ -385,7 +391,7 @@ test('the focus mission: presets, phases, milestones, final minute, keyboard and
     /* — 50-minute preset becomes a 60-minute mission via both +5 paths — */
     await startMission(50)
     assert.equal(window.CC.getState().focus.active.plannedMinutes, 50, 'the 50-minute preset is honoured')
-    assert.match($('.focus-overlay').textContent, /Focus Mode/, 'the product name is still present')
+    assert.match($('.focus-overlay').textContent, /Focus Room/, 'the product name is still present')
     assert.equal($('.focus-energy').getAttribute('role'), 'progressbar', 'progress is exposed to assistive tech')
     assert.ok($('.fz-node.current'), 'the running mission is the hollow momentum node')
     assert.match($('.focus-overlay').textContent, /Deep Work/, 'an unlinked mission uses the generic label')
@@ -450,7 +456,7 @@ test('the focus mission: presets, phases, milestones, final minute, keyboard and
     assert.match($('.focus-celebration').textContent, /SESSION COMPLETE/)
     assert.match($('.focus-celebration').textContent, /\+60 FOCUS MINUTES/)
     assert.match($('.focus-celebration').textContent, /Score\s*\d+\/100/, 'the real daily score is shown')
-    assert.match($('.focus-celebration').textContent, /day streak/, 'the real streak state is shown')
+    assert.match($('.focus-celebration').textContent, /meaningful days/, 'the real streak state is shown')
     assert.match($('.focus-celebration').textContent, /You finished what you started\./)
     const logged = window.CC.getState().focus.sessions.at(-1)
     assert.equal(logged.status, 'completed')

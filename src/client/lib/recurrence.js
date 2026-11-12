@@ -130,7 +130,20 @@ export function buildOccurrence(template, key, options = {}) {
     priority: template.priority || 'medium',
     cat: template.cat || null,
     notes: template.notes || '',
+    description: template.description || '',
     estimateMinutes: template.estimateMinutes ?? 30,
+    time: template.time || null,
+    deadline: template.deadline || null,
+    goalId: template.goalId || null,
+    projectId: template.projectId || null,
+    milestoneId: template.milestoneId || null,
+    horizon: template.horizon || 'daily',
+    status: 'ready',
+    subtasks: (template.subtasks || []).map((s) => ({ ...s, done: false })),
+    protected: template.protected === true,
+    flexible: template.flexible !== false,
+    progress: null,
+    history: [],
     inbox: false,
     done: false,
     createdAt: now,
@@ -158,7 +171,9 @@ export function materializeOccurrences({ tasks, todayKey, horizonDays = 7, uid, 
     if (key) existing.add(key)
   }
 
-  const templates = tasks.filter((t) => t.recurrence && !t.endedSeries)
+  // Only the canonical series record generates instances. Completed, skipped
+  // or paused occurrences must never restart a series from stale fields.
+  const templates = tasks.filter((t) => t.recurrence && !t.endedSeries && (!t.seriesId || t.seriesId === t.id) && t.status !== 'cancelled' && t.status !== 'paused')
   const created = []
   for (const template of templates) {
     const seriesId = template.seriesId || template.id

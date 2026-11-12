@@ -22,13 +22,15 @@ export const DEFAULT_BREAK_MINUTES = 5
  * @param {string} options.id
  * @param {string|null} [options.taskId]
  * @param {number} [options.plannedMinutes]
- * @param {'focus'|'break'} [options.mode]
+ * @param {'focus'|'break'|'stopwatch'} [options.mode]
+ * @param {string|null} [options.goalId]
  * @param {number} options.now        epoch ms
  */
-export function createSession({ id, taskId = null, plannedMinutes = DEFAULT_FOCUS_MINUTES, mode = 'focus', now }) {
+export function createSession({ id, taskId = null, goalId = null, plannedMinutes = DEFAULT_FOCUS_MINUTES, mode = 'focus', now }) {
   return {
     id,
     taskId,
+    goalId,
     mode,
     plannedMinutes: Math.max(1, Math.round(plannedMinutes)),
     startedAt: now,
@@ -98,6 +100,9 @@ export function finalizeSession(session, now, status = 'stopped') {
   return {
     id: ticked.id,
     taskId: ticked.taskId || null,
+    goalId: ticked.goalId || null,
+    categoryId: ticked.categoryId || null,
+    taskTitle: ticked.taskTitle || null,
     mode: ticked.mode || 'focus',
     plannedMinutes: ticked.plannedMinutes,
     focusedSeconds: Math.round(ticked.accumulatedSeconds || 0),
@@ -162,7 +167,7 @@ export function reconcileStaleSession(session, now, maxIdleHours = 12) {
     ...session,
     running: false,
     // keep what was genuinely focused, but never more than the planned block
-    accumulatedSeconds: Math.min(session.accumulatedSeconds || 0, plannedSeconds(session)),
+    accumulatedSeconds: session.mode === 'stopwatch' ? (session.accumulatedSeconds || 0) : Math.min(session.accumulatedSeconds || 0, plannedSeconds(session)),
   }
   return { session: capped, stale: true }
 }

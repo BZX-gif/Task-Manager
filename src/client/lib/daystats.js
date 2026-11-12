@@ -16,6 +16,7 @@ import { dateKey, minutesOfDay, nowMinutes as nowMinutesOf } from './dates.js'
 import { activeMissionId, timetableFor } from './missions.js'
 import { buildScoreInput, computeDailyScore, focusedMinutesOn, overdueTasks } from './score.js'
 import { sessionTotals } from './focus.js'
+import { scheduleFor, itemDone } from './planner.js'
 import { top3Stats } from './top3.js'
 
 /** Snapshot the active mission's timetable for `dateKey` (idempotent). */
@@ -56,9 +57,9 @@ export function dayStats(state, dateKeyValue, options = {}) {
   const dateKey = dateKeyValue
   const todayKey = options.todayKey || dateKey
   const now = options.now || new Date()
-  const tasksForDay = (state.tasks || []).filter((t) => t.date === dateKey)
+  const tasksForDay = (state.tasks || []).filter((t) => t.date === dateKey && !t.inbox && t.status !== 'cancelled')
   const log = state.completionLog?.[dateKey] || { ttDone: [], taskDone: [] }
-  const plan = dayPlanFor(state, dateKey)
+  const plan = state.schedule?.days ? scheduleFor(state,dateKey) : dayPlanFor(state, dateKey)
   const ttDone = Array.isArray(log.ttDone) ? log.ttDone : []
   const doneSet = new Set(ttDone)
 
@@ -68,24 +69,30 @@ export function dayStats(state, dateKeyValue, options = {}) {
   const focus = sessionTotals(state.focus?.sessions || [], dateKey)
 
   const blocksTotal = plan.length
-  const blocksDone = plan.filter((b) => doneSet.has(b.id)).length
+  const isDone = (b) => state.schedule?.days ? itemDone(state,b,dateKey) : doneSet.has(b.id)
+  const blocksDone = plan.filter(isDone).length
   const nowMin = nowMinutesOf(now)
   const isToday = dateKey === todayKey
   const isPast = dateKey < todayKey
   // only blocks that have already started count towards adherence
   const cutoff = isPast ? 24 * 60 : isToday ? nowMin : -1
-  const blocksElapsed = plan.filter((b) => minutesOfDay(b.time) <= cutoff).length
+  const blocksElapsed = plan.filter((b) => minutesOfDay(b.time)+(b.duration||60) <= cutoff).length
 
   const plannedMinutes = plan.reduce((sum, b) => sum + (b.duration || 60), 0)
-  const completedMinutes = plan.filter((b) => doneSet.has(b.id)).reduce((sum, b) => sum + (b.duration || 60), 0)
-  const taskPlannedMinutes = tasksForDay.reduce((sum, t) => sum + (t.estimateMinutes ?? 30), 0)
-  const taskDoneMinutes = tasksForDay.filter((t) => t.done).reduce((sum, t) => sum + (t.estimateMinutes ?? 30), 0)
+  const completedMinutes = plan.filter(isDone).reduce((sum, b) => sum + (b.duration || 60), 0)
+  const unblockedTasks = tasksForDay.filter((t) => !plan.some((b) => b.taskId === t.id))
+  const taskPlannedMinutes = unblockedTasks.reduce((sum, t) => sum + (t.estimateMinutes ?? 30), 0)
+  const taskDoneMinutes = unblockedTasks.filter((t) => t.done).reduce((sum, t) => sum + (t.estimateMinutes ?? 30), 0)
 
   const tasksDone = tasksForDay.filter((t) => t.done).length
 
   return {
     dateKey,
     score: score.score,
+    baseScore: score.base,
+    hasData: score.hasData,
+    penalty: score.penalty,
+    focusTargetMinutes: score.focusTargetMinutes,
     scoreParts: score.parts,
     pace: score.pace,
     onTrack: score.onTrack,
@@ -96,7 +103,7 @@ export function dayStats(state, dateKeyValue, options = {}) {
     focusSessions: focus.sessions,
     completedSessions: focus.completedSessions,
     breakMinutes: focus.breakMinutes,
-    tasksPlanned: tasksForDay.length,
+    tasksPlanned: tasksForDay.filter((t) => !t.inbox && t.status !== 'cancelled').length,
     tasksDone,
     plannedMinutes,
     completedMinutes,

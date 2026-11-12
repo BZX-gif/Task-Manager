@@ -3,9 +3,17 @@
    Kept separate from the store so tests and migrations can import them alone.
    ------------------------------------------------------------------------- */
 
-export const STATE_VERSION = 5
+export const STATE_VERSION = 6
 
 export const DEFAULT_CATEGORIES = [
+  { id: 'personal', name: 'Personal', color: '#a99af1' },
+  { id: 'work', name: 'Work', color: '#7ba7ea' },
+  { id: 'learning', name: 'Learning', color: '#79bca5' },
+  { id: 'wellbeing', name: 'Wellbeing', color: '#d3b17c' },
+  { id: 'life', name: 'Life admin', color: '#9aabbf' },
+]
+
+export const LEGACY_CATEGORIES = [
   { id: 'body', name: 'Body & Recovery', color: '#34d399' },
   { id: 'upsc', name: 'UPSC Core', color: '#3b82f6' },
   { id: 'ssc', name: 'SSC · News · CA', color: '#f59e0b' },
@@ -105,7 +113,12 @@ export function starterTimetableFor(missionId) {
 
 export const DEFAULT_SETTINGS = {
   theme: 'dark',
-  userName: 'Kulshresth',
+  accent: 'iris',
+  timeFormat: '12h',
+  sidebarCollapsed: false,
+  workingHours: { start: '09:00', end: '18:00' },
+  defaultTaskMinutes: 30,
+  userName: '',
   /** weekly review + analytics start Monday */
   weekStart: 1,
   /** day boundary used by the recovery planner / focus day rollover */
@@ -115,7 +128,10 @@ export const DEFAULT_SETTINGS = {
     breakMinutes: 5,
     /** minutes of deep focus that count as a "full" focus day (daily score) */
     targetMinutes: 180,
-    autoCompleteTask: true,
+    autoCompleteTask: false,
+    longBreakMinutes: 15,
+    longBreakEvery: 4,
+    autoStartBreaks: false,
   },
   reminders: {
     enabled: true,
@@ -127,6 +143,11 @@ export const DEFAULT_SETTINGS = {
     /** evening nudge when the Top 3 is not finished (empty string disables) */
     top3NudgeAt: '20:30',
     desktopNotifications: false,
+    planningAt: '08:30',
+    reviewAt: '18:00',
+    reviewDay: 0,
+    routines: true,
+    permissionRequested: false,
     respectProtectedTime: true,
   },
   /** optional protected / sleep windows the scheduler must avoid */

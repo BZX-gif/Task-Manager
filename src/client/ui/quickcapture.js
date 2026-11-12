@@ -4,7 +4,7 @@
 
 import { addDays } from '../lib/dates.js'
 import { closeModal, escapeHtml, openModal, toast } from '../core/dom.js'
-import { commit, currentDayKey } from '../core/store.js'
+import { commit, currentDayKey, state } from '../core/store.js'
 import { categoryOptions } from '../views/shared.js'
 import { uid } from '../lib/state.js'
 
@@ -21,8 +21,8 @@ export function openQuickCapture({ inbox = false, prefill = '' } = {}) {
   const body = `
     <form id="capture-form" class="space-y-3.5">
       <div>
-        <label class="field-label" for="capture-title">Task</label>
-        <input class="input-field !text-[15px]" id="capture-title" placeholder="What needs doing?" value="${escapeHtml(prefill)}" autocomplete="off">
+        <label class="field-label" for="capture-title">Mission</label>
+        <input class="input-field !text-[15px]" id="capture-title" placeholder="What’s on your mind?" value="${escapeHtml(prefill)}" autocomplete="off">
       </div>
       <div class="flex flex-wrap gap-1.5" data-capture-dates>
         <button type="button" class="preset-btn ${inbox ? '' : 'preset-active'}" data-date="${today}">Today</button>
@@ -52,7 +52,7 @@ export function openQuickCapture({ inbox = false, prefill = '' } = {}) {
         <span class="text-[11.5px] text-slate-500"><kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Enter</kbd> to save · <kbd class="kbd">Esc</kbd> to close</span>
         <div class="flex gap-2">
           <button type="button" class="btn-ghost" data-modal-close>Cancel</button>
-          <button type="submit" class="btn-primary">Add task</button>
+          <button type="submit" class="btn-primary">Add mission</button>
         </div>
       </div>
     </form>`
@@ -82,6 +82,8 @@ export function openQuickCapture({ inbox = false, prefill = '' } = {}) {
         chosenDate = dateInput.value || today
       })
 
+      const syncTop3 = () => { const allowed = chosenDate === today; const check=box.querySelector('#capture-top3');check.disabled=!allowed;if(!allowed)check.checked=false;check.closest('label').style.opacity=allowed?'1':'.45' }
+      box.querySelectorAll('[data-capture-dates] [data-date]').forEach((b)=>b.addEventListener('click',syncTop3));dateInput.addEventListener('change',syncTop3);syncTop3()
       const form = box.querySelector('#capture-form')
       form.addEventListener('submit', (event) => {
         event.preventDefault()
@@ -124,7 +126,9 @@ function save(box, { date, inbox }) {
       priority,
       cat,
       notes: '',
-      estimateMinutes: 30,
+      estimateMinutes: state.settings.defaultTaskMinutes,
+      status: date ? 'ready' : 'not_started',
+      horizon: 'quick',
       done: false,
       inbox: inbox || (!date && !cat),
       createdAt: Date.now(),
@@ -133,14 +137,14 @@ function save(box, { date, inbox }) {
       seriesId: null,
       occurrenceDate: null,
     })
-    if (toTop3) {
+    if (toTop3 && date === today) {
       const current = s.top3[today] || []
       if (current.length < 3 && !current.includes(id)) s.top3[today] = [...current, id]
     }
   })
   open = false
   closeModal()
-  toast(inbox ? 'Captured to inbox' : 'Task added', 'success')
+  toast(inbox ? 'Captured to inbox' : 'Mission added', 'success')
   // capture another quickly with the same shortcut
   window.CC?.refreshAll?.()
 }
