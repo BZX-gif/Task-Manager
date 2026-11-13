@@ -44,7 +44,7 @@ export function categoryInsights(state, { from, to, todayKey }) {
   const fallback = {
     categoryId: '__none__',
     name: 'Uncategorised',
-    color: '#64748b',
+    color: '#737373',
     plannedMinutes: 0,
     completedMinutes: 0,
     focusedMinutes: 0,

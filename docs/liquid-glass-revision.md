@@ -11,10 +11,10 @@ the PWA `theme-color`.
 
 | Layer | Surface | Material |
 | --- | --- | --- |
-| 1 · Atmosphere | `body::before` / `body::after` | Deep-black canvas (`#08090b`) with five static painted radials (neutral key/fill lights, one restrained accent whisper, a graphite pool) plus a fixed vignette. No animation, no neon. |
+| 1 · Atmosphere | `body::before` / `body::after` | Neutral-black canvas (`#080808`) with four static painted radials (white key/fill lights and a graphite pool — no cool tints, no ambient accent) plus a fixed vignette. No animation, no neon. |
 | 2 · Workspace | `.main-content`, sections | Inherits the canvas; translucency has atmosphere to reveal. |
 | 3 · Navigation | `.sidebar`, `.topbar`, `.mobile-nav`, `.mobile-dock` | `glass-navigation` / `glass-floating` tokens: translucent charcoal, hairline border, inset edge light, separation shadow. Sidebar/topbar are **painted** glass; the mobile drawer and dock keep `backdrop-filter` (real content passes behind them). |
-| 4 · Cards | `.card`, `.glass-card`, `.metric-strip`, list/calendar surfaces | `glass-primary`: painted translucency + diagonal sheen + top/bottom edge light + layered depth shadow — **never filtered** (they sit in the scroll path). Hero `.command-card` keeps its accent wash with an added specular highlight. |
+| 4 · Cards | `.card`, `.glass-card`, `.metric-strip`, list/calendar surfaces | `glass-primary`: painted translucency + diagonal sheen + top/bottom edge light + layered depth shadow — **never filtered** (they sit in the scroll path). Hero `.command-card` uses a neutral specular highlight (accent reserved for actions and active states). |
 | 5 · Floats | `.modal-overlay/.modal-box`, `.toast`, `.event-actions` | `glass-floating`: denser glass, deeper float shadow; transient `blur(6–8px)` only on the overlay/toast. |
 | 6 · Controls | buttons, `.segmented`, chips, inputs, rows, nav items | `glass-interactive`: quiet glass fills, inset edge, lit hover states, refined active nav (accent gradient + hairline). |
 
