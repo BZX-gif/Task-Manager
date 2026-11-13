@@ -96,7 +96,7 @@ export function applyTheme() {
   document.documentElement.dataset.theme = theme
   document.documentElement.dataset.accent = settings.accent
   document.documentElement.classList.toggle('sidebar-collapsed', !!settings.sidebarCollapsed)
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f6f8' : '#08090b')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f5f5f5' : '#080808')
   const toggle = document.getElementById('theme-toggle')
   toggle?.setAttribute('aria-label', `Switch to ${theme === 'light' ? 'dark' : 'light'} theme`)
 }

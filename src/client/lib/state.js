@@ -50,7 +50,7 @@ export function normalizeTime(value, fallback = '09:00') {
 
 export function normalizeCategory(cat, fallbackId = 'misc') {
   const id = String(cat?.id || fallbackId).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || fallbackId
-  const color = /^#[0-9a-fA-F]{3,8}$/.test(String(cat?.color)) ? String(cat.color) : '#7c5cff'
+  const color = /^#[0-9a-fA-F]{3,8}$/.test(String(cat?.color)) ? String(cat.color) : '#d4d4d4'
   return { id, name: String(cat?.name || id).slice(0, 60), color }
 }
 

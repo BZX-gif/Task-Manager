@@ -188,4 +188,4 @@ export const MOTIVATIONAL_QUOTES = [
 ]
 
 export const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
-export const PRIORITY_COLORS = { high: '#fb7185', medium: '#fbbf24', low: '#60a5fa' }
+export const PRIORITY_COLORS = { high: '#fb7185', medium: '#fbbf24', low: '#a1a1a1' }

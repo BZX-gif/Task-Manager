@@ -39,7 +39,7 @@ export function renderShell(): string {
 <meta name="description" content="A calmer place to plan your day, connect your goals and do your best work. Private, local-first and ready offline." />
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
 <link rel="manifest" href="/manifest.webmanifest" />
-<meta name="theme-color" content="#08090b" />
+<meta name="theme-color" content="#080808" />
 <meta name="color-scheme" content="dark light" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
