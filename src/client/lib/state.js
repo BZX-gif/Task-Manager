@@ -160,7 +160,7 @@ export function normalizeSettings(raw) {
         }
       }),
     theme: ['dark', 'light', 'system'].includes(settings.theme) ? settings.theme : 'dark',
-    accent: ['iris', 'blue', 'sage', 'amber', 'rose'].includes(settings.accent) ? settings.accent : 'iris',
+    accent: ['ember', 'iris', 'blue', 'sage', 'amber', 'rose'].includes(settings.accent) ? settings.accent : 'ember',
     timeFormat: settings.timeFormat === '24h' ? '24h' : '12h',
     userName: String(settings.userName || '').slice(0, 60),
     workingHours: { start: normalizeTime(settings.workingHours?.start, '09:00'), end: normalizeTime(settings.workingHours?.end, '18:00') },

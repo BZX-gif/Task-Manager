@@ -21,13 +21,15 @@ export default {
         body: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Segoe UI', 'sans-serif'],
       },
       colors: {
-        base: { 950: '#0b0d11', 900: '#0f1217', 850: '#141820', 800: '#191e27', 700: '#1e242f' },
-        accent: { DEFAULT: '#5b93e6', 2: '#5b93e6', 3: '#57b28c', 4: '#cf9f5f', 5: '#d2797a' },
-        white: '#eceef2',
-        slate: { 100: '#eceef2', 200: '#eceef2', 300: '#c2c8d2', 400: '#a0a8b5', 500: '#828b99', 600: '#828b99' },
-        emerald: { 300: '#57b28c', 400: '#57b28c' },
-        amber: { 300: '#cf9f5f', 400: '#cf9f5f' },
-        violet: { 500: '#5b93e6' },
+        // Warm graphite surfaces — mirrors the semantic tokens in style.css.
+        base: { 950: '#080808', 900: '#101010', 850: '#151515', 800: '#1c1c1c', 700: '#242424' },
+        // Ember is the signature Command accent; semantic states stay distinct.
+        accent: { DEFAULT: '#f0783e', 2: '#f0783e', 3: '#8ac6ad', 4: '#d7b582', 5: '#e39b9b' },
+        white: '#f5f1eb',
+        slate: { 100: '#f5f1eb', 200: '#f5f1eb', 300: '#aaa6a0', 400: '#aaa6a0', 500: '#77736f', 600: '#77736f' },
+        emerald: { 300: '#8ac6ad', 400: '#8ac6ad' },
+        amber: { 200: '#e6cf9f', 300: '#d7b582', 400: '#d7b582' },
+        violet: { 500: '#f0783e' },
       },
 
     },

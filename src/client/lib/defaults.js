@@ -113,7 +113,7 @@ export function starterTimetableFor(missionId) {
 
 export const DEFAULT_SETTINGS = {
   theme: 'dark',
-  accent: 'iris',
+  accent: 'ember',
   timeFormat: '12h',
   sidebarCollapsed: false,
   workingHours: { start: '09:00', end: '18:00' },
@@ -188,4 +188,4 @@ export const MOTIVATIONAL_QUOTES = [
 ]
 
 export const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
-export const PRIORITY_COLORS = { high: '#fb7185', medium: '#fbbf24', low: '#a1a1a1' }
+export const PRIORITY_COLORS = { high: '#f0783e', medium: '#d7b582', low: '#837e78' }
