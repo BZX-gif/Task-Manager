@@ -6,7 +6,7 @@
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
-Chart.defaults.color = '#737373'
+Chart.defaults.color = '#837e78'
 Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif"
 Chart.defaults.animation = { duration: 320 }
 
@@ -46,11 +46,11 @@ export function chartColors() {
   const style = typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement) : null
   const read = (name, fallback) => style?.getPropertyValue(name).trim() || fallback
   return {
-    accent: read('--accent', '#b4a3f5'),
+    accent: read('--accent', '#f0783e'),
     series: read('--chart-series', 'rgba(255,255,255,.16)'),
     seriesStrong: read('--chart-series-strong', 'rgba(255,255,255,.72)'),
     seriesHover: read('--chart-series-hover', 'rgba(255,255,255,.36)'),
-    muted: read('--muted', '#737373'),
+    muted: read('--muted', '#837e78'),
     border: read('--border', 'rgba(255,255,255,.09)'),
     success: read('--success', '#8ac6ad'),
     warning: read('--warning', '#d7b582'),

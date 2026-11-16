@@ -1,5 +1,5 @@
 /** The local-first application shell. All application data stays in the browser. */
-export const APP_VERSION = '3.0'
+export const APP_VERSION = '4.0'
 
 export const NAV_GROUPS = [
   { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['schedule', 'Schedule', 'calendar'], ['tasks', 'Missions', 'missions'] ] },
@@ -31,7 +31,7 @@ const nav = (mobile = false) => NAV_GROUPS.map((group) => `<div class="nav-group
 
 export function renderShell(): string {
   return `<!DOCTYPE html>
-<html lang="en" data-theme="dark" data-accent="iris">
+<html lang="en" data-theme="dark" data-accent="ember">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -46,7 +46,7 @@ export function renderShell(): string {
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Command" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-<script>try{const s=JSON.parse(localStorage.getItem('kcc_state_v1')||'{}').settings||{};const t=s.theme==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):s.theme==='light'?'light':'dark';document.documentElement.dataset.theme=t;document.documentElement.dataset.accent=['iris','blue','sage','amber','rose'].includes(s.accent)?s.accent:'iris';if(s.sidebarCollapsed)document.documentElement.classList.add('sidebar-collapsed')}catch(e){}</script>
+<script>try{const s=JSON.parse(localStorage.getItem('kcc_state_v1')||'{}').settings||{};const t=s.theme==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):s.theme==='light'?'light':'dark';document.documentElement.dataset.theme=t;document.documentElement.dataset.accent=['ember','iris','blue','sage','amber','rose'].includes(s.accent)?s.accent:'ember';if(s.sidebarCollapsed)document.documentElement.classList.add('sidebar-collapsed')}catch(e){}</script>
 <link href="/static/tailwind.css" rel="stylesheet" />
 <link href="/static/style.css" rel="stylesheet" />
 <link href="/static/studio.css" rel="stylesheet" />
