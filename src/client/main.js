@@ -23,7 +23,7 @@ import { toggleMission, applyTheme } from './core/actions.js'
 import { handleTitlesUnlocked } from './ui/titles.js'
 import { icon } from './ui/icons.js'
 
-const APP_VERSION='4.0'
+const APP_VERSION='4.1'
 function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshCurrentView()}
 function streakInfo(){const result=streak();return{...result,recent:result.recent.map((day)=>({...day,status:dayStatus(state,day.dateKey).status}))}}
 function disciplineInfo(){return disciplineStreak()}

@@ -23,6 +23,8 @@ export function updateClockAndGreeting(){
   if(avatar&&avatar.textContent!==initial){avatar.textContent=initial;avatar.setAttribute('title',userName()||'Personal workspace')}
   const workspace=document.querySelector('.workspace-avatar');if(workspace)workspace.textContent=initial
   const date=document.querySelector('.date-day');if(date)date.textContent=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
+  const dayBar=document.getElementById('day-progress'),dayFill=document.getElementById('day-progress-fill')
+  if(dayBar&&dayFill){const toMin=(t)=>{const p=String(t||'').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)};const ws=state.settings.workingHours||{};const start=toMin(ws.start||'08:00');let end=toMin(ws.end||'20:00');if(end<=start)end=start+60;const pct=Math.max(0,Math.min(100,Math.round((now.getHours()*60+now.getMinutes()-start)/(end-start)*100)));dayFill.style.width=pct+'%';dayBar.setAttribute('role','img');dayBar.setAttribute('aria-label',pct+'% of your available hours used')}
 }
 export function rotateQuote(force=false){const node=el('quote-text');if(!node)return;const i=Math.floor(Math.random()*MOTIVATIONAL_QUOTES.length);if(!force&&node.dataset.index===String(i))return;node.dataset.index=String(i);node.textContent=MOTIVATIONAL_QUOTES[i]}
 export function startChromeTimers(){updateClockAndGreeting();if(clockTimer)clearInterval(clockTimer);clockTimer=setInterval(updateClockAndGreeting,1000);rotateQuote(true);if(quoteTimer)clearInterval(quoteTimer);quoteTimer=setInterval(()=>rotateQuote(),120000)}

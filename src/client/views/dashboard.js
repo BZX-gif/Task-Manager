@@ -31,7 +31,7 @@ export function renderDashboard() {
   const candidates = top3Candidates(state,today).filter((t) => !top3.items.some((x) => x.task.id === t.id))
   const adherence = stats.blocksElapsed ? Math.round(stats.adherence*100) : null
   section.innerHTML = `
-    <div class="overview-greeting"><div><p class="eyebrow">A LITTLE CLARITY. A LOT OF POSSIBILITY.</p><h1 id="overview-greeting">Good morning.</h1><p>Your day. Your priorities. Your execution.</p></div><div class="date-block"><p class="date-day">${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</p><p class="date-clock" id="overview-clock"></p></div></div>
+    <div class="overview-greeting"><div><p class="eyebrow">A LITTLE CLARITY. A LOT OF POSSIBILITY.</p><h1 id="overview-greeting">Good morning.</h1><p>Your day. Your priorities. Your execution.</p></div><div class="date-block"><p class="date-day">${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</p><p class="date-clock" id="overview-clock"></p><div class="day-progress" id="day-progress"><i id="day-progress-fill"></i></div></div></div>
     ${overdue.length ? `<div class="recovery-banner">${icon('recover')}<span>A fresh start is always possible. ${overdue.length} earlier mission${overdue.length===1?' is':'s are'} still open.</span><button class="text-button" data-common="recover">Recover my day ${icon('arrow')}</button></div>` : ''}
     <div class="overview-top">
       <article class="card command-card"><div class="orbital-art" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p class="eyebrow"><span class="status-dot"></span>${active ? 'IN THE MOMENT' : command ? 'YOUR NEXT MOVE' : 'TODAY’S COMMAND'}</p>
