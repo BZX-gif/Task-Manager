@@ -19,6 +19,7 @@ interface Window {
     openWeeklyReview(options?: { offset?: number }): void
     openRecoveryModal(options?: { nowMinutes?: number }): void
     closeModal(): void
+    openShortcuts(): void
     openDayPlanner(options?: { date?: string }): void
     openGoalModal(id?: string | null): void
     openGoalDetail(id: string): void

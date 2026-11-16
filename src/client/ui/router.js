@@ -12,11 +12,13 @@ import { renderProgress } from '../views/progress.js'
 import { renderReview } from '../views/review.js'
 import { renderAssistant } from '../views/assistant.js'
 import { renderSettings } from '../views/settings.js'
+import { renderForecast } from '../views/forecast.js'
+import { renderJournal } from '../views/journal.js'
 import { setMobileNav, updateBreadcrumb } from './chrome.js'
 import { icon } from './icons.js'
 
-export const VIEWS = ['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress','review','assistant','settings']
-const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,schedule:renderSchedule,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,assistant:renderAssistant,settings:renderSettings}
+export const VIEWS = ['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings']
+const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,schedule:renderSchedule,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,assistant:renderAssistant,settings:renderSettings}
 let currentView='dashboard',refreshTimer=null;const enterTimers={}
 export function getCurrentView(){return currentView}
 export function switchView(view){

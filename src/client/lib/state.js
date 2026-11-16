@@ -15,6 +15,7 @@ import { DEFAULT_CATEGORIES, LEGACY_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_TIMETA
 import { dateKey } from './dates.js'
 import { isValidKey, minutesOfDay } from './dates.js'
 import { normalizeRecurrence } from './recurrence.js'
+import { normalizeJournal } from './journal.js'
 import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
 
 /** Legacy key kept for backward compatibility with existing installs. */
@@ -194,6 +195,8 @@ export function emptyState(ctx = makeContext()) {
     routineHistory: {},
     schedule: { days: {}, history: [] },
     reviews: {},
+    /** one honest reflection per day; see lib/journal.js */
+    journal: {},
     top3: {},
     completionLog: {},
     dayPlans: {},
@@ -256,6 +259,12 @@ export function migrateState(raw, ctx = makeContext()) {
     working = migrateStateV5ToV6(working, ctx)
     applied.push('migrateStateV5ToV6')
     version = 6
+  }
+
+  if (version < 7) {
+    working = migrateStateV6ToV7(working, ctx)
+    applied.push('migrateStateV6ToV7')
+    version = 7
   }
 
   const state = normalizeState(working, ctx, warnings)
@@ -603,10 +612,19 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
   }
   state.reviews = {}
   for (const [day, value] of Object.entries(isObj(raw.reviews) ? raw.reviews : {})) if (isValidKey(day) && isObj(value)) state.reviews[day] = { intention: text(value.intention, 1000), reflection: text(value.reflection, 2000), updatedAt: Number.isFinite(value.updatedAt) ? value.updatedAt : ctx.now }
+  state.journal = normalizeJournal(raw.journal)
   state.meta.legacyStudyPlans = raw.meta?.legacyStudyPlans === true || (Number(raw.version) || 1) < 6
   state.focus.active = state.focus.active ? { ...state.focus.active, mode: ['break', 'stopwatch'].includes(state.focus.active.mode) ? state.focus.active.mode : 'focus', goalId: state.focus.active.goalId ? String(state.focus.active.goalId) : null } : null
 
   return state
+}
+
+/**
+ * v6 → v7: every existing record is untouched. The daily journal starts empty
+ * (it is written by the user, never seeded) and is normalised on load.
+ */
+export function migrateStateV6ToV7(raw, ctx = makeContext()) {
+  return { ...raw, version: 7, journal: isObj(raw.journal) ? raw.journal : {} }
 }
 
 /* ------------------------------------------------------------------ *

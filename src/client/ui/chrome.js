@@ -9,7 +9,7 @@ import { icon } from './icons.js'
 import { on } from '../core/bus.js'
 import { VIEWS } from './router.js'
 
-const VIEW_LABELS = {dashboard:'Overview',day:'My Day',schedule:'Schedule',tasks:'Missions',goals:'Goals',projects:'Projects',routines:'Routines',focus:'Focus Room',progress:'Analytics',review:'Weekly Review',assistant:'Planning assistant',settings:'Settings'}
+const VIEW_LABELS = {dashboard:'Overview',day:'My Day',schedule:'Schedule',tasks:'Missions',goals:'Goals',projects:'Projects',routines:'Routines',focus:'Focus Room',progress:'Analytics',review:'Weekly Review',journal:'Journal',forecast:'Forecast',assistant:'Planning assistant',settings:'Settings'}
 let clockTimer=null, quoteTimer=null, mobileOpen=false, notificationsBound=false
 const recentReminders=[]
 export function userName(){return state.settings.userName?.trim()||''}
@@ -52,9 +52,18 @@ export function bindChrome(){
   document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&mobileOpen)setMobileNav(false);if(e.key==='Tab'&&mobileOpen){const nodes=[...el('mobile-nav').querySelectorAll('button:not([disabled])')],first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}})
   applyTheme()
 }
+export function openShortcuts(){
+  /** @type {Array<[string, Array<[string, string]>]>} */
+  const groups=[
+    ['Getting around',[['⌘K / Ctrl K','Quick capture'],['⇧⌘K','Command palette'],['1 – 9','Jump to a view'],['B','Today’s briefing'],['J','Journal'],['O','Forecast'],['F','Focus Room'],['N','Quick capture'],['Esc','Close whatever is open']]],
+    ['While writing',[['⌘Enter / Ctrl Enter','Save the open form'],['Tab','Move between fields'],['Esc','Cancel without saving']]],
+  ]
+  openModal({title:'Keyboard shortcuts',body:`<div class="shortcut-sheet">${groups.map(([label,rows])=>`<div class="shortcut-group"><p class="field-label">${escapeHtml(label)}</p>${rows.map(([keys,what])=>`<div class="shortcut-row"><span>${escapeHtml(what)}</span><span>${keys.split(' / ').flatMap((part)=>part.split(' ')).filter(Boolean).map((part)=>/^[⌘⇧⌥]$/.test(part)?`<kbd class="kbd">${part}</kbd>`:`<kbd class="kbd">${escapeHtml(part)}</kbd>`).join('')}</span></div>`).join('')}</div>`).join('')}</div><p class="form-hint" style="margin-top:16px">Shortcuts pause while you are typing, so nothing fires mid-sentence.</p><div class="form-footer"><button class="btn-primary" data-modal-close>Got it</button></div>`})
+}
+
 export function openCommandPalette(){
   /** @type {any[]} */ const commands=Object.entries(VIEW_LABELS).filter(([key])=>VIEWS.includes(key)).map(([key,title])=>({key,title,subtitle:'Go to '+title,icon:key==='dashboard'?'overview':key==='tasks'?'missions':key==='progress'?'analytics':key==='review'?'review':key==='settings'?'settings':key,view:key}))
-  commands.push({key:'briefing',title:'Open the briefing',subtitle:`At your command, ${salutation()}`,icon:'bell',action:()=>window.CC.openBriefing()},{key:'new',title:'Create a mission',subtitle:'A clear next step',icon:'plus',action:()=>window.CC.openTaskModal()},{key:'capture',title:'Quick capture',subtitle:'Get it out of your head',icon:'inbox',action:()=>window.CC.openQuickCapture()},{key:'plan',title:'Plan my day',subtitle:'Review a realistic proposal',icon:'sun',action:()=>window.CC.openDayPlanner()},{key:'recover',title:'Recover my day',subtitle:'Start again without losing your work',icon:'recover',action:()=>window.CC.openRecoveryModal()})
+  commands.push({key:'shortcuts',title:'Keyboard shortcuts',subtitle:'Every shortcut, in one place',icon:'info',action:()=>openShortcuts()},{key:'briefing',title:'Open the briefing',subtitle:`At your command, ${salutation()}`,icon:'bell',action:()=>window.CC.openBriefing()},{key:'new',title:'Create a mission',subtitle:'A clear next step',icon:'plus',action:()=>window.CC.openTaskModal()},{key:'capture',title:'Quick capture',subtitle:'Get it out of your head',icon:'inbox',action:()=>window.CC.openQuickCapture()},{key:'plan',title:'Plan my day',subtitle:'Review a realistic proposal',icon:'sun',action:()=>window.CC.openDayPlanner()},{key:'recover',title:'Recover my day',subtitle:'Start again without losing your work',icon:'recover',action:()=>window.CC.openRecoveryModal()})
   const results=[...commands,...state.tasks.map((t)=>({key:t.id,title:t.title,subtitle:`Mission · ${t.done?'Completed':t.date?formatKeyLabel(t.date):'Inbox'}`,icon:'missions',action:()=>window.CC.openTaskModal(t.id)})),...state.goals.map((g)=>({key:g.id,title:g.title,subtitle:'Goal · '+g.category,icon:'target',action:()=>window.CC.openGoalDetail(g.id)})),...state.projects.map((p)=>({key:p.id,title:p.title,subtitle:'Project',icon:'projects',action:()=>window.CC.openProjectDetail(p.id)})),...state.routines.filter((r)=>!r.archived).map((r)=>({key:r.id,title:r.title,subtitle:'Routine',icon:'routines',action:()=>window.CC.openRoutineModal(r.id)}))]
   openModal({title:'Find your next move',body:`<div class="command-palette"><div class="toolbar-search">${icon('search')}<input class="input-field" id="palette-query" placeholder="Search missions, goals, or commands…" autocomplete="off" aria-label="Search your workspace" role="combobox" aria-expanded="true" aria-controls="palette-results"></div><div id="palette-results" role="listbox"></div><p class="form-hint" style="margin-top:14px">↑ ↓ to move · Enter to open · Esc to close</p></div>`,onMount:(box)=>{
     const input=box.querySelector('#palette-query'),list=box.querySelector('#palette-results');let active=0,matches=[]

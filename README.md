@@ -19,6 +19,9 @@ No account, database, paid client dependency or API key is required for the core
 
 ## What works
 
+- **Forecast** — the only forward-looking view: committed load for the next 7/14/30 days from the same schedule the planner uses, capacity line, load status per day, clashes, category balance and carried-over work. Rest blocks are never counted as commitments.
+- **Journal** — one honest entry a day: what happened, one win, the next step, mood and energy. Thirty-day mood/streak metrics, a gentle summary line and a timeline of recent entries. Local only.
+- **Natural-language capture** — quick capture reads “Pay the bill tomorrow at 6pm for 15m !high #work” and shows each detected field as a chip before saving; repetition becomes a real series.
 - **Briefing** — opening the app greets you as **“Sir”** (editable), names the one mission that needs you now, and shows the honest shape of the day: score, Top 3, focus minutes, overdue work, the next blocks, tomorrow’s first move and one written intention. An always-visible command strip keeps that next move in sight on every screen; `B` opens the full briefing at any time.
 - **Overview / My Day** — time-aware greeting, live clock, today’s command, transparent daily score, Top 3 priorities, upcoming timeline, real weekly chart and quick actions.
 - **Schedule** — day/week/list calendars, dated time blocks, protected windows, conflict warnings, pointer drag, keyboard rescheduling (`Alt + ↑/↓`), task extension that moves only flexible blocks, and legacy study-plan templates.
@@ -31,6 +34,10 @@ No account, database, paid client dependency or API key is required for the core
 - **Assistant** — optional Cloudflare Worker AI plus useful offline planning tools. AI can suggest; it cannot modify missions or accept a schedule.
 - **Settings** — profile, theme/accent, week start, time format, working hours, focus/break preferences, reminders, categories, protected time, export/import/reset and safety copies.
 - **PWA** — installable shell, offline navigation/assets, local data, responsible notification permissions and in-app reminder fallback.
+
+## The forward view
+
+The workspace answers three questions in order: **what needs me now** (the briefing), **what does the next fortnight look like** (Forecast), and **what actually happened** (Journal). Forecast counts only real commitments from your schedule — sleep and protected windows are excluded — and reports clashes and carried-over work without blame. The Journal stores one entry per day (note, win, next step, mood, energy) inside state schema **v7**, with an additive migration and no change to existing records. Quick capture understands dates, times, durations, priorities, categories and repetition, and mirrors every parsed field into the visible controls before anything is saved. See `docs/workspace-4.3.md` for the full behaviour tables and recorded verification.
 
 ## The briefing
 
@@ -90,7 +97,7 @@ Without a key or network, the assistant reports the failure honestly and the bui
 
 ## Keyboard
 
-`B` briefing · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `F` Focus Room · `N` capture · `1–9` main views · `Esc` close/minimise · calendar `Alt + ↑/↓` reschedule · assistant `Enter` send / `Shift + Enter` newline.
+`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `F` Focus Room · `N` capture · `J` Journal · `O` Forecast · `1–9` main views · `Esc` close/minimise · calendar `Alt + ↑/↓` reschedule · assistant `Enter` send / `Shift + Enter` newline.
 
 ## Verification
 
