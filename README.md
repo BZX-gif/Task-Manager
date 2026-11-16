@@ -19,7 +19,8 @@ No account, database, paid client dependency or API key is required for the core
 
 ## What works
 
-- **Overview / My Day** — greeting, live clock, today’s command, transparent daily score, Top 3 priorities, upcoming timeline, real weekly chart and quick actions.
+- **Briefing** — opening the app greets you as **“Sir”** (editable), names the one mission that needs you now, and shows the honest shape of the day: score, Top 3, focus minutes, overdue work, the next blocks, tomorrow’s first move and one written intention. An always-visible command strip keeps that next move in sight on every screen; `B` opens the full briefing at any time.
+- **Overview / My Day** — time-aware greeting, live clock, today’s command, transparent daily score, Top 3 priorities, upcoming timeline, real weekly chart and quick actions.
 - **Schedule** — day/week/list calendars, dated time blocks, protected windows, conflict warnings, pointer drag, keyboard rescheduling (`Alt + ↑/↓`), task extension that moves only flexible blocks, and legacy study-plan templates.
 - **Plan My Day / Recover My Day** — deterministic proposals from real available time. Existing commitments and protected windows stay put; excess work is explicitly deferred. Every row is editable and nothing applies until you accept.
 - **Missions** — daily/weekly/long-term/quick horizons, seven statuses, subtasks, deadlines, recurrence, search/filter, quick capture, inbox, reschedule/skip history and goal/project/milestone links.
@@ -30,6 +31,21 @@ No account, database, paid client dependency or API key is required for the core
 - **Assistant** — optional Cloudflare Worker AI plus useful offline planning tools. AI can suggest; it cannot modify missions or accept a schedule.
 - **Settings** — profile, theme/accent, week start, time format, working hours, focus/break preferences, reminders, categories, protected time, export/import/reset and safety copies.
 - **PWA** — installable shell, offline navigation/assets, local data, responsible notification permissions and in-app reminder fallback.
+
+## The briefing
+
+The briefing is the first thing you see and the fastest way back into the day. It is deterministic: the same records always produce the same next move.
+
+| Surface | What it does |
+|---|---|
+| Startup briefing | Greets you by your salutation, then names the current mission. Opens once a day by default; configurable to every load or only on request. |
+| Command strip | A one-line “At your command, Sir.” under the top bar that always names the next mission, its reason and its time. Updates on every change. |
+| Next-move order | Running time block → unfinished Top 3 → most overdue → highest-priority mission today → next scheduled block → newest inbox capture → an honest clear day. |
+| Intention | One short sentence per day, saved locally, shown in the greeting, the briefing and the assistant’s context. |
+| Spoken briefing | Optional browser-voice reading of the same summary. No audio leaves the device; unsupported browsers simply show the text. |
+| Recovery | When earlier work is still open, the briefing offers *Recover my day* without blame. |
+
+Nothing in the briefing is invented and nothing is written except your intention and the “last shown” day. Settings → **Briefing** controls the salutation, when it opens and whether it speaks. The pure model lives in `src/client/lib/briefing.js` and is covered by unit and jsdom integration tests.
 
 ## Architecture
 
@@ -43,7 +59,7 @@ No account, database, paid client dependency or API key is required for the core
 | Typography/icons | system font stack + inline local SVG |
 
 ```text
-src/client/lib/      pure planning, score, focus, recurrence, relationships, routines, backup…
+src/client/lib/      pure planning, briefing, score, focus, recurrence, relationships, routines, backup…
 src/client/core/     store, actions, DOM/dialogs, charts, event bus
 src/client/ui/       shell chrome, router, focus overlay, capture, reminders, PWA
 src/client/views/    Overview, My Day, Schedule, Missions, Goals, Projects, Routines,
@@ -74,7 +90,7 @@ Without a key or network, the assistant reports the failure honestly and the bui
 
 ## Keyboard
 
-`Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `F` Focus Room · `N` capture · `1–9` main views · `Esc` close/minimise · calendar `Alt + ↑/↓` reschedule · assistant `Enter` send / `Shift + Enter` newline.
+`B` briefing · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `F` Focus Room · `N` capture · `1–9` main views · `Esc` close/minimise · calendar `Alt + ↑/↓` reschedule · assistant `Enter` send / `Shift + Enter` newline.
 
 ## Verification
 

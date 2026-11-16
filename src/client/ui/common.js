@@ -15,7 +15,8 @@ export function bindCommon(root) {
   root.querySelectorAll('[data-common]').forEach((button) => button.addEventListener('click', () => {
     const action = button.dataset.common
     const cc = window.CC
-    if (action === 'new-task') cc.openTaskModal(null, { date: button.dataset.date || undefined })
+    if (action === 'briefing') cc.openBriefing()
+    else if (action === 'new-task') cc.openTaskModal(null, { date: button.dataset.date || undefined })
     else if (action === 'capture') cc.openQuickCapture()
     else if (action === 'plan') cc.openDayPlanner({ date: button.dataset.date })
     else if (action === 'recover') cc.openRecoveryModal()

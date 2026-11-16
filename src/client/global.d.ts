@@ -51,6 +51,12 @@ interface Window {
     handleChatKey(event: KeyboardEvent): void
     toggleMobileNav(): void
     checkReminders(): unknown[]
+    /** Full-screen "Sir" briefing. Safe to call at any time; idempotent. */
+    openBriefing(options?: { auto?: boolean }): any
+    closeBriefing(options?: { restoreFocus?: boolean }): void
+    briefingInfo(now?: Date): any
+    saveIntention(value: string): string
+    speakBriefing(briefing?: any, options?: { notify?: boolean }): boolean
     refreshQuoteInline(): void
   }
   webkitAudioContext?: typeof AudioContext

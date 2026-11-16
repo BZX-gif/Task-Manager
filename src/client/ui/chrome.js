@@ -1,5 +1,6 @@
 import { MOTIVATIONAL_QUOTES } from '../lib/defaults.js'
-import { escapeHtml, el, closeModal, openModal, toast } from '../core/dom.js'
+import { greetingLine, salutationOf } from '../lib/briefing.js'
+import { escapeHtml, el, closeModal, openModal, qsa, toast } from '../core/dom.js'
 import { commit, currentDayKey, state } from '../core/store.js'
 import { elapsedSeconds, remainingSeconds, sessionTotals } from '../lib/focus.js'
 import { formatClock, formatDuration, formatKeyLabel } from '../lib/dates.js'
@@ -12,11 +13,13 @@ const VIEW_LABELS = {dashboard:'Overview',day:'My Day',schedule:'Schedule',tasks
 let clockTimer=null, quoteTimer=null, mobileOpen=false, notificationsBound=false
 const recentReminders=[]
 export function userName(){return state.settings.userName?.trim()||''}
-export function greeting(now=new Date()){const hour=now.getHours();const phrase=hour<5?'A quiet moment':hour<12?'Good morning':hour<17?'Good afternoon':hour<21?'Good evening':'Time to wind down';return `${phrase}${userName()?', '+userName():''}.`}
+export function salutation(){return salutationOf(state)}
+/** Time-aware, respectful greeting: "Good evening, Sir." */
+export function greeting(now=new Date()){return greetingLine(state,now)}
 export function updateClockAndGreeting(){
   const now=new Date(),format=state.settings.timeFormat||'12h'
   const text=(selector,value)=>{const node=el(selector);if(node&&node.textContent!==value)node.textContent=value}
-  text('overview-greeting',greeting(now));text('greeting-text',greeting(now))
+  text('overview-greeting',greeting(now));text('greeting-text',greeting(now));text('command-strip-salute',`At your command, ${salutation()}.`)
   const clock=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:format==='12h'})
   text('live-clock',clock);text('overview-clock',clock)
   const avatar=document.querySelector('.brand-avatar'),initial=userName().charAt(0).toLocaleUpperCase()||'P'
@@ -39,6 +42,7 @@ export function bindChrome(){
   el('sidebar-collapse')?.addEventListener('click',()=>{commit((s)=>s.settings.sidebarCollapsed=!s.settings.sidebarCollapsed,{silent:true,immediate:true});applyTheme();el('sidebar-collapse')?.setAttribute('aria-expanded',String(!state.settings.sidebarCollapsed));el('sidebar-collapse')?.setAttribute('aria-label',state.settings.sidebarCollapsed?'Expand sidebar':'Collapse sidebar')})
   el('theme-toggle')?.addEventListener('click',()=>{commit((s)=>s.settings.theme=document.documentElement.dataset.theme==='light'?'dark':'light',{silent:true,immediate:true});applyTheme();el('theme-toggle').innerHTML=icon(document.documentElement.dataset.theme==='light'?'moon':'sun')})
   el('command-search')?.addEventListener('click',openCommandPalette)
+  qsa(document,'[data-briefing-open]').forEach((button)=>button.addEventListener('click',()=>{setMobileNav(false);window.CC.openBriefing()}))
   el('mobile-menu-btn')?.addEventListener('click',()=>toggleMobileNav());el('mobile-more')?.addEventListener('click',()=>toggleMobileNav());el('mobile-nav-close')?.addEventListener('click',()=>setMobileNav(false))
   el('mobile-nav')?.addEventListener('click',(e)=>{if(e.target===el('mobile-nav'))setMobileNav(false)})
   el('notifications-btn')?.addEventListener('click',openNotifications)
@@ -50,7 +54,7 @@ export function bindChrome(){
 }
 export function openCommandPalette(){
   /** @type {any[]} */ const commands=Object.entries(VIEW_LABELS).filter(([key])=>VIEWS.includes(key)).map(([key,title])=>({key,title,subtitle:'Go to '+title,icon:key==='dashboard'?'overview':key==='tasks'?'missions':key==='progress'?'analytics':key==='review'?'review':key==='settings'?'settings':key,view:key}))
-  commands.push({key:'new',title:'Create a mission',subtitle:'A clear next step',icon:'plus',action:()=>window.CC.openTaskModal()},{key:'capture',title:'Quick capture',subtitle:'Get it out of your head',icon:'inbox',action:()=>window.CC.openQuickCapture()},{key:'plan',title:'Plan my day',subtitle:'Review a realistic proposal',icon:'sun',action:()=>window.CC.openDayPlanner()},{key:'recover',title:'Recover my day',subtitle:'Start again without losing your work',icon:'recover',action:()=>window.CC.openRecoveryModal()})
+  commands.push({key:'briefing',title:'Open the briefing',subtitle:`At your command, ${salutation()}`,icon:'bell',action:()=>window.CC.openBriefing()},{key:'new',title:'Create a mission',subtitle:'A clear next step',icon:'plus',action:()=>window.CC.openTaskModal()},{key:'capture',title:'Quick capture',subtitle:'Get it out of your head',icon:'inbox',action:()=>window.CC.openQuickCapture()},{key:'plan',title:'Plan my day',subtitle:'Review a realistic proposal',icon:'sun',action:()=>window.CC.openDayPlanner()},{key:'recover',title:'Recover my day',subtitle:'Start again without losing your work',icon:'recover',action:()=>window.CC.openRecoveryModal()})
   const results=[...commands,...state.tasks.map((t)=>({key:t.id,title:t.title,subtitle:`Mission · ${t.done?'Completed':t.date?formatKeyLabel(t.date):'Inbox'}`,icon:'missions',action:()=>window.CC.openTaskModal(t.id)})),...state.goals.map((g)=>({key:g.id,title:g.title,subtitle:'Goal · '+g.category,icon:'target',action:()=>window.CC.openGoalDetail(g.id)})),...state.projects.map((p)=>({key:p.id,title:p.title,subtitle:'Project',icon:'projects',action:()=>window.CC.openProjectDetail(p.id)})),...state.routines.filter((r)=>!r.archived).map((r)=>({key:r.id,title:r.title,subtitle:'Routine',icon:'routines',action:()=>window.CC.openRoutineModal(r.id)}))]
   openModal({title:'Find your next move',body:`<div class="command-palette"><div class="toolbar-search">${icon('search')}<input class="input-field" id="palette-query" placeholder="Search missions, goals, or commands…" autocomplete="off" aria-label="Search your workspace" role="combobox" aria-expanded="true" aria-controls="palette-results"></div><div id="palette-results" role="listbox"></div><p class="form-hint" style="margin-top:14px">↑ ↓ to move · Enter to open · Esc to close</p></div>`,onMount:(box)=>{
     const input=box.querySelector('#palette-query'),list=box.querySelector('#palette-results');let active=0,matches=[]

@@ -1,5 +1,5 @@
 /** The local-first application shell. All application data stays in the browser. */
-export const APP_VERSION = '4.1'
+export const APP_VERSION = '4.2'
 
 export const NAV_GROUPS = [
   { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['schedule', 'Schedule', 'calendar'], ['tasks', 'Missions', 'missions'] ] },
@@ -59,6 +59,7 @@ export function renderShell(): string {
 <div class="workspace-label"><span class="workspace-avatar">P</span><div><strong>Personal workspace</strong><span>Designed around you</span></div></div>
 <nav id="nav-list" class="sidebar-nav" aria-label="Primary">${nav()}</nav>
 <div class="sidebar-bottom">
+<button class="nav-item briefing-nav" data-briefing-open>${svg('bell')}<span>Today’s briefing</span><span class="nav-key">B</span></button>
 <button class="nav-item assistant-nav" data-view="assistant">${svg('review')}<span>Planning assistant</span><span class="ai-tag">AI</span></button>
 <button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button>
 <div class="sidebar-focus"><div class="sidebar-focus-top">${svg('focus')}<span>Space to focus</span><span class="status-dot"></span></div><p id="focus-mini-time">0m</p><span class="sidebar-focus-caption">of deep work today</span><button id="focus-mini-start" class="btn btn-secondary btn-small">Start a session ${svg('arrow')}</button></div>
@@ -71,6 +72,14 @@ export function renderShell(): string {
 <div class="topbar-left"><button id="mobile-menu-btn" class="icon-btn mobile-menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav">${svg('menu')}</button><span class="breadcrumb-workspace">Workspace</span><span class="breadcrumb-divider">/</span><span id="breadcrumb-current">Overview</span></div>
 <div class="topbar-actions"><button id="command-search" class="search-trigger" aria-label="Search commands and your workspace"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><span>Search anything</span><kbd>⌘  K</kbd></button><span class="topbar-separator"></span><span class="local-status"><span class="status-dot"></span><span id="connection-label">On this device</span></span><button id="active-timer-chip" class="timer-chip hidden" aria-label="Return to focus session">${svg('focus')}<span id="active-timer-chip-text">25:00</span></button><button id="theme-toggle" class="icon-btn" aria-label="Switch to light theme">${svg('sun')}</button><button id="notifications-btn" class="icon-btn notification-toggle" aria-label="View reminders">${svg('bell')}<span id="notification-dot" class="notification-dot hidden"></span></button><button id="quick-add-btn" class="btn btn-primary btn-small topbar-add" aria-label="Add a mission">${svg('plus')}<span>New mission</span></button><button class="brand-avatar" data-view="settings" aria-label="Profile and settings">P</button></div>
 </header>
+<div id="command-strip" class="command-strip" aria-label="Current command">
+<span class="command-strip-salute" id="command-strip-salute">At your command, Sir.</span>
+<span class="command-strip-sep" aria-hidden="true"></span>
+<span class="command-strip-label">Next move</span>
+<button class="command-strip-task" id="command-strip-task" type="button" data-briefing-open>Your next mission will show here</button>
+<span class="command-strip-meta" id="command-strip-meta"></span>
+<button class="btn btn-secondary btn-small command-strip-brief" id="briefing-open-btn" type="button" data-briefing-open>${svg('bell')}<span>Briefing</span><kbd>B</kbd></button>
+</div>
 <div class="mobile-context"><span id="greeting-text">Your personal command center</span><span id="live-clock">--:--</span></div>
 <main id="main-content" tabindex="-1" class="main-content">
 <section id="view-dashboard" class="view-section" aria-label="Overview"><div class="boot-skeleton"><div></div><div></div><div></div></div></section>
@@ -79,9 +88,9 @@ ${['day','schedule','tasks','goals','projects','routines','focus','progress','re
 <footer class="workspace-footer"><span>A little more clarity. A little more progress.</span><span>Private by design <span class="footer-dot">·</span> <span id="app-version">v${APP_VERSION}</span></span></footer>
 </div>
 </div>
-<div id="mobile-nav" class="mobile-nav hidden" role="dialog" aria-modal="true" aria-label="Navigation"><div class="mobile-nav-head"><strong>Your workspace</strong><button id="mobile-nav-close" class="icon-btn" aria-label="Close navigation">${svg('close')}</button></div><nav>${nav(true)}<button class="nav-item" data-view="assistant">${svg('review')}<span>Planning assistant</span></button><button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button></nav></div>
-<nav id="mobile-dock" class="mobile-dock" aria-label="Quick navigation"><button class="dock-item is-active" data-view="dashboard">${svg('overview')}<span>Overview</span></button><button class="dock-item" data-view="day">${svg('sun')}<span>My Day</span></button><button class="dock-item" data-view="tasks">${svg('missions')}<span>Missions</span></button><button class="dock-item" data-view="focus">${svg('focus')}<span>Focus</span></button><button id="mobile-more" class="dock-item" aria-label="More navigation">${svg('overview')}<span>More</span></button></nav>
-<div id="modal-root"></div><div id="focus-root"></div><div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div><div id="quote-text" class="sr-only"></div>
+<div id="mobile-nav" class="mobile-nav hidden" role="dialog" aria-modal="true" aria-label="Navigation"><div class="mobile-nav-head"><strong>Your workspace</strong><button id="mobile-nav-close" class="icon-btn" aria-label="Close navigation">${svg('close')}</button></div><nav>${nav(true)}<button class="nav-item" data-briefing-open>${svg('bell')}<span>Today’s briefing</span><span class="nav-key">B</span></button><button class="nav-item" data-view="assistant">${svg('review')}<span>Planning assistant</span></button><button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button></nav></div>
+<nav id="mobile-dock" class="mobile-dock" aria-label="Quick navigation"><button class="dock-item is-active" data-view="dashboard">${svg('overview')}<span>Overview</span></button><button class="dock-item" data-view="day">${svg('sun')}<span>My Day</span></button><button class="dock-item" data-view="tasks">${svg('missions')}<span>Missions</span></button><button class="dock-item" data-view="focus">${svg('focus')}<span>Focus</span></button><button class="dock-item" data-briefing-open aria-label="Open today’s briefing">${svg('bell')}<span>Brief</span></button><button id="mobile-more" class="dock-item" aria-label="More navigation">${svg('overview')}<span>More</span></button></nav>
+<div id="modal-root"></div><div id="briefing-root"></div><div id="focus-root"></div><div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div><div id="quote-text" class="sr-only"></div>
 <script defer src="/static/js/app.js"></script>
 </body></html>`
 }
