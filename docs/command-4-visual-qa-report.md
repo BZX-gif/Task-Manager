@@ -191,3 +191,57 @@ statically-tested contracts still match first.
 5. `docs/glassmorphism.md` / `docs/liquid-glass-revision.md` describe the
    previous visual phase and are kept as historical records, superseded by
    this pass.
+
+---
+
+## 8 · Addendum — Command 4.1 design layers (branch `arena/4fcfb201-task-manager`)
+
+A second, additive design pass on top of the merged 4.0 transformation
+(PR #18). No 4.0 behaviour was changed; everything below is new layers.
+
+**What was added**
+
+1. **Toast tones** — `.toast-symbol` (previously unstyled, like the 70 classes
+   in the audit) is now a 20px tone disc: ember for info, and distinct
+   success/warning/danger tints, keeping semantic states separate from the
+   signature accent.
+2. **Overview entrance choreography** — the dashboard's direct children enter
+   with a 40ms-capped stagger (`viewEnter`, ≤240ms total). The router marks a
+   section `.view-enter` **only on real view switches** and clears it after
+   1.2s, so the minute-refresh re-render never replays motion (no continuous
+   movement; fully crushed by the reduced-motion contract).
+3. **Day-progress hairline** — a 3px ember bar under the Overview clock
+   showing the share of your *configured available hours* used so far.
+   Computed from `settings.workingHours` and the real clock in
+   `updateClockAndGreeting` (clamped 0–100, degenerate windows guarded,
+   `role="img"` + live aria-label). No fabricated data — before your working
+   day starts it honestly reads 0%.
+4. **Micro-interactions (2px rule)** — trailing chevrons/arrows on
+   `.text-button`, quick actions, offline tools and palette rows slide 2px on
+   hover; the brand mark settles from −5° to 0° on hover. Transform/opacity
+   only, `--motion-fast`, reduced-motion safe.
+5. **Today is a place** — the Schedule week grid tints today's column in
+   accent-soft with an ember hairline under the day head.
+6. **Sidebar separation** — the bottom zone (assistant/settings/focus card)
+   now sits under a hairline divider (folded into the original rule, not an
+   override layer).
+7. **Touch-comfort floor for coarse pointers** — a `@media (pointer:coarse)`
+   block raises minimum target sizes (icon buttons 42px, nav 44px, dock 48px,
+   segmented/pills/presets 40px…) on tablets and touch laptops at *any*
+   viewport width, closing audit item M6 without loosening desktop density.
+8. **Versioning** — APP_VERSION 4.1 (shell + footer), service-worker cache
+   `v4-1-0` so PWA users pick the new layers up.
+
+**Files touched:** `public/static/style.css`, `src/client/ui/router.js`,
+`src/client/ui/chrome.js`, `src/client/views/dashboard.js`, `src/shell.ts`,
+`src/client/main.js`, `public/sw.js`.
+
+**Verification (re-run on this branch)**
+
+| Check | Result |
+|---|---|
+| `npm run verify` (lint · typecheck · tests) | ✅ **221/221 pass** |
+| Production build | ✅ |
+| `scripts/smoke-render.mjs` (12 routes, dialogs, populated + empty) | ✅ no failures, **zero console errors** |
+| Day-progress harness | ✅ renders, correct clamped width, live aria-label |
+| Stagger lifecycle harness | ✅ `.view-enter` applied on switch, removed after 1.2s — minute-refresh does not replay motion |
