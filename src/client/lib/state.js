@@ -140,6 +140,7 @@ export function clampNumber(value, min, max, fallback) {
 /** Merge stored settings with defaults (deep for the nested objects we own). */
 export function normalizeSettings(raw) {
   const settings = isObj(raw) ? raw : {}
+  const salutation = typeof settings.salutation === 'string' ? settings.salutation.trim().replace(/\s+/g, ' ').slice(0, 40) : ''
   return {
     ...DEFAULT_SETTINGS,
     ...settings,
@@ -163,6 +164,9 @@ export function normalizeSettings(raw) {
     accent: ['ember', 'iris', 'blue', 'sage', 'amber', 'rose'].includes(settings.accent) ? settings.accent : 'ember',
     timeFormat: settings.timeFormat === '24h' ? '24h' : '12h',
     userName: String(settings.userName || '').slice(0, 60),
+    salutation: salutation || DEFAULT_SETTINGS.salutation,
+    briefingMode: ['daily', 'every', 'off'].includes(settings.briefingMode) ? settings.briefingMode : DEFAULT_SETTINGS.briefingMode,
+    briefingSpeak: settings.briefingSpeak === true,
     workingHours: { start: normalizeTime(settings.workingHours?.start, '09:00'), end: normalizeTime(settings.workingHours?.end, '18:00') },
     defaultTaskMinutes: clampNumber(settings.defaultTaskMinutes, 5, 600, 30),
     weekStart: settings.weekStart === 0 ? 0 : 1,
@@ -198,6 +202,8 @@ export function emptyState(ctx = makeContext()) {
     chatHistory: [],
     reminders: { sent: {} },
     settings: normalizeSettings({}),
+    /** the briefing: which day it was last shown + one honest intention per day */
+    briefing: { lastShownDay: null, intentions: {} },
     onboarding: { seen: false },
     dailyProgress: {},
     titles: {
@@ -514,6 +520,18 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
 
   state.settings = normalizeSettings(raw.settings)
   state.onboarding = { ...DEFAULT_SETTINGS.onboarding, ...(isObj(raw.onboarding) ? raw.onboarding : isObj(raw.settings?.onboarding) ? raw.settings.onboarding : {}) }
+
+  // --- additive: briefing state (never required by older payloads) ---
+  const rawBriefing = isObj(raw.briefing) ? raw.briefing : {}
+  const intentions = {}
+  for (const [key, value] of Object.entries(isObj(rawBriefing.intentions) ? rawBriefing.intentions : {})) {
+    if (isValidKey(key) && typeof value === 'string' && value.trim()) intentions[key] = value.trim().slice(0, 200)
+  }
+  const intentionKeys = Object.keys(intentions).sort()
+  state.briefing = {
+    lastShownDay: typeof rawBriefing.lastShownDay === 'string' && isValidKey(rawBriefing.lastShownDay) ? rawBriefing.lastShownDay : null,
+    intentions: Object.fromEntries(intentionKeys.slice(-120).map((key) => [key, intentions[key]])),
+  }
 
   // --- v3: dailyProgress snapshots (frozen historical truth) ---
   state.dailyProgress = {}

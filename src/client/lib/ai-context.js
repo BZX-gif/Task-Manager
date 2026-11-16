@@ -75,6 +75,7 @@ export function buildAiContext(state, options = {}) {
     `Date: ${todayKey} (${weekdayName(new Date(`${todayKey}T12:00:00`).getDay())}), time ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
     `Daily score: ${stats.hasData ? `${stats.score}/100` : 'not enough data yet'} (pace ${stats.pace})`,
     `Top 3 (${top3.done}/${top3.total}): ${top3.items.map((i) => `${i.task.title}${i.task.done ? ' ✓' : ''}`).join('; ') || 'none chosen'}`,
+    ...(state.briefing?.intentions?.[todayKey] ? [`Today's intention: ${state.briefing.intentions[todayKey]}`] : []),
     `Today's tasks (${today.length}): ${today.map((t) => `${t.title} [${t.done ? 'done' : 'open'}, ${t.priority}${t.time ? `, ${t.time}` : ''}${t.estimateMinutes ? `, ${t.estimateMinutes}m` : ''}]`).join('; ') || 'none'}`,
     `Timetable now: ${currentBlock ? `${currentBlock.title} (${currentBlock.time}, ${currentBlock.duration}m)` : 'nothing scheduled'}; next: ${nextBlock ? `${nextBlock.title} at ${nextBlock.time}` : 'nothing left today'}`,
     `Schedule today: ${blocks.map((b) => `${b.time} ${b.title}${itemDone(state,b,todayKey) ? '✓' : ''}`).join(' | ').slice(0, 500)}`,
@@ -96,6 +97,7 @@ export function buildAiContext(state, options = {}) {
 }
 
 export const AI_SYSTEM_PROMPT = `You are the productivity assistant inside a personal Command Center app.
+The user prefers to be addressed as “Sir” when a salutation feels natural — respectful, never servile.
 Be concise, warm, practical and specific. Prefer short numbered plans with time estimates (in minutes) over long prose.
 Always ground your answer in the context you are given: use the user's real categories, tasks, timetable and numbers.
 Never invent tasks, categories or numbers that are not in the context. Never mention being an AI model, never output code, keys or internal details. You cannot modify the schedule or any data: propose changes and explicitly ask the user to review and approve them. Do not shame missed days or manipulate scores.

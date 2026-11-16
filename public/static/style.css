@@ -847,3 +847,165 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;bac
   .settings-nav button{min-height:42px}
   .theme-option,.accent-options button{min-height:42px}
 }
+
+/* ==========================================================================
+   COMMAND 4.2 — THE BRIEFING
+   One material language for the new surfaces: the always-on command strip,
+   the full-screen briefing, the intention chip and the greeting hero. Ember
+   is used only for meaning (address, next move, intention), never decor.
+   ========================================================================== */
+
+/* The one-line command strip lives directly under the top bar. */
+.command-strip{position:sticky;top:64px;z-index:39;display:flex;align-items:center;gap:11px;padding:9px clamp(16px,3vw,36px);min-height:44px;border-bottom:1px solid var(--border);background:var(--glass-sheen-soft),var(--glass-navigation-bg);backdrop-filter:blur(var(--glass-blur));-webkit-backdrop-filter:blur(var(--glass-blur));font-size:11px}
+.command-strip-salute{color:var(--accent);font-weight:560;white-space:nowrap;letter-spacing:-.1px;max-width:30ch;overflow:hidden;text-overflow:ellipsis}
+.command-strip-sep{width:1px;height:14px;background:var(--border-strong);flex-shrink:0}
+.command-strip-label{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.command-strip-task{border:0;background:none;padding:2px 0;color:var(--text);font-size:12px;font-weight:520;max-width:44ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;letter-spacing:-.1px;min-height:28px}
+.command-strip-task:hover{color:var(--accent)}
+.command-strip-meta{color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.command-strip-brief{margin-left:auto;flex-shrink:0;gap:7px;min-height:30px;padding:5px 10px;font-size:10px;color:var(--text-secondary)}
+.command-strip-brief kbd{font-size:9px;color:var(--muted);border:1px solid var(--border-strong);border-radius:4px;padding:0 4px;line-height:14px;background:var(--glass-interactive-bg)}
+.command-strip[data-kind="clear"] .command-strip-salute{color:var(--success)}
+.command-strip[data-kind="clear"] .command-strip-task{color:var(--text-secondary);font-weight:450}
+
+/* Full-screen briefing */
+body.briefing-open{overflow:hidden}
+.briefing-overlay{position:fixed;inset:0;z-index:94;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,34px);overflow-y:auto;background:rgba(4,4,4,.74);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:fadeIn .22s ease}
+:root[data-theme="light"] .briefing-overlay{background:rgba(38,31,25,.32)}
+.briefing-panel{position:relative;isolation:isolate;width:min(100%,980px);max-height:calc(100dvh - 2 * clamp(12px,3vw,34px));overflow-y:auto;padding:clamp(20px,3vw,34px);border:1px solid var(--glass-floating-border);border-radius:24px;background:radial-gradient(760px 420px at 88% -18%,rgba(var(--accent-rgb),.1),transparent 62%),var(--glass-sheen-soft),var(--glass-floating-bg);box-shadow:var(--glass-edge),var(--shadow-modal);outline:none;scrollbar-width:thin;scrollbar-color:var(--surface-hover) transparent;animation:modalIn .3s var(--ease)}
+.briefing-aurora{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;z-index:-1;opacity:.7}
+.briefing-aurora span{position:absolute;border:1px solid rgba(255,255,255,.05);border-radius:50%}
+.briefing-aurora span:nth-child(1){width:520px;height:520px;right:-210px;top:-250px}
+.briefing-aurora span:nth-child(2){width:360px;height:360px;right:-130px;top:-170px;border-color:rgba(var(--accent-rgb),.1)}
+.briefing-aurora span:nth-child(3){width:180px;height:180px;right:-40px;top:-80px;border-color:rgba(var(--accent-rgb),.14);background:radial-gradient(circle at 35% 30%,rgba(var(--accent-rgb),.1),transparent 70%)}
+.briefing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:26px}
+.briefing-head-main{min-width:0}
+.briefing-dot{padding:0 2px;color:var(--border-strong)}
+.briefing-salute{font-family:var(--font-display);font-size:clamp(30px,4.6vw,52px);font-weight:560;letter-spacing:-1.8px;line-height:1.08;margin:12px 0 10px}
+.briefing-lead{color:var(--text-secondary);font-size:13px;line-height:1.7;max-width:62ch}
+.briefing-intention-line{display:inline-flex;align-items:flex-start;gap:8px;margin-top:15px;padding:7px 11px;border:1px solid var(--border);border-radius:9px;background:var(--glass-interactive-bg);font-size:11.5px;line-height:1.6;color:var(--text-secondary);max-width:100%;overflow-wrap:anywhere}
+.briefing-intention-line .icon{width:14px;height:14px;color:var(--accent);margin-top:2px}
+.briefing-intention-line strong{color:var(--text);font-weight:560}
+.briefing-intention-line.is-empty{color:var(--muted);border-style:dashed;background:transparent}
+.briefing-head-side{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.briefing-clock{font-family:var(--font-display);font-size:26px;font-weight:450;letter-spacing:-.8px;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.briefing-close{background:var(--glass-interactive-bg);border-color:var(--border);color:var(--text-secondary)}
+
+.briefing-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(250px,1fr);gap:18px;margin-top:26px}
+.briefing-focus{display:flex;flex-direction:column;min-width:0;padding:22px 24px;border:1px solid var(--accent-border);border-radius:18px;background:radial-gradient(520px 320px at 94% -30%,rgba(var(--accent-rgb),.14),transparent 62%),var(--glass-interactive-bg);box-shadow:var(--glass-edge)}
+.briefing-focus .eyebrow{color:var(--text-secondary)}
+.briefing-focus .eyebrow .status-dot{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.briefing-focus h2{font-size:clamp(22px,3vw,31px);font-weight:560;letter-spacing:-.9px;line-height:1.22;margin:15px 0 7px;overflow-wrap:anywhere}
+.briefing-reason{font-size:11px;color:var(--muted)}
+.briefing-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px;font-size:10px;color:var(--text-secondary)}
+.briefing-chips>span{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--glass-interactive-bg)}
+.briefing-chips .icon{width:13px;height:13px;color:var(--muted)}
+.briefing-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:auto;padding-top:24px}
+.briefing-actions .btn-primary,.briefing-actions .btn-ghost{min-height:38px;font-size:12px}
+.briefing-focus[data-focus-kind="clear"]{border-color:var(--border);background:var(--glass-interactive-bg)}
+
+.briefing-stats{min-width:0;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--glass-secondary-bg);box-shadow:var(--glass-edge)}
+.briefing-score{display:flex;align-items:center;gap:16px}
+.briefing-score .score-ring{width:82px;height:82px}
+.briefing-score .ring-label strong{font-size:25px}
+.briefing-score strong{display:block;font-size:13px;font-weight:560;margin-bottom:5px}
+.briefing-score p{font-size:10px;line-height:1.65;color:var(--muted)}
+.briefing-stat-rows{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.briefing-stat span{display:block;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.briefing-stat strong{display:block;font-size:16px;font-weight:550;font-variant-numeric:tabular-nums;margin-top:3px;letter-spacing:-.4px}
+.briefing-stat small{display:block;font-size:9px;color:var(--muted);margin-top:1px;line-height:1.4}
+
+.briefing-lower{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,1fr);gap:18px;margin-top:18px}
+.briefing-agenda,.briefing-intention{min-width:0;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--glass-secondary-bg);box-shadow:var(--glass-edge)}
+.briefing-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.briefing-section-head h3{font-size:13px;font-weight:560;letter-spacing:-.2px}
+.briefing-section-head .icon{width:15px;height:15px;color:var(--muted)}
+.briefing-agenda-list{display:flex;flex-direction:column;gap:12px}
+.briefing-agenda-row{display:grid;grid-template-columns:64px 8px minmax(0,1fr);gap:10px;align-items:start}
+.briefing-agenda-time{font-size:10px;color:var(--text-secondary);font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:1px}
+.briefing-agenda-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px}
+.briefing-agenda-row strong{display:block;font-size:12px;font-weight:500;line-height:1.45;overflow-wrap:anywhere}
+.briefing-agenda-row small{display:block;font-size:9.5px;color:var(--muted);margin-top:2px}
+.briefing-empty{display:flex;gap:8px;align-items:flex-start;font-size:11px;line-height:1.7;color:var(--muted)}
+.briefing-empty .icon{width:16px;height:16px;color:var(--text-secondary);margin-top:1px}
+.briefing-inbox{display:flex;align-items:center;gap:7px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}
+.briefing-inbox .icon{width:14px;height:14px}
+.briefing-tomorrow{display:flex;align-items:flex-start;gap:7px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:10px;line-height:1.6;color:var(--muted)}
+.briefing-tomorrow .icon{width:14px;height:14px;color:var(--text-secondary);margin-top:1px}
+.briefing-tomorrow strong{color:var(--text-secondary);font-weight:560}
+.briefing-tomorrow span{overflow-wrap:anywhere}
+.briefing-intention form{display:flex;gap:8px;align-items:center;margin-bottom:9px}
+.briefing-intention .input-field{flex:1;min-width:0;min-height:36px;font-size:12px}
+.briefing-intention .btn-small{min-height:36px}
+.briefing-intention-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}
+.briefing-intention-actions .icon{width:13px;height:13px}
+
+.briefing-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:22px;padding-top:18px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}
+.briefing-foot>p{display:flex;align-items:center;gap:6px}
+.briefing-foot>p .icon{width:13px;height:13px}
+.briefing-foot-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Overview hero additions */
+.overview-greeting .greeting-copy{min-width:0}
+.greeting-intention{display:inline-flex;align-items:center;gap:8px;max-width:100%;margin-top:10px;padding:5px 10px;border:1px solid var(--border);border-radius:7px;background:var(--glass-interactive-bg);color:var(--text-secondary);font-size:11px;text-align:left;box-shadow:var(--glass-edge);transition:border-color var(--motion-fast) var(--ease),background var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease)}
+.greeting-intention:hover{border-color:var(--accent-border);background:var(--accent-soft);color:var(--text)}
+.greeting-intention .icon{width:13px;height:13px;color:var(--accent);flex-shrink:0}
+.greeting-intention .icon:last-child{color:var(--muted);margin-left:1px}
+.greeting-intention span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:54ch}
+.greeting-intention.is-empty{color:var(--muted);border-style:dashed;background:transparent}
+.greeting-brief{margin-top:12px;font-size:10px;min-height:31px}
+.date-block .greeting-brief{margin-left:auto}
+
+/* Settings: briefing preview */
+.briefing-settings-preview{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px;padding:15px 16px;border:1px solid var(--border);border-radius:12px;background:var(--glass-secondary-bg);box-shadow:var(--glass-edge)}
+.briefing-settings-preview strong{display:block;font-size:13px;font-weight:560;letter-spacing:-.2px}
+.briefing-settings-preview p{font-size:10.5px;line-height:1.65;color:var(--muted);margin-top:4px}
+.briefing-settings-preview kbd,.briefing-intention kbd{font-size:9px;border:1px solid var(--border-strong);border-radius:4px;padding:0 4px;line-height:15px;color:var(--text-secondary);background:var(--glass-interactive-bg)}
+.briefing-settings-preview .btn{flex-shrink:0}
+
+@media (max-width:1023px){
+  .briefing-grid{grid-template-columns:minmax(0,1.35fr) minmax(220px,1fr)}
+  .briefing-lower{grid-template-columns:1fr}
+}
+@media (max-width:860px){
+  .briefing-grid{grid-template-columns:1fr}
+  .briefing-stats .briefing-stat-rows{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (max-width:767px){
+  .command-strip{top:56px;padding:7px 14px;gap:8px;min-height:42px}
+  .command-strip-label,.command-strip-meta,.command-strip-brief kbd{display:none}
+  .command-strip-salute{max-width:38%;font-size:10px}
+  .command-strip-sep{display:none}
+  .command-strip-task{flex:1;min-width:0;max-width:none;font-size:11px;min-height:24px}
+  .command-strip-brief{margin-left:0;padding:5px 9px;font-size:9.5px}
+  .briefing-overlay{padding:0;align-items:flex-end}
+  .mobile-dock .dock-item{flex:1 1 0;width:auto;min-width:0}
+  .briefing-panel{width:100%;max-height:calc(100dvh - 10px);padding:22px 18px calc(22px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0}
+  .briefing-head{display:block;padding-right:34px}
+  .briefing-head-side{position:absolute;top:14px;right:14px}
+  .briefing-clock{display:none}
+  .briefing-salute{font-size:33px;letter-spacing:-1.2px;margin-top:10px}
+  .briefing-lead{font-size:12px}
+  .briefing-grid{margin-top:20px;gap:14px}
+  .briefing-focus{padding:19px 18px}
+  .briefing-focus h2{font-size:23px}
+  .briefing-actions .btn-primary,.briefing-actions .btn-ghost{flex:1 1 auto;justify-content:center}
+  .briefing-actions .text-button{flex-basis:100%}
+  .briefing-stats,.briefing-agenda,.briefing-intention{padding:17px}
+  .briefing-stats .briefing-stat-rows{grid-template-columns:1fr 1fr}
+  .briefing-lower{gap:14px}
+  .briefing-foot{flex-direction:column;align-items:flex-start;gap:12px}
+  .briefing-foot-actions{width:100%}
+  .briefing-foot-actions .btn{flex:1 1 auto;justify-content:center}
+  .briefing-settings-preview{flex-direction:column;align-items:flex-start;gap:12px}
+  .overview-greeting .greeting-brief{display:none}
+  .greeting-intention{margin-top:8px}
+  .greeting-intention span{max-width:38ch}
+}
+@media (max-width:420px){
+  .briefing-panel{padding:20px 15px calc(20px + env(safe-area-inset-bottom))}
+  .briefing-intention form{flex-wrap:wrap}
+  .briefing-intention .input-field{flex-basis:100%}
+  .briefing-intention .btn-small{flex:1}
+  .command-strip-salute{display:none}
+}
