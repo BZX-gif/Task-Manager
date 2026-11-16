@@ -1,10 +1,10 @@
 /** The local-first application shell. All application data stays in the browser. */
-export const APP_VERSION = '4.2'
+export const APP_VERSION = '4.3'
 
 export const NAV_GROUPS = [
-  { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['schedule', 'Schedule', 'calendar'], ['tasks', 'Missions', 'missions'] ] },
+  { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['schedule', 'Schedule', 'calendar'], ['tasks', 'Missions', 'missions'], ['forecast', 'Forecast', 'forecast'] ] },
   { label: 'THE BIGGER PICTURE', items: [ ['goals', 'Goals', 'target'], ['projects', 'Projects', 'projects'], ['routines', 'Routines', 'routines'] ] },
-  { label: 'YOUR SPACE', items: [ ['focus', 'Focus Room', 'focus'], ['progress', 'Analytics', 'analytics'], ['review', 'Weekly Review', 'review'] ] },
+  { label: 'YOUR SPACE', items: [ ['focus', 'Focus Room', 'focus'], ['progress', 'Analytics', 'analytics'], ['review', 'Weekly Review', 'review'], ['journal', 'Journal', 'journal'] ] },
 ]
 
 // These paths are original SVGs embedded by the client, not a remote icon font.
@@ -19,6 +19,8 @@ const ICONS: Record<string, string> = {
   focus: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6M12 2v3"/>',
   analytics: '<path d="M4 3v18h17M8 15v-4m5 4V7m5 8V4"/>',
   review: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Zm0 0v6h6M8 13h8m-8 4h5"/>',
+  forecast: '<path d="M3 17h4l3-8 4 12 3-7h4"/><path d="M3 21h18"/>',
+  journal: '<path d="M5 4a2 2 0 0 1 2-2h11v18H7a2 2 0 0 0-2 2Z"/><path d="M5 18h13M9 7h6M9 11h4"/>',
   settings: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="m9 3 1-1h4l1 3 3 1 3 1v4l-2 1-1 3 1 3-3 3-3-1-3 1-1 2H8l-1-3-3-1-2-1v-4l2-1 1-3-1-3 3-3Z"/>',
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
@@ -83,7 +85,7 @@ export function renderShell(): string {
 <div class="mobile-context"><span id="greeting-text">Your personal command center</span><span id="live-clock">--:--</span></div>
 <main id="main-content" tabindex="-1" class="main-content">
 <section id="view-dashboard" class="view-section" aria-label="Overview"><div class="boot-skeleton"><div></div><div></div><div></div></div></section>
-${['day','schedule','tasks','goals','projects','routines','focus','progress','review','assistant','settings'].map((view) => `<section id="view-${view}" class="view-section hidden" aria-label="${view}"></section>`).join('')}
+${['day','schedule','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings'].map((view) => `<section id="view-${view}" class="view-section hidden" aria-label="${view}"></section>`).join('')}
 </main>
 <footer class="workspace-footer"><span>A little more clarity. A little more progress.</span><span>Private by design <span class="footer-dot">·</span> <span id="app-version">v${APP_VERSION}</span></span></footer>
 </div>

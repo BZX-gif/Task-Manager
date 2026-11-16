@@ -10,6 +10,8 @@ const paths = {
   focus: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6M12 2v3m6 1 2 2"/>',
   analytics: '<path d="M4 3v17h17M8 15v-4m5 4V7m5 8V4"/>',
   review: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+  forecast: '<path d="M3 17h4l3-8 4 12 3-7h4"/><path d="M3 21h18"/>',
+  journal: '<path d="M5 4a2 2 0 0 1 2-2h11v18H7a2 2 0 0 0-2 2Z"/><path d="M5 18h13M9 7h6M9 11h4"/>',
   routines: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 17.9 17"/>',
   settings: '<path d="m9 3-.6 2.4-2.1 1.2L4 6l-2 3 1.8 1.8v2.4L2 15l2 3 2.3-.6 2.1 1.2L9 21h6l.6-2.4 2.1-1.2 2.3.6 2-3-1.8-1.8v-2.4L22 9l-2-3-2.3.6-2.1-1.2L15 3Z"/><circle cx="12" cy="12" r="3"/>',
   sparkle: '<path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4ZM20 2v4m-2-2h4"/>',

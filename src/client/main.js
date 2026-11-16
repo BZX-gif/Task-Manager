@@ -4,7 +4,7 @@ import { announceStatus, commit, currentDayKey, ensureRecurringOccurrences, init
 import { addToTop3, removeFromTop3, getTop3Ids, setTop3Ids } from './lib/top3.js'
 import { describeScoreFormula } from './lib/score.js'
 import { initRouter, refreshCurrentView, switchView, getCurrentView } from './ui/router.js'
-import { bindChrome, footerVersion, refreshFocusChip, refreshStreakWidget, renderQuoteInline, startChromeTimers, toggleMobileNav, openCommandPalette, updateClockAndGreeting } from './ui/chrome.js'
+import { bindChrome, footerVersion, refreshFocusChip, refreshStreakWidget, renderQuoteInline, startChromeTimers, toggleMobileNav, openCommandPalette, openShortcuts, updateClockAndGreeting } from './ui/chrome.js'
 import { dayStatus } from './ui/status.js'
 import { completeFocus, hasRunningSession, initFocus, openFocusMode, pauseFocus, resumeFocus, stopFocus } from './ui/focus.js'
 import { handleChatKey, sendMessage, runLocalCommand } from './views/assistant.js'
@@ -24,7 +24,7 @@ import { handleTitlesUnlocked } from './ui/titles.js'
 import { icon } from './ui/icons.js'
 import { closeBriefing, initBriefing, isBriefingOpen, openBriefing, refreshCommandStrip, briefingInfo, saveBriefingIntention, speakBriefing } from './ui/briefing.js'
 
-const APP_VERSION='4.2'
+const APP_VERSION='4.3'
 function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshCurrentView()}
 function streakInfo(){const result=streak();return{...result,recent:result.recent.map((day)=>({...day,status:dayStatus(state,day.dateKey).status}))}}
 function disciplineInfo(){return disciplineStreak()}
@@ -54,6 +54,7 @@ window.CC = {
   openFocusRoom,
   openScoreInfo,
   openCommandPalette,
+  openShortcuts,
   openBriefing,
   closeBriefing,
   briefingInfo,
@@ -83,7 +84,7 @@ window.CC = {
   checkReminders:()=>checkReminders(),
   refreshQuoteInline:renderQuoteInline,
 }
-function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
+function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
 let lastDay=currentDayKey(),reminderInterval=null,minuteInterval=null,recurrenceInterval=null
 function boot(){
   initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();startChromeTimers();bindChrome();initRouter();initFocus();initPwa();bindKeyboard()

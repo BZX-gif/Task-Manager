@@ -27,7 +27,7 @@ test('v4 → v5 preserves the legacy timetable as the UPSC mission schedule', ()
     { version: 4, timetable: [{ id: 'legacy-1', time: '09:00', title: 'Legacy block', duration: 60, cat: 'upsc' }] },
     ctx(),
   )
-  assert.equal(state.version, 6)
+  assert.equal(state.version, 7)
   assert.ok(applied.includes('migrateStateV4ToV5'))
   assert.equal(state.timetable, undefined, 'the flat v4 timetable is gone')
   assert.equal(state.timetables.upsc_cse_2028[0].id, 'legacy-1', 'legacy block ids survive the move')

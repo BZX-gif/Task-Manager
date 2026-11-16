@@ -22,7 +22,11 @@ const day = (offset) => new Date(Date.now() + offset * 864e5).toISOString().slic
 
 function seedState() {
   return {
-    version: 6,
+    version: 7,
+    journal: {
+      [day(-1)]: { note: 'Held the morning block and shipped the audit.', win: 'Shipped the audit', nextStep: 'Send the summary', mood: 'good', energy: 'medium', updatedAt: Date.now() - 864e5 },
+      [day(-2)]: { note: 'Slow start, but I showed up.', win: 'Showed up', nextStep: 'Sleep earlier', mood: 'steady', energy: 'low', updatedAt: Date.now() - 2 * 864e5 },
+    },
     categories: [{ id: 'work', name: 'Work', color: '#7ba7ea' }, { id: 'learning', name: 'Learning', color: '#79bca5' }],
     tasks: [
       { id: 't1', title: 'Ship the design audit', date: today, time: '09:00', estimateMinutes: 90, priority: 'high', cat: 'work', done: false, status: 'ready', inbox: false, createdAt: 1, goalId: 'g1', projectId: null, milestoneId: null, subtasks: [{ id: 's1', title: 'Read sources', done: true }, { id: 's2', title: 'Write findings', done: false }], history: [] },
@@ -64,7 +68,7 @@ async function boot(seed) {
   return { dom, window, errors, $: (s) => window.document.querySelector(s) }
 }
 
-const VIEWS = ['dashboard', 'day', 'schedule', 'tasks', 'goals', 'projects', 'routines', 'focus', 'progress', 'review', 'assistant', 'settings']
+const VIEWS = ['dashboard', 'day', 'schedule', 'tasks', 'goals', 'projects', 'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'assistant', 'settings']
 let failures = 0
 
 async function walk(label, seed) {
@@ -97,6 +101,15 @@ async function walk(label, seed) {
     window.CC.closeModal(); await settle(300)
     window.CC.openQuickCapture(); await settle(30)
     console.log('  quick capture:', $('.modal-box, [class*=capture]') ? 'ok' : 'MISSING')
+    const captureInput = $('#capture-title')
+    if (captureInput) {
+      captureInput.value = 'Pay the bill tomorrow at 6pm for 15m !high #work'
+      captureInput.dispatchEvent(new window.Event('input', { bubbles: true }))
+      await settle(20)
+      const chips = window.document.querySelectorAll('.capture-chip').length
+      console.log('  capture parse:', chips === 5 ? 'ok (5 fields)' : `UNEXPECTED (${chips} chips)`)
+      if (chips !== 5) failures++
+    }
     window.CC.closeQuickCapture(); await settle(300)
     // interactions
     window.CC.switchView('dashboard'); await settle(40)
