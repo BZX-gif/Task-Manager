@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { emptyState, makeContext, loadState, saveState, storageUsage } from '../../src/client/lib/state.js'
+import { STATE_VERSION } from '../../src/client/lib/defaults.js'
 import { dayStats } from '../../src/client/lib/daystats.js'
 import { computeStreak } from '../../src/client/lib/streak.js'
 import {
@@ -226,7 +227,7 @@ test('a quiet day never erases meaningful-day momentum', () => {
 test('storage denial and quota failures are reported instead of crashing', () => {
   const denied = { getItem() { throw new Error('denied') }, setItem() { throw new Error('denied') } }
   const loaded = loadState({ storage: denied, now: 1 })
-  assert.equal(loaded.state.version, 7)
+  assert.equal(loaded.state.version, STATE_VERSION)
   assert.equal(saveState(loaded.state, { storage: denied }), false)
   assert.deepEqual(storageUsage({ storage: denied }), { bytes: 0, kb: 0 })
 })

@@ -1,8 +1,8 @@
 /** The local-first application shell. All application data stays in the browser. */
-export const APP_VERSION = '4.3'
+export const APP_VERSION = '4.4'
 
 export const NAV_GROUPS = [
-  { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['schedule', 'Schedule', 'calendar'], ['tasks', 'Missions', 'missions'], ['forecast', 'Forecast', 'forecast'] ] },
+  { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['calendar', 'Calendar', 'calendar'], ['schedule', 'Schedule', 'clock'], ['hyb', 'HYB Studio', 'bolt'], ['tasks', 'Missions', 'missions'], ['forecast', 'Forecast', 'forecast'] ] },
   { label: 'THE BIGGER PICTURE', items: [ ['goals', 'Goals', 'target'], ['projects', 'Projects', 'projects'], ['routines', 'Routines', 'routines'] ] },
   { label: 'YOUR SPACE', items: [ ['focus', 'Focus Room', 'focus'], ['progress', 'Analytics', 'analytics'], ['review', 'Weekly Review', 'review'], ['journal', 'Journal', 'journal'] ] },
 ]
@@ -21,6 +21,8 @@ const ICONS: Record<string, string> = {
   review: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Zm0 0v6h6M8 13h8m-8 4h5"/>',
   forecast: '<path d="M3 17h4l3-8 4 12 3-7h4"/><path d="M3 21h18"/>',
   journal: '<path d="M5 4a2 2 0 0 1 2-2h11v18H7a2 2 0 0 0-2 2Z"/><path d="M5 18h13M9 7h6M9 11h4"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  bolt: '<path d="m13 2-9 12h7l-1 8 10-12h-7Z"/>',
   settings: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="m9 3 1-1h4l1 3 3 1 3 1v4l-2 1-1 3 1 3-3 3-3-1-3 1-1 2H8l-1-3-3-1-2-1v-4l2-1 1-3-1-3 3-3Z"/>',
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
@@ -29,7 +31,7 @@ const ICONS: Record<string, string> = {
   arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
 }
 const svg = (name: string) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.overview}</svg>`
-const nav = (mobile = false) => NAV_GROUPS.map((group) => `<div class="nav-group"><p class="nav-label">${group.label}</p>${group.items.map(([view,label,icon]) => `<button data-view="${view}" class="${mobile ? 'nav-item' : 'nav-item'}" title="${label}">${svg(icon)}<span>${label}</span>${view === 'focus' ? '<span class="nav-key">F</span>' : ''}</button>`).join('')}</div>`).join('')
+const nav = (mobile = false) => NAV_GROUPS.map((group) => `<div class="nav-group"><p class="nav-label">${group.label}</p>${group.items.map(([view,label,icon]) => `<button data-view="${view}" class="nav-item${view === 'hyb' ? ' nav-item-hyb' : ''}" title="${label}">${svg(icon)}<span>${label}</span>${view === 'focus' ? '<span class="nav-key">F</span>' : view === 'calendar' ? '<span class="nav-key">C</span>' : view === 'hyb' ? '<span class="nav-key">H</span>' : ''}</button>`).join('')}</div>`).join('')
 
 export function renderShell(): string {
   return `<!DOCTYPE html>
@@ -72,7 +74,7 @@ export function renderShell(): string {
 <div class="workspace-main">
 <header class="topbar">
 <div class="topbar-left"><button id="mobile-menu-btn" class="icon-btn mobile-menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav">${svg('menu')}</button><span class="breadcrumb-workspace">Workspace</span><span class="breadcrumb-divider">/</span><span id="breadcrumb-current">Overview</span></div>
-<div class="topbar-actions"><button id="command-search" class="search-trigger" aria-label="Search commands and your workspace"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><span>Search anything</span><kbd>⌘  K</kbd></button><span class="topbar-separator"></span><span class="local-status"><span class="status-dot"></span><span id="connection-label">On this device</span></span><button id="active-timer-chip" class="timer-chip hidden" aria-label="Return to focus session">${svg('focus')}<span id="active-timer-chip-text">25:00</span></button><button id="theme-toggle" class="icon-btn" aria-label="Switch to light theme">${svg('sun')}</button><button id="notifications-btn" class="icon-btn notification-toggle" aria-label="View reminders">${svg('bell')}<span id="notification-dot" class="notification-dot hidden"></span></button><button id="quick-add-btn" class="btn btn-primary btn-small topbar-add" aria-label="Add a mission">${svg('plus')}<span>New mission</span></button><button class="brand-avatar" data-view="settings" aria-label="Profile and settings">P</button></div>
+<div class="topbar-actions"><button id="hyb-btn" class="hyb-trigger" type="button" data-hyb-trigger="deck" aria-haspopup="dialog" aria-label="HYB · hybrid plans" title="HYB · add a plan"><span class="hyb-trigger-glyph" aria-hidden="true"><span>H</span><span>Y</span><span>B</span></span><span class="hyb-trigger-count" data-hyb-count aria-hidden="true">0</span><span class="hyb-live-dot hidden" id="hyb-live-dot" aria-hidden="true"></span></button><span class="topbar-separator hyb-separator" aria-hidden="true"></span><button id="command-search" class="search-trigger" aria-label="Search commands and your workspace"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><span>Search anything</span><kbd>⌘  K</kbd></button><span class="topbar-separator"></span><span class="local-status"><span class="status-dot"></span><span id="connection-label">On this device</span></span><button id="active-timer-chip" class="timer-chip hidden" aria-label="Return to focus session">${svg('focus')}<span id="active-timer-chip-text">25:00</span></button><button id="theme-toggle" class="icon-btn" aria-label="Switch to light theme">${svg('sun')}</button><button id="notifications-btn" class="icon-btn notification-toggle" aria-label="View reminders">${svg('bell')}<span id="notification-dot" class="notification-dot hidden"></span></button><button id="quick-add-btn" class="btn btn-primary btn-small topbar-add" aria-label="Add a mission">${svg('plus')}<span>New mission</span></button><button class="brand-avatar" data-view="settings" aria-label="Profile and settings">P</button></div>
 </header>
 <div id="command-strip" class="command-strip" aria-label="Current command">
 <span class="command-strip-salute" id="command-strip-salute">At your command, Sir.</span>
@@ -85,14 +87,15 @@ export function renderShell(): string {
 <div class="mobile-context"><span id="greeting-text">Your personal command center</span><span id="live-clock">--:--</span></div>
 <main id="main-content" tabindex="-1" class="main-content">
 <section id="view-dashboard" class="view-section" aria-label="Overview"><div class="boot-skeleton"><div></div><div></div><div></div></div></section>
-${['day','schedule','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings'].map((view) => `<section id="view-${view}" class="view-section hidden" aria-label="${view}"></section>`).join('')}
+${['day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings'].map((view) => `<section id="view-${view}" class="view-section hidden" aria-label="${view}"></section>`).join('')}
 </main>
 <footer class="workspace-footer"><span>A little more clarity. A little more progress.</span><span>Private by design <span class="footer-dot">·</span> <span id="app-version">v${APP_VERSION}</span></span></footer>
 </div>
 </div>
-<div id="mobile-nav" class="mobile-nav hidden" role="dialog" aria-modal="true" aria-label="Navigation"><div class="mobile-nav-head"><strong>Your workspace</strong><button id="mobile-nav-close" class="icon-btn" aria-label="Close navigation">${svg('close')}</button></div><nav>${nav(true)}<button class="nav-item" data-briefing-open>${svg('bell')}<span>Today’s briefing</span><span class="nav-key">B</span></button><button class="nav-item" data-view="assistant">${svg('review')}<span>Planning assistant</span></button><button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button></nav></div>
+<div id="mobile-nav" class="mobile-nav hidden" role="dialog" aria-modal="true" aria-label="Navigation"><div class="mobile-nav-head"><strong>Your workspace</strong><button id="mobile-nav-close" class="icon-btn" aria-label="Close navigation">${svg('close')}</button></div><nav>${nav(true)}<button class="nav-item nav-item-hyb" type="button" data-hyb-trigger="deck">${svg('bolt')}<span>HYB · add a plan</span><span class="nav-key">H</span></button><button class="nav-item" data-briefing-open>${svg('bell')}<span>Today’s briefing</span><span class="nav-key">B</span></button><button class="nav-item" data-view="assistant">${svg('review')}<span>Planning assistant</span></button><button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button></nav></div>
 <nav id="mobile-dock" class="mobile-dock" aria-label="Quick navigation"><button class="dock-item is-active" data-view="dashboard">${svg('overview')}<span>Overview</span></button><button class="dock-item" data-view="day">${svg('sun')}<span>My Day</span></button><button class="dock-item" data-view="tasks">${svg('missions')}<span>Missions</span></button><button class="dock-item" data-view="focus">${svg('focus')}<span>Focus</span></button><button class="dock-item" data-briefing-open aria-label="Open today’s briefing">${svg('bell')}<span>Brief</span></button><button id="mobile-more" class="dock-item" aria-label="More navigation">${svg('overview')}<span>More</span></button></nav>
-<div id="modal-root"></div><div id="briefing-root"></div><div id="focus-root"></div><div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div><div id="quote-text" class="sr-only"></div>
+<button id="hyb-fab" class="hyb-fab" type="button" data-hyb-trigger="deck" aria-label="HYB · add a plan"><span aria-hidden="true">HYB</span><span class="hyb-trigger-count" data-hyb-count>0</span></button>
+<div id="modal-root"></div><div id="hyb-root" class="hidden"></div><div id="briefing-root"></div><div id="focus-root"></div><div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div><div id="quote-text" class="sr-only"></div>
 <script defer src="/static/js/app.js"></script>
 </body></html>`
 }

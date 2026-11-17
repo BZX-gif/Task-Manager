@@ -22,7 +22,15 @@ const day = (offset) => new Date(Date.now() + offset * 864e5).toISOString().slic
 
 function seedState() {
   return {
-    version: 7,
+    version: 8,
+    hyb: {
+      plans: [
+        { id: 'h1', title: 'Evening revision — polity', date: today, startTime: '18:30', minutes: 90, kind: 'study', priority: 'high', energy: 'deep', repeat: 'none', status: 'planned', notes: 'Previous year questions.', tags: ['mock'], steps: [{ id: 'hs1', title: 'Set the timer', done: false }, { id: 'hs2', title: 'Write without the phone', done: false }], log: {}, missionId: null, goalId: 'g1', projectId: null, createdAt: 1, updatedAt: 1, completedAt: null },
+        { id: 'h2', title: 'Morning run', date: day(-6), startTime: '06:15', minutes: 40, kind: 'body', priority: 'medium', energy: 'steady', repeat: 'daily', status: 'planned', notes: '', tags: [], steps: [], log: { [day(-1)]: 'done', [today]: 'skipped' }, createdAt: 1, updatedAt: 1, completedAt: null },
+        { id: 'h3', title: 'Call the bank', date: null, startTime: null, minutes: 20, kind: 'personal', priority: 'low', energy: 'light', repeat: 'none', status: 'planned', notes: '', tags: [], steps: [], log: {}, createdAt: 1, updatedAt: 1, completedAt: null },
+        { id: 'h4', title: 'Idea for the essay', date: day(3), startTime: '21:00', minutes: 25, kind: 'idea', priority: 'medium', energy: 'light', repeat: 'weekly', status: 'planned', notes: '', tags: ['essay'], steps: [], log: {}, createdAt: 1, updatedAt: 1, completedAt: null },
+      ],
+    },
     journal: {
       [day(-1)]: { note: 'Held the morning block and shipped the audit.', win: 'Shipped the audit', nextStep: 'Send the summary', mood: 'good', energy: 'medium', updatedAt: Date.now() - 864e5 },
       [day(-2)]: { note: 'Slow start, but I showed up.', win: 'Showed up', nextStep: 'Sleep earlier', mood: 'steady', energy: 'low', updatedAt: Date.now() - 2 * 864e5 },
@@ -48,7 +56,7 @@ function seedState() {
     reminders: {},
     chatHistory: [{ role: 'user', text: 'How should I plan today?', ts: Date.now() }, { role: 'model', text: 'Start with your highest priority.', ts: Date.now() }],
     scoreHistory: { [day(-1)]: 62, [day(-2)]: 48, [today]: 35 },
-    settings: { userName: 'Asha', theme: 'dark', accent: 'ember', timeFormat: '12h', weekStart: 1, sidebarCollapsed: false, dayEnd: '22:00', defaultTaskMinutes: 45, workingHours: { start: '08:00', end: '20:00' }, focus: { defaultMinutes: 25, targetMinutes: 180, breakMinutes: 5, longBreakMinutes: 20, longBreakEvery: 4, autoStartBreaks: false, autoCompleteTask: false }, reminders: { enabled: true, timetable: true, taskDue: true, overdue: true, routines: false, respectProtectedTime: true, beforeMinutes: 10, planningAt: '08:00', top3NudgeAt: '15:00', reviewAt: '18:00', reviewDay: 5, permissionRequested: false, desktopNotifications: false }, protectedTime: [{ id: 'pt1', label: 'Sleep', start: '23:00', end: '06:00', days: [] }] },
+    settings: { userName: 'Asha', theme: 'dark', accent: 'ember', timeFormat: '12h', weekStart: 1, sidebarCollapsed: false, dayEnd: '22:00', defaultTaskMinutes: 45, workingHours: { start: '08:00', end: '20:00' }, focus: { defaultMinutes: 25, targetMinutes: 180, breakMinutes: 5, longBreakMinutes: 20, longBreakEvery: 4, autoStartBreaks: false, autoCompleteTask: false }, reminders: { enabled: true, timetable: true, taskDue: true, overdue: true, routines: false, respectProtectedTime: true, beforeMinutes: 10, planningAt: '08:00', top3NudgeAt: '15:00', reviewAt: '18:00', reviewDay: 5, permissionRequested: false, desktopNotifications: false }, protectedTime: [{ id: 'pt1', label: 'Sleep', start: '23:00', end: '06:00', days: [] }], hyb: { defaultMinutes: 60, defaultKind: 'study', showOnCalendar: true, deckOnLoad: false }, calendar: { mode: 'month', layers: { blocks: true, missions: true, hyb: true, routines: true, deadlines: true, journal: true } } },
   }
 }
 
@@ -68,7 +76,7 @@ async function boot(seed) {
   return { dom, window, errors, $: (s) => window.document.querySelector(s) }
 }
 
-const VIEWS = ['dashboard', 'day', 'schedule', 'tasks', 'goals', 'projects', 'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'assistant', 'settings']
+const VIEWS = ['dashboard', 'day', 'calendar', 'hyb', 'schedule', 'tasks', 'goals', 'projects', 'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'assistant', 'settings']
 let failures = 0
 
 async function walk(label, seed) {
@@ -112,6 +120,44 @@ async function walk(label, seed) {
     }
     window.CC.closeQuickCapture(); await settle(300)
     // interactions
+    // HYB deck: one line in, a parsed plan out
+    window.CC.openHybDeck(); await settle(40)
+    console.log('  hyb deck:', $('.hyb-deck') ? 'ok' : 'MISSING'); if (!$('.hyb-deck')) failures++
+    const hybInput = $('#hyb-quick-input')
+    if (hybInput) {
+      hybInput.value = 'Mock paper tomorrow 6pm for 3h @study ~deep !high #gs'
+      hybInput.dispatchEvent(new window.Event('input', { bubbles: true }))
+      await settle(20)
+      const hybChips = window.document.querySelectorAll('#hyb-quick-chips .hyb-chip').length
+      console.log('  hyb parse:', hybChips >= 6 ? `ok (${hybChips} fields read)` : `UNEXPECTED (${hybChips} chips)`)
+      if (hybChips < 6) failures++
+      // a tag becomes its own chip (so it never sits inside the title)
+      const tagChips = [...window.document.querySelectorAll('#hyb-quick-chips .hyb-chip--tag')].map((chip) => chip.textContent.trim())
+      console.log('  hyb tags:', tagChips.join(' ') === '#gs' ? 'ok (one clean tag chip)' : `UNEXPECTED (${tagChips.join(', ') || 'none'})`)
+      if (tagChips.join(' ') !== '#gs') failures++
+    }
+    window.CC.openHybPlanModal(); await settle(40)
+    console.log('  hyb plan editor:', $('#hyb-plan-form') ? 'ok' : 'MISSING'); if (!$('#hyb-plan-form')) failures++
+    window.CC.closeModal(); await settle(300)
+    window.CC.closeHybDeck(); await settle(40)
+    console.log('  hyb triggers:', window.document.querySelectorAll('[data-hyb-trigger]').length, '| count badge:', $('[data-hyb-count]')?.textContent || '-')
+    // calendar: three modes, a layer toggle, a day tap
+    window.CC.openCalendar(today); await settle(50)
+    const cells = window.document.querySelectorAll('.cal-cell').length
+    console.log('  calendar grid:', cells >= 28 ? `ok (${cells} cells)` : `EMPTY (${cells})`); if (cells < 28) failures++
+    console.log('  calendar hyb chips:', window.document.querySelectorAll('.cal-chip--hyb').length, '| day rail rows:', window.document.querySelectorAll('.cal-day-row').length)
+    for (const mode of ['week', 'agenda', 'month']) {
+      const btn = window.document.querySelector(`[data-cal-mode="${mode}"]`)
+      btn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); await settle(40)
+      console.log(`  calendar ${mode.padEnd(6)}:`, ($('#view-calendar').innerHTML.length > 400) ? 'ok' : 'EMPTY!')
+      if ($('#view-calendar').innerHTML.length <= 400) failures++
+    }
+    const layerBtn = window.document.querySelector('[data-cal-layer="hyb"]')
+    layerBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); await settle(40)
+    console.log('  calendar layer toggle:', window.document.querySelectorAll('.cal-chip--hyb').length === 0 ? 'ok (off)' : 'STILL SHOWING')
+    layerBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); await settle(40)
+    window.CC.switchView('hyb'); await settle(40)
+    console.log('  hyb studio cards:', window.document.querySelectorAll('.hyb-card').length, '| balance rows:', window.document.querySelectorAll('.hyb-balance-row').length)
     window.CC.switchView('dashboard'); await settle(40)
     const check = $('[data-priority-toggle]')
     if (check) { check.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); await settle(40); console.log('  priority toggle: ok') }

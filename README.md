@@ -19,6 +19,8 @@ No account, database, paid client dependency or API key is required for the core
 
 ## What works
 
+- **HYB** — the hybrid plan layer and the button that opens it: study, work, body, people, events and ideas in six lanes. A plan is lighter than a mission and heavier than a note — lane, day, optional time, length, energy, steps, tags and links. Type `Mock paper tomorrow 6pm for 3h @study ~deep !high #gs` and every field is mirrored back as a chip before anything is saved. Repeating plans are finished day by day, never all at once, and any plan can be put on the real schedule or turned into a real mission. HYB Studio is the full working surface: scopes, lane/energy filters, search, day groups, week strip, lane balance and streak.
+- **Calendar** — one month/week/agenda view over everything the app already stores: time blocks, missions, HYB plans, routines, deadlines and journal days, each a layer you can switch off. Cells carry chips, quiet markers and a load bar; the day rail shows one day in reading order with actions. A HYB plan that has been scheduled is drawn once, in its lane colour, at the time it was actually placed. Arrow keys move, `Enter` opens the day in Schedule, `+` adds a plan to it.
 - **Forecast** — the only forward-looking view: committed load for the next 7/14/30 days from the same schedule the planner uses, capacity line, load status per day, clashes, category balance and carried-over work. Rest blocks are never counted as commitments.
 - **Journal** — one honest entry a day: what happened, one win, the next step, mood and energy. Thirty-day mood/streak metrics, a gentle summary line and a timeline of recent entries. Local only.
 - **Natural-language capture** — quick capture reads “Pay the bill tomorrow at 6pm for 15m !high #work” and shows each detected field as a chip before saving; repetition becomes a real series.
@@ -37,7 +39,7 @@ No account, database, paid client dependency or API key is required for the core
 
 ## The forward view
 
-The workspace answers three questions in order: **what needs me now** (the briefing), **what does the next fortnight look like** (Forecast), and **what actually happened** (Journal). Forecast counts only real commitments from your schedule — sleep and protected windows are excluded — and reports clashes and carried-over work without blame. The Journal stores one entry per day (note, win, next step, mood, energy) inside state schema **v7**, with an additive migration and no change to existing records. Quick capture understands dates, times, durations, priorities, categories and repetition, and mirrors every parsed field into the visible controls before anything is saved. See `docs/workspace-4.3.md` for the full behaviour tables and recorded verification.
+The workspace answers three questions in order: **what needs me now** (the briefing), **what does the next fortnight look like** (Forecast), and **what actually happened** (Journal). The **Calendar** is the same data read as a month, and **HYB** is the layer for everything that is a plan rather than a task. Forecast counts only real commitments from your schedule — sleep and protected windows are excluded — and reports clashes and carried-over work without blame. The Journal stores one entry per day (note, win, next step, mood, energy) inside state schema **v7**; HYB plans and the calendar preferences arrived in **v8**, again as an additive migration with no change to existing records. Quick capture understands dates, times, durations, priorities, categories and repetition, and mirrors every parsed field into the visible controls before anything is saved. See `docs/workspace-4.4.md` for HYB and the calendar, and `docs/workspace-4.3.md` for the earlier behaviour tables and recorded verification.
 
 ## The briefing
 
@@ -62,15 +64,16 @@ Nothing in the briefing is invented and nothing is written except your intention
 | Client | Vanilla JS ES modules, no UI framework |
 | Build | esbuild client bundle, compiled Tailwind, Vite Worker build |
 | Charts | locally bundled Chart.js |
-| Storage | browser `localStorage`, key `kcc_state_v1`, schema **v6** |
+| Storage | browser `localStorage`, key `kcc_state_v1`, schema **v8** |
 | Typography/icons | system font stack + inline local SVG |
 
 ```text
 src/client/lib/      pure planning, briefing, score, focus, recurrence, relationships, routines, backup…
 src/client/core/     store, actions, DOM/dialogs, charts, event bus
 src/client/ui/       shell chrome, router, focus overlay, capture, reminders, PWA
-src/client/views/    Overview, My Day, Schedule, Missions, Goals, Projects, Routines,
-                     Focus Room, Analytics, Weekly Review, Assistant, Settings
+src/client/views/    Overview, My Day, Calendar, HYB Studio, Schedule, Missions, Goals,
+                     Projects, Routines, Focus Room, Analytics, Weekly Review,
+                     Assistant, Settings
 public/sw.js         versioned offline shell
 tests/unit/          pure-domain tests
 tests/integration/   real Worker routes + real client bundle in jsdom + AI contract
@@ -89,7 +92,7 @@ Without a key or network, the assistant reports the failure honestly and the bui
 
 ## Data safety
 
-- Additive migrations preserve existing IDs, tasks, timetables, completion logs, focus history and preferences.
+- Additive migrations preserve existing IDs, tasks, timetables, completion logs, focus history, journal entries and preferences; exports report HYB plan counts so a backup says what is inside it.
 - Pre-upgrade, pre-import, pre-reset and unreadable-data rescue copies are kept when storage permits.
 - Import validates the whole file before replacing anything; a safety copy is written first.
 - Storage denial/quota failure is reported visibly; the current tab keeps working and export remains available.
@@ -97,7 +100,7 @@ Without a key or network, the assistant reports the failure honestly and the bui
 
 ## Keyboard
 
-`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `F` Focus Room · `N` capture · `J` Journal · `O` Forecast · `1–9` main views · `Esc` close/minimise · calendar `Alt + ↑/↓` reschedule · assistant `Enter` send / `Shift + Enter` newline.
+`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `H` HYB deck · `C` calendar · `F` Focus Room · `N` capture · `J` Journal · `O` Forecast · `1–9` main views · `Esc` close/minimise · schedule `Alt + ↑/↓` reschedule · calendar grid arrows / `PageUp` `PageDown` month / `Enter` open day / `Space` or `+` add plan · assistant `Enter` send / `Shift + Enter` newline.
 
 ## Verification
 

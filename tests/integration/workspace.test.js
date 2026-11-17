@@ -229,14 +229,21 @@ test('the shortcut sheet opens on ? and documents the new keys', async () => {
   }
 })
 
-test('version 4.3 is visible in the shell and the client', async () => {
+test('the shipped version is visible in the shell and the client', async () => {
+  // read the real constants so the test tracks the source instead of a string
+  const shellSource = await readFile(path.join(root, 'src', 'shell.ts'), 'utf8')
+  const appVersion = shellSource.match(/APP_VERSION\s*=\s*'([^']+)'/)?.[1]
+  const { STATE_VERSION } = await import(path.join(root, 'src', 'client', 'lib', 'defaults.js'))
+  assert.ok(appVersion, 'the shell declares an APP_VERSION')
+
   const { window, $ } = await boot()
   try {
-    assert.equal(window.CC.version, '4.3')
-    assert.equal($('#app-version').textContent, 'v4.3')
+    assert.equal(window.CC.version, appVersion)
+    assert.equal($('#app-version').textContent, `v${appVersion}`)
     const state = window.CC.getState()
-    assert.equal(state.version, 7, 'schema v7 carries the journal')
+    assert.equal(state.version, STATE_VERSION, 'the current schema carries the journal and HYB plans')
     assert.equal(Object.keys(state.journal).length, 0)
+    assert.equal(state.hyb.plans.length, 0, 'HYB plans start empty')
   } finally {
     window.close()
   }

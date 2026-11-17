@@ -3,7 +3,7 @@
    Kept separate from the store so tests and migrations can import them alone.
    ------------------------------------------------------------------------- */
 
-export const STATE_VERSION = 7
+export const STATE_VERSION = 8
 
 export const DEFAULT_CATEGORIES = [
   { id: 'personal', name: 'Personal', color: '#a99af1' },
@@ -158,6 +158,22 @@ export const DEFAULT_SETTINGS = {
   },
   /** optional protected / sleep windows the scheduler must avoid */
   protectedTime: [],
+  /** HYB — the hybrid plan layer (see lib/hyb.js) */
+  hyb: {
+    /** minutes a new plan gets when you don't say */
+    defaultMinutes: 60,
+    /** lane a new plan starts in */
+    defaultKind: 'study',
+    /** show HYB plans on the calendar grid */
+    showOnCalendar: true,
+    /** open the HYB deck on load (off: the button is enough) */
+    deckOnLoad: false,
+  },
+  /** calendar view: which layers the month grid draws */
+  calendar: {
+    mode: 'month',
+    layers: { blocks: true, missions: true, hyb: true, routines: true, deadlines: true, journal: true },
+  },
   /** one-time flags */
   onboarding: { seen: false },
 }

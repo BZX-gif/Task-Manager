@@ -77,6 +77,7 @@ export function toast(message, type = 'info', options = {}) {
   const { timeout = type === 'error' ? 6000 : 3600, action } = options
   const node = document.createElement('div')
   node.className = 'toast'
+  node.dataset.type = type
   node.setAttribute('role', type === 'error' ? 'alert' : 'status')
   node.innerHTML = `<span class="toast-symbol toast-${type}">${type === 'success' ? '✓' : type === 'error' ? '!' : '·'}</span><span>${escapeHtml(message)}</span>`
   if (action) {
