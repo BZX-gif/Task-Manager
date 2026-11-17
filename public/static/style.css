@@ -1776,3 +1776,19 @@ body.hyb-deck-open{overflow:hidden}
 .forecast-day-hyb{display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-size:9px;font-weight:550;color:var(--accent)}
 .forecast-day-hyb .icon{width:11px;height:11px}
 .forecast-day--over .forecast-day-hyb,.forecast-day--conflict .forecast-day-hyb{color:var(--warning)}
+
+/* 4.4 · My Day carries today's HYB plans */
+.hyb-day-card{margin-top:20px}
+.hyb-day-list{display:flex;flex-direction:column;gap:2px}
+.hyb-day-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:11px;padding:9px 8px;border-radius:11px;transition:background var(--motion-fast) var(--ease)}
+.hyb-day-row:hover{background:var(--glass-interactive-bg)}
+.hyb-day-row.is-done{opacity:.6}
+.hyb-day-row.is-done .hyb-day-copy strong{text-decoration:line-through;color:var(--muted)}
+.hyb-day-row.is-skipped{opacity:.5}
+.hyb-day-copy{min-width:0;display:flex;flex-direction:column;gap:3px;border-left:2px solid var(--lane,var(--border-strong));padding-left:10px}
+.hyb-day-copy strong{font-size:12px;font-weight:520;line-height:1.45;overflow-wrap:anywhere}
+.hyb-day-copy small{font-size:9.5px;color:var(--muted);line-height:1.5}
+@media (max-width:767px){
+  .hyb-day-card .heading-actions{gap:4px}
+  .hyb-day-row{gap:9px;padding:10px 4px}
+}

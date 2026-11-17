@@ -547,6 +547,71 @@ test('HYB plans survive a reload, and a v7 workspace migrates additively', async
   }
 })
 
+test('My Day carries today\u2019s HYB plans and can finish one in place', async () => {
+  const seed = {
+    version: STATE_VERSION,
+    hyb: {
+      plans: [
+        { id: 'd1', title: 'Evening revision', date: today, startTime: '18:00', minutes: 60, kind: 'study', priority: 'high', energy: 'deep', repeat: 'none', status: 'planned', steps: [], tags: [], log: {} },
+        { id: 'd2', title: 'Walk after lunch', date: today, startTime: '13:30', minutes: 25, kind: 'body', priority: 'low', energy: 'light', repeat: 'none', status: 'planned', steps: [], tags: [], log: {} },
+      ],
+    },
+  }
+  const { window, $, $$, click, state, errors } = await boot({ seed })
+  try {
+    window.CC.switchView('day')
+    await settle(70)
+    const card = $('.hyb-day-card')
+    assert.ok(card, 'My Day has a HYB card')
+    assert.match(card.textContent, /2\/2|0\/2/, 'it reports progress out of the day\u2019s plans')
+    assert.equal($$('.hyb-day-row').length, 2, 'both plans are listed')
+    // the card reads the day in clock order, not in the order plans were typed
+    assert.match($('.hyb-day-row').textContent, /Walk after lunch/)
+    assert.match($('.hyb-day-row.lane-study').textContent, /Evening revision/)
+    assert.match($('.hyb-day-row.lane-study').textContent, /Study/, 'the row names its lane')
+    assert.match($('.hyb-day-row.lane-study').textContent, /Deep energy/, 'and its energy')
+
+    click('.hyb-day-row.lane-study [data-hyb-day-toggle]')
+    await settle(70)
+    assert.equal(state().hyb.plans[0].status, 'done', 'ticking it writes through the same action')
+    assert.ok($('.hyb-day-row.is-done'), 'the row shows the finished state')
+    assert.match($('.hyb-day-card').textContent, /1\/2 done/, 'the header counts it')
+
+    click('.hyb-day-row.lane-study [data-hyb-day-edit]')
+    await settle(60)
+    assert.ok($('#hyb-plan-form'), 'the plan editor opens from My Day')
+    assert.equal($('#hyb-title').value, 'Evening revision')
+    window.CC.closeModal()
+    await settle(30)
+
+    click('[data-hyb-open-deck]')
+    await settle(60)
+    assert.ok($('.hyb-deck'), 'and so does the deck')
+    window.CC.closeHybDeck()
+    assert.equal(errors.length, 0, `errors: ${errors.join(' | ')}`)
+  } finally {
+    window.close()
+  }
+})
+
+test('My Day offers the HYB layer when nothing is planned yet', async () => {
+  const { window, $, click, errors } = await boot()
+  try {
+    window.CC.switchView('day')
+    await settle(70)
+    const card = $('.hyb-day-card')
+    assert.ok(card, 'the card is there even with no plans')
+    assert.equal($('.hyb-day-row'), null)
+    assert.match(card.textContent, /A plan is lighter than a mission/)
+    click('.hyb-day-card [data-hyb-open-deck]')
+    await settle(60)
+    assert.ok($('.hyb-deck'), 'the empty state opens the deck')
+    assert.equal(errors.length, 0, `errors: ${errors.join(' | ')}`)
+  } finally {
+    window.close()
+  }
+})
+
 test('the one-time deck nudge respects its setting and never repeats', async () => {
   const seed = { version: STATE_VERSION, settings: { hyb: { deckOnLoad: true } } }
   const first = await boot({ seed })

@@ -96,7 +96,9 @@ working surface rather than a drawer.
   lane), what needs attention (overdue and undated) and the streak.
 
 Coverage: `tests/unit/hyb.test.js` (23 cases) and the jsdom flows in
-`tests/integration/hyb-calendar.test.js`.
+`tests/integration/hyb-calendar.test.js` (13 flows: the deck, the editor, the
+calendar grid, the day rail, the studio, the keyboard, My Day, the nudge,
+persistence and the v7 → v8 migration).
 
 ---
 
@@ -153,6 +155,24 @@ month, `Enter` opens the day in Schedule, `Space` or `+` adds a HYB plan to it.
 Coverage: `tests/unit/calendar.test.js` (17 cases); the same integration file
 drives the grid, the layers, all three modes, the day rail and the editors that
 open from it.
+
+---
+
+## Where HYB shows up
+
+A layer is only real if the rest of the app can see it. HYB plans are read by
+six surfaces, all from the same `state.hyb.plans`:
+
+| Surface | What it does with your plans |
+|---|---|
+| **The HYB button** | Live count of what is still open today, plus a pulse dot when something is waiting. Opens the deck from the topbar, the drawer, the floating button, the palette or `H`. |
+| **My Day** | A *HYB · today's plans* card under today's missions, in clock order, tickable in place, with an editor one tap away. With nothing planned it explains what a plan is instead of sitting empty. |
+| **Calendar** | Chips on the grid in the lane colour, quiet dots on a phone, a full row in the day rail with *finish* and *put on schedule* in place. A switchable layer. |
+| **Forecast** | `hybCount` / `hybMinutes` per day and totals for the window: HYB time that is planned but **not yet on the schedule**. A plan already placed arrived as a real block and is never counted twice; finished, skipped and dropped days ask for nothing. When unplaced HYB time is the most useful thing to say, the advice says it — ranked below clashes, heavy days and carried-over missions. |
+| **Schedule** | *Put on schedule* writes a real time block (`hyb:<planId>`), so drag, resize, conflicts, protected time, the Focus Room and the recovery planner all treat it as ordinary committed time. |
+| **Missions** | *Make it a mission* maps every field across, steps become subtasks, tags travel in the notes, and a repeating plan gets a real recurrence series. |
+
+Exports and backups count `hybPlans`, so a backup file says what is inside it.
 
 ---
 
@@ -228,8 +248,16 @@ working.
   every plan title is searchable.
 - **Schedule** — a fifth segment, **Month**, hands over to the calendar on the
   same date.
+- **My Day** — a *HYB · today's plans* card under today's missions: clock order,
+  tickable in place, one tap to the editor, and an honest empty state that
+  explains what a plan is.
 - **Triggers everywhere** — the topbar, the drawer, the FAB, the calendar rail,
-  HYB Studio, Settings and the palette all open the same deck.
+  HYB Studio, My Day, Settings and the palette all open the same deck.
+- **Tests** — `tests/unit/forecast.test.js` gained 6 cases for the new HYB rows
+  (per-day and window totals, no double counting, done/skipped/dropped, a daily
+  series, an HYB-only workspace, advice ranking); `scripts/smoke-render.mjs` now
+  walks the two new views, the deck parse, all three calendar modes and the
+  studio scopes.
 - **Version** — `4.4` in the shell, the client and the footer; service worker
   cache `v4-4-0`.
 
@@ -242,13 +270,13 @@ npm run verify
   ✔ lint passed (72 source files, 24 CC API calls verified)
   ✔ tsc (worker + client) — no errors
   ✔ client built (v4.4)
-  ✔ tests 332 pass / 0 fail   (24 unit + 6 integration files)
+  ✔ tests 340 pass / 0 fail   (24 unit + 6 integration files)
 
 node scripts/smoke-render.mjs
   SMOKE OK — no failures
   (populated + empty workspace, all 16 views including Calendar and HYB Studio,
    HYB parse = 7 fields with one clean tag chip, calendar grid = 42 cells,
-   the deck nudge, the studio scopes,
+   the deck nudge, the studio scopes, the My Day HYB card,
    week/agenda/month modes, layer toggle, studio cards + lane balance,
    console errors: none)
 ```
