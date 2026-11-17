@@ -157,8 +157,8 @@ export function renderDashboard() {
           <p class="date date-day">${escapeHtml(briefingDate)}</p>
           <div class="day-bar" id="day-progress" role="img" aria-label="Progress through your working day"><i id="day-progress-fill"></i></div>
           <div class="quick-actions-card" style="display:flex;gap:6px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-small" data-common="briefing">${icon('bell')}Briefing</button>
-            <button class="btn btn-ghost btn-small" data-common="new-task" title="New mission">${icon('plus')}Mission</button>
+            <button class="btn btn-ghost btn-small" data-common="briefing" aria-label="Open today’s briefing" title="Open today’s briefing (B)">${icon('bell')}Briefing</button>
+            <button class="btn btn-ghost btn-small" data-common="new-task" aria-label="New mission" title="New mission (N)">${icon('plus')}Mission</button>
             <button class="btn btn-ghost btn-small" data-common="focus" aria-label="Start a focus session" title="Start a focus session">${icon('focus')}</button>
             <button class="btn btn-ghost btn-small" data-common="capture" aria-label="Quick capture" title="Quick capture (N)">${icon('inbox')}</button>
           </div>
