@@ -79,14 +79,11 @@ export function refreshCommandStrip(now = new Date()) {
     if (node && node.textContent !== value) node.textContent = value
   }
   const focus = briefing.focus
-  setText('#command-strip-salute', `At your command, ${briefing.salutation}.`)
+  setText('#command-strip-salute', briefing.salutation ? `At your command, ${briefing.salutation}.` : 'At your command.')
   setText('#command-strip-task', focus.kind === 'clear' ? 'Nothing pending — the day is yours' : focus.title)
-  const meta = [
-    focus.kind === 'clear' ? '' : focus.reason,
-    focus.time ? timeLabel(focus.time, true) : '',
-    focus.minutes ? formatDuration(focus.minutes) : '',
-    focus.goalTitle || focus.projectTitle || '',
-  ].filter(Boolean)
+  // One line, short enough to read at a glance: why, then when. The goal title
+  // lives in the briefing itself, not in a strip that must never truncate.
+  const meta = focus.kind === 'clear' ? [] : [focus.reason, focus.time ? timeLabel(focus.time, true) : ''].filter(Boolean)
   setText('#command-strip-meta', meta.join(' · '))
   strip.dataset.kind = focus.kind
   return briefing
@@ -458,7 +455,7 @@ export function initBriefing() {
     if (!state || document.visibilityState === 'hidden') return
     // The user may have opened (and closed) the briefing in the meantime.
     if (!shouldShowBriefing(state, currentDayKey())) return
-    if (isModalOpen() || isBriefingOpen() || document.querySelector('.focus-overlay')) return
+    if (isModalOpen() || isBriefingOpen() || document.querySelector('.focus-overlay') || document.querySelector('.onboarding')) return
     const active = document.activeElement
     const typing =
       active instanceof HTMLElement &&

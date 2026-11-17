@@ -47,6 +47,8 @@ export function chartColors() {
   const read = (name, fallback) => style?.getPropertyValue(name).trim() || fallback
   return {
     accent: read('--accent', '#f0783e'),
+    accentSoft: read('--accent-chart-soft', 'rgba(239,123,69,.16)'),
+    accentMuted: read('--accent-chart-muted', 'rgba(239,123,69,.42)'),
     series: read('--chart-series', 'rgba(255,255,255,.16)'),
     seriesStrong: read('--chart-series-strong', 'rgba(255,255,255,.72)'),
     seriesHover: read('--chart-series-hover', 'rgba(255,255,255,.36)'),

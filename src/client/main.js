@@ -12,6 +12,8 @@ import { openQuickCapture, isQuickCaptureOpen, closeQuickCapture } from './ui/qu
 import { checkReminders, startReminderRunner } from './ui/reminders-runner.js'
 import { initPwa } from './ui/pwa.js'
 import { openTaskModal } from './views/tasks.js'
+import { openOnboarding, closeOnboarding, isOnboardingOpen } from './ui/onboarding.js'
+import { openCalendarImport } from './ui/calendar-import.js'
 import { openWeeklyReview } from './views/review.js'
 import { openDayPlanner, openRecoveryModal } from './views/planner.js'
 import { openGoalModal, openGoalDetail } from './views/goals.js'
@@ -57,6 +59,9 @@ window.CC = {
   openShortcuts,
   openBriefing,
   closeBriefing,
+  openOnboarding,
+  closeOnboarding,
+  openCalendarImport,
   briefingInfo,
   saveIntention:saveBriefingIntention,
   speakBriefing,
@@ -84,11 +89,12 @@ window.CC = {
   checkReminders:()=>checkReminders(),
   refreshQuoteInline:renderQuoteInline,
 }
-function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
+function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}if(isOnboardingOpen()){closeOnboarding();return}}if(isOnboardingOpen()&&event.key!=='?'&&!(event.shiftKey&&event.key==='/'))return;if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();if(isOnboardingOpen())closeOnboarding();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
 let lastDay=currentDayKey(),reminderInterval=null,minuteInterval=null,recurrenceInterval=null
 function boot(){
   initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();startChromeTimers();bindChrome();initRouter();initFocus();initPwa();bindKeyboard()
   document.getElementById('quick-add-btn')?.addEventListener('click',()=>openTaskModal())
+  document.getElementById('welcome-tour-btn')?.addEventListener('click',()=>openOnboarding({force:true}))
   document.getElementById('focus-mini-start')?.addEventListener('click',()=>openFocusRoom())
   document.getElementById('active-timer-chip')?.addEventListener('click',()=>openFocusMode())
   on('focus:tick',()=>{refreshFocusChip();paintFocusRoom()})
@@ -96,7 +102,7 @@ function boot(){
   on('titles:unlocked',(detail)=>handleTitlesUnlocked(detail))
   const persist=()=>{syncScoreHistory(currentDayKey());flush()};window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else{updateClockAndGreeting();refreshCommandStrip();refreshCurrentView();checkReminders()}});window.addEventListener('pagehide',persist)
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&isFocusFullscreen())exitFocusFullscreen()})
-  refreshAll();switchView('dashboard');reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing()
+  refreshAll();switchView('dashboard');reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);openOnboarding();initBriefing()
   minuteInterval=setInterval(()=>{if(document.visibilityState!=='visible')return;const day=currentDayKey();if(day!==lastDay){lastDay=day;ensureRecurringOccurrences(day);syncScoreHistory(day);commit(()=>{},{immediate:true});refreshCommandStrip();return}refreshCommandStrip();if(!isModalOpen()&&!isBriefingOpen()&&!['settings','assistant','focus'].includes(getCurrentView())&&!document.querySelector('.calendar-event.is-dragging'))refreshCurrentView()},60000)
   recurrenceInterval=setInterval(()=>{const created=ensureRecurringOccurrences();if(created.length)commit(()=>{},{immediate:true})},3600000)
   const action=new URLSearchParams(location.search).get('action');if(action==='capture')openQuickCapture();if(action==='focus')openFocusRoom()

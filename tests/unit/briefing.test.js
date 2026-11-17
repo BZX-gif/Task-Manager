@@ -75,11 +75,12 @@ test('the briefing greets by salutation and time of day', () => {
   assert.ok(leadLine(at(9)).length > 10)
 })
 
-test('a chosen name wins, a blank salutation still falls back to Sir', () => {
+test('a chosen name wins and an unset salutation stays neutral', () => {
   const named = stateWith({ settings: { salutation: '', userName: '  Asha  ', focus: { targetMinutes: 180 } } })
-  assert.equal(salutationOf(named), 'Sir')
+  assert.equal(salutationOf(named), '', 'no salutation is invented for you')
   assert.equal(greetingLine(named, at(9)), 'Good morning, Asha.')
   assert.equal(salutationOf(stateWith({ settings: { salutation: '   Boss   ' } })), 'Boss')
+  assert.equal(greetingLine(stateWith({ settings: { salutation: '' } }), at(9)), 'Good morning.', 'an anonymous workspace is greeted without an invented address')
 })
 
 /* ------------------------------------------------------- next move order */

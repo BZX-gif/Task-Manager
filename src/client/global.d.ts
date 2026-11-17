@@ -55,6 +55,9 @@ interface Window {
     /** Full-screen "Sir" briefing. Safe to call at any time; idempotent. */
     openBriefing(options?: { auto?: boolean }): any
     closeBriefing(options?: { restoreFocus?: boolean }): void
+    openOnboarding(options?: { force?: boolean }): void
+    closeOnboarding(): void
+    openCalendarImport(): void
     briefingInfo(now?: Date): any
     saveIntention(value: string): string
     speakBriefing(briefing?: any, options?: { notify?: boolean }): boolean

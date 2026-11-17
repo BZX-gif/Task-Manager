@@ -53,19 +53,23 @@ export function dayPart(now = new Date()) {
 export function salutationOf(state) {
   const raw = state?.settings?.salutation
   const clean = typeof raw === 'string' ? raw.trim().replace(/\s+/g, ' ').slice(0, 40) : ''
-  return clean || 'Sir'
+  return clean
 }
 
-/** The person the briefing speaks to: a chosen name, otherwise the salutation. */
+/**
+ * The person the briefing speaks to: their first name, otherwise the
+ * salutation. A full name in a greeting reads like a letter, not a room.
+ */
 export function addresseeOf(state) {
   const name = state?.settings?.userName
   const clean = typeof name === 'string' ? name.trim().replace(/\s+/g, ' ').slice(0, 60) : ''
-  return clean || salutationOf(state)
+  return clean ? clean.split(' ')[0] : salutationOf(state)
 }
 
 /** `Good evening, Sir.` — time aware, never a generic hello. */
 export function greetingLine(state, now = new Date()) {
-  return `${PART_GREETING[dayPart(now)]}, ${addresseeOf(state)}.`
+  const addressee = addresseeOf(state)
+  return addressee ? `${PART_GREETING[dayPart(now)]}, ${addressee}.` : `${PART_GREETING[dayPart(now)]}.`
 }
 
 export function leadLine(now = new Date()) {

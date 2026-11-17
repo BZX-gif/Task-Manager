@@ -20,3 +20,6 @@ public/static/fonts.css
 # logs & os noise
 *.log
 .DS_Store
+
+# local QA harness (screenshots, puppeteer scratch scripts)
+.qa/

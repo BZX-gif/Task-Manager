@@ -52,6 +52,7 @@ export function renderShell(): string {
 <link href="/static/tailwind.css" rel="stylesheet" />
 <link href="/static/style.css" rel="stylesheet" />
 <link href="/static/studio.css" rel="stylesheet" />
+<link href="/static/v5.css" rel="stylesheet" />
 </head>
 <body class="font-body antialiased">
 <a href="#main-content" class="skip-link">Skip to content</a>

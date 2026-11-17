@@ -119,8 +119,8 @@ export const DEFAULT_SETTINGS = {
   workingHours: { start: '09:00', end: '18:00' },
   defaultTaskMinutes: 30,
   userName: '',
-  /** how the briefing addresses you (editable — "Sir" by default) */
-  salutation: 'Sir',
+  /** how the briefing addresses you — empty until you choose one */
+  salutation: '',
   /** daily = once per day, every = every load, off = only when asked */
   briefingMode: 'daily',
   /** read the briefing aloud when the browser allows speech */

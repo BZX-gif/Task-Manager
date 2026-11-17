@@ -19,7 +19,8 @@ export function greeting(now=new Date()){return greetingLine(state,now)}
 export function updateClockAndGreeting(){
   const now=new Date(),format=state.settings.timeFormat||'12h'
   const text=(selector,value)=>{const node=el(selector);if(node&&node.textContent!==value)node.textContent=value}
-  text('overview-greeting',greeting(now));text('greeting-text',greeting(now));text('command-strip-salute',`At your command, ${salutation()}.`)
+  const address=salutation()
+  text('overview-greeting',greeting(now));text('greeting-text',greeting(now));text('command-strip-salute',address?`At your command, ${address}.`:'At your command.')
   const clock=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:format==='12h'})
   text('live-clock',clock);text('overview-clock',clock)
   const avatar=document.querySelector('.brand-avatar'),initial=userName().charAt(0).toLocaleUpperCase()||'P'
@@ -31,7 +32,7 @@ export function updateClockAndGreeting(){
 }
 export function rotateQuote(force=false){const node=el('quote-text');if(!node)return;const i=Math.floor(Math.random()*MOTIVATIONAL_QUOTES.length);if(!force&&node.dataset.index===String(i))return;node.dataset.index=String(i);node.textContent=MOTIVATIONAL_QUOTES[i]}
 export function startChromeTimers(){updateClockAndGreeting();if(clockTimer)clearInterval(clockTimer);clockTimer=setInterval(updateClockAndGreeting,1000);rotateQuote(true);if(quoteTimer)clearInterval(quoteTimer);quoteTimer=setInterval(()=>rotateQuote(),120000)}
-export function refreshStreakWidget(){const node=el('focus-mini-time');if(node)node.textContent=formatDuration(sessionTotals(state.focus.sessions,currentDayKey()).focusedMinutes);const workspace=document.querySelector('.workspace-label strong');if(workspace)workspace.textContent=userName()?`${userName()}’s workspace`:'Personal workspace'}
+export function refreshStreakWidget(){const node=el('focus-mini-time');if(node)node.textContent=formatDuration(sessionTotals(state.focus.sessions,currentDayKey()).focusedMinutes);const workspace=document.querySelector('.workspace-label strong');if(workspace)workspace.textContent=userName()?`${userName().split(' ')[0]}’s workspace`:'Personal workspace'}
 export function refreshFocusChip(){const chip=el('active-timer-chip'),text=el('active-timer-chip-text');if(!chip||!text)return;const session=state.focus?.active;chip.classList.toggle('hidden',!session);chip.classList.toggle('is-paused',!!session&&!session.running);if(!session)return;const now=Date.now();text.textContent=session.running?formatClock(session.mode==='stopwatch'?elapsedSeconds(session,now):remainingSeconds(session,now)):'Paused';chip.title=session.mode==='break'?'Recharge session':session.mode==='stopwatch'?'Stopwatch session':'Focus session';chip.setAttribute('aria-label',`${session.running?'Open':'Resume'} ${session.mode} session, ${text.textContent}`)}
 export function renderQuoteInline(){rotateQuote(true)}
 export function setMobileNav(open){mobileOpen=!!open;const nav=el('mobile-nav');if(!nav)return;nav.classList.toggle('hidden',!open);el('mobile-menu-btn')?.setAttribute('aria-expanded',String(!!open));document.body.classList.toggle('mobile-nav-open',!!open);if(open)nav.querySelector('.nav-item')?.focus();else el('mobile-menu-btn')?.focus({preventScroll:true})}

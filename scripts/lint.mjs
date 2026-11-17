@@ -86,12 +86,12 @@ const shell = await readFile(path.join(root, 'src', 'shell.ts'), 'utf8')
 if (/cdn\.tailwindcss\.com/.test(shell)) problems.push('src/shell.ts: cdn.tailwindcss.com is back (it warns in production)')
 if (/cdn\.jsdelivr\.net/.test(shell)) problems.push('src/shell.ts: third-party CDN scripts should be bundled instead')
 if (/fonts\.(googleapis|gstatic)\.com/.test(shell)) problems.push('src/shell.ts: fonts are self-hosted — remove the Google Fonts CDN link')
-for (const asset of ['/static/js/app.js', '/static/tailwind.css', '/static/style.css', '/static/studio.css']) {
+for (const asset of ['/static/js/app.js', '/static/tailwind.css', '/static/style.css', '/static/studio.css', '/static/v5.css']) {
   if (!shell.includes(asset)) problems.push(`src/shell.ts: expected to reference ${asset}`)
 }
 
 /* 5 — generated assets referenced by the shell must exist after a build */
-const requiredArtifacts = ['public/static/js/app.js', 'public/static/tailwind.css', 'public/static/studio.css']
+const requiredArtifacts = ['public/static/js/app.js', 'public/static/tailwind.css', 'public/static/studio.css', 'public/static/v5.css']
 for (const artifact of requiredArtifacts) {
   try {
     await stat(path.join(root, artifact))

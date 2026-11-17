@@ -84,7 +84,10 @@ export function proposeDay({ tasks = [], start = '09:00', end = '18:00', nowMinu
 export function scheduleFor(state, date) {
   const override = state.schedule?.days?.[date]
   if (Array.isArray(override)) {
-    const represented = new Set(override.map((b) => b.taskId).filter(Boolean))
+    // A dated block already represents its mission: showing the mission again
+    // as a second event is how a day turns into ten conflicting copies of five
+    // commitments. Blocks win; only unrepresented missions become events.
+    const represented = new Set(override.flatMap((b) => [b.taskId, b.missionId]).filter(Boolean))
     const timed = (state.tasks || []).filter((t) => t.date === date && t.time && !t.inbox && !represented.has(t.id) && t.status !== 'cancelled').map((t) => ({ id: `task:${t.id}`, sourceId: t.id, taskId: t.id, title: t.title, time: t.time, duration: t.estimateMinutes || 30, cat: t.cat, priority: t.priority, goalId: t.goalId, projectId: t.projectId, milestoneId: t.milestoneId, kind: 'mission', status: t.done ? 'completed' : 'planned', protected: !!t.protected, flexible: t.flexible !== false && !t.protected }))
     return [...override.map((b) => ({ ...b })), ...timed].sort((a,b) => minutesOfDay(a.time)-minutesOfDay(b.time))
   }
@@ -96,7 +99,8 @@ export function scheduleFor(state, date) {
   const snapshot = state.dayPlans?.[missionId]?.[date]
   const templates = Array.isArray(snapshot) && date < dateKey() ? snapshot : timetableFor(state, missionId)
   const blocks = templates.filter((b) => !b.days?.length || b.days.includes(weekdayOf(date))).map((b) => ({ ...b, sourceId: b.id, kind: b.protected ? 'protected' : 'mission', status: done.includes(b.id) ? 'completed' : 'planned', protected: b.protected === true, flexible: b.flexible !== false && !b.protected }))
-  const tasks = (state.tasks || []).filter((t) => t.date === date && t.time && !t.inbox && t.status !== 'cancelled').map((t) => ({ id: `task:${t.id}`, sourceId: t.id, taskId: t.id, title: t.title, time: t.time, duration: t.estimateMinutes || 30, cat: t.cat, priority: t.priority, goalId: t.goalId, projectId: t.projectId, milestoneId: t.milestoneId, kind: 'mission', status: t.done ? 'completed' : 'planned', protected: !!t.protected, flexible: t.flexible !== false && !t.protected }))
+  const represented = new Set(blocks.flatMap((b) => [b.taskId, b.missionId]).filter(Boolean))
+  const tasks = (state.tasks || []).filter((t) => t.date === date && t.time && !t.inbox && t.status !== 'cancelled' && !represented.has(t.id)).map((t) => ({ id: `task:${t.id}`, sourceId: t.id, taskId: t.id, title: t.title, time: t.time, duration: t.estimateMinutes || 30, cat: t.cat, priority: t.priority, goalId: t.goalId, projectId: t.projectId, milestoneId: t.milestoneId, kind: 'mission', status: t.done ? 'completed' : 'planned', protected: !!t.protected, flexible: t.flexible !== false && !t.protected }))
   return [...blocks, ...tasks].sort((a,b) => minutesOfDay(a.time)-minutesOfDay(b.time))
 }
 
