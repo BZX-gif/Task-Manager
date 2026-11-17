@@ -4,7 +4,7 @@ import { announceStatus, commit, currentDayKey, ensureRecurringOccurrences, init
 import { addToTop3, removeFromTop3, getTop3Ids, setTop3Ids } from './lib/top3.js'
 import { describeScoreFormula } from './lib/score.js'
 import { initRouter, refreshCurrentView, switchView, getCurrentView } from './ui/router.js'
-import { bindChrome, footerVersion, refreshFocusChip, refreshStreakWidget, renderQuoteInline, startChromeTimers, toggleMobileNav, openCommandPalette, openShortcuts, updateClockAndGreeting } from './ui/chrome.js'
+import { bindChrome, footerVersion, refreshFocusChip, refreshStreakWidget, renderQuoteInline, setMobileNav, startChromeTimers, toggleMobileNav, openCommandPalette, openShortcuts, updateClockAndGreeting } from './ui/chrome.js'
 import { dayStatus } from './ui/status.js'
 import { completeFocus, hasRunningSession, initFocus, openFocusMode, pauseFocus, resumeFocus, stopFocus } from './ui/focus.js'
 import { handleChatKey, sendMessage, runLocalCommand } from './views/assistant.js'
@@ -23,12 +23,17 @@ import { toggleMission, applyTheme } from './core/actions.js'
 import { handleTitlesUnlocked } from './ui/titles.js'
 import { icon } from './ui/icons.js'
 import { closeBriefing, initBriefing, isBriefingOpen, openBriefing, refreshCommandStrip, briefingInfo, saveBriefingIntention, speakBriefing } from './ui/briefing.js'
+import { closeHybDeck, initHyb, isHybDeckOpen, openHybDeck, openHybPlanModal, refreshHybTriggers, toggleHybDeck } from './ui/hyb.js'
+import { hybSummary } from './core/hyb.js'
+import { setCalendarDate } from './views/calendar.js'
 
-const APP_VERSION='4.3'
-function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshCurrentView()}
+const APP_VERSION='4.4'
+function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshHybTriggers();refreshCurrentView()}
 function streakInfo(){const result=streak();return{...result,recent:result.recent.map((day)=>({...day,status:dayStatus(state,day.dateKey).status}))}}
 function disciplineInfo(){return disciplineStreak()}
 function titles(){return titlesInfo()}
+function hybInfo(){return hybSummary({todayKey:currentDayKey()})}
+function openCalendar(date){if(date)setCalendarDate(date);switchView('calendar')}
 function addTaskToTop3(taskId){
   /** @type {any} */
   let result={ok:false,reason:'Mission not found.',ids:[]};commit((s)=>{result=addToTop3(s,currentDayKey(),taskId)});return result}
@@ -57,6 +62,13 @@ window.CC = {
   openShortcuts,
   openBriefing,
   closeBriefing,
+  openHybDeck,
+  closeHybDeck,
+  toggleHybDeck,
+  openHybPlanModal,
+  refreshHybTriggers,
+  hybInfo,
+  openCalendar,
   briefingInfo,
   saveIntention:saveBriefingIntention,
   speakBriefing,
@@ -81,18 +93,19 @@ window.CC = {
   handleChatKey,
   runLocalCommand,
   toggleMobileNav,
+  closeMobileNav:()=>setMobileNav(false),
   checkReminders:()=>checkReminders(),
   refreshQuoteInline:renderQuoteInline,
 }
-function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
+function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isHybDeckOpen()){closeHybDeck();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||isHybDeckOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='h'){event.preventDefault();toggleHybDeck()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='c'){event.preventDefault();openCalendar()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
 let lastDay=currentDayKey(),reminderInterval=null,minuteInterval=null,recurrenceInterval=null
 function boot(){
-  initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();startChromeTimers();bindChrome();initRouter();initFocus();initPwa();bindKeyboard()
+  initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();startChromeTimers();bindChrome();initRouter();initFocus();initHyb();initPwa();bindKeyboard()
   document.getElementById('quick-add-btn')?.addEventListener('click',()=>openTaskModal())
   document.getElementById('focus-mini-start')?.addEventListener('click',()=>openFocusRoom())
   document.getElementById('active-timer-chip')?.addEventListener('click',()=>openFocusMode())
   on('focus:tick',()=>{refreshFocusChip();paintFocusRoom()})
-  on('store:change',()=>{refreshStreakWidget();refreshFocusChip();refreshCommandStrip();applyTheme()})
+  on('store:change',()=>{refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshHybTriggers();applyTheme()})
   on('titles:unlocked',(detail)=>handleTitlesUnlocked(detail))
   const persist=()=>{syncScoreHistory(currentDayKey());flush()};window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else{updateClockAndGreeting();refreshCommandStrip();refreshCurrentView();checkReminders()}});window.addEventListener('pagehide',persist)
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&isFocusFullscreen())exitFocusFullscreen()})

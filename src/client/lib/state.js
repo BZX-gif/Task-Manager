@@ -17,6 +17,8 @@ import { isValidKey, minutesOfDay } from './dates.js'
 import { normalizeRecurrence } from './recurrence.js'
 import { normalizeJournal } from './journal.js'
 import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
+import { normalizeHybPlan } from './hyb.js'
+import { normalizeLayers } from './calendar.js'
 
 /** Legacy key kept for backward compatibility with existing installs. */
 export const STORAGE_KEY = 'kcc_state_v1'
@@ -172,6 +174,21 @@ export function normalizeSettings(raw) {
     defaultTaskMinutes: clampNumber(settings.defaultTaskMinutes, 5, 600, 30),
     weekStart: settings.weekStart === 0 ? 0 : 1,
     dayEnd: normalizeTime(settings.dayEnd, '23:30'),
+    // HYB defaults are additive: an unknown shape falls back to the shipped one
+    hyb: {
+      ...DEFAULT_SETTINGS.hyb,
+      ...(isObj(settings.hyb) ? settings.hyb : {}),
+      defaultMinutes: clampNumber(settings.hyb?.defaultMinutes, 5, 1440, DEFAULT_SETTINGS.hyb.defaultMinutes),
+      defaultKind: typeof settings.hyb?.defaultKind === 'string' ? settings.hyb.defaultKind : DEFAULT_SETTINGS.hyb.defaultKind,
+      showOnCalendar: settings.hyb?.showOnCalendar !== false,
+      deckOnLoad: settings.hyb?.deckOnLoad === true,
+    },
+    calendar: {
+      ...DEFAULT_SETTINGS.calendar,
+      ...(isObj(settings.calendar) ? settings.calendar : {}),
+      mode: ['month', 'week', 'agenda'].includes(settings.calendar?.mode) ? settings.calendar.mode : DEFAULT_SETTINGS.calendar.mode,
+      layers: normalizeLayers(settings.calendar?.layers),
+    },
     // The Gemini key never belongs to the browser any more (server secret).
     geminiApiKey: undefined,
   }
@@ -197,6 +214,8 @@ export function emptyState(ctx = makeContext()) {
     reviews: {},
     /** one honest reflection per day; see lib/journal.js */
     journal: {},
+    /** HYB — hybrid plans; see lib/hyb.js */
+    hyb: { plans: [] },
     top3: {},
     completionLog: {},
     dayPlans: {},
@@ -265,6 +284,12 @@ export function migrateState(raw, ctx = makeContext()) {
     working = migrateStateV6ToV7(working, ctx)
     applied.push('migrateStateV6ToV7')
     version = 7
+  }
+
+  if (version < 8) {
+    working = migrateStateV7ToV8(working, ctx)
+    applied.push('migrateStateV7ToV8')
+    version = 8
   }
 
   const state = normalizeState(working, ctx, warnings)
@@ -613,6 +638,15 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
   state.reviews = {}
   for (const [day, value] of Object.entries(isObj(raw.reviews) ? raw.reviews : {})) if (isValidKey(day) && isObj(value)) state.reviews[day] = { intention: text(value.intention, 1000), reflection: text(value.reflection, 2000), updatedAt: Number.isFinite(value.updatedAt) ? value.updatedAt : ctx.now }
   state.journal = normalizeJournal(raw.journal)
+
+  // --- v8: HYB plans (additive; unknown shapes are dropped, never invented) ---
+  const rawHyb = isObj(raw.hyb) ? raw.hyb : {}
+  state.hyb = {
+    plans: asArray(rawHyb.plans)
+      .map((plan) => normalizeHybPlan(plan, ctx))
+      .filter(Boolean)
+      .slice(-2000),
+  }
   state.meta.legacyStudyPlans = raw.meta?.legacyStudyPlans === true || (Number(raw.version) || 1) < 6
   state.focus.active = state.focus.active ? { ...state.focus.active, mode: ['break', 'stopwatch'].includes(state.focus.active.mode) ? state.focus.active.mode : 'focus', goalId: state.focus.active.goalId ? String(state.focus.active.goalId) : null } : null
 
@@ -625,6 +659,20 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
  */
 export function migrateStateV6ToV7(raw, ctx = makeContext()) {
   return { ...raw, version: 7, journal: isObj(raw.journal) ? raw.journal : {} }
+}
+
+/**
+ * v7 → v8: adds the HYB plan layer and the calendar preferences. Purely
+ * additive — no mission, schedule, goal, routine or journal record is touched,
+ * and a workspace with no HYB data simply starts with an empty plan list.
+ */
+export function migrateStateV7ToV8(raw, ctx = makeContext()) {
+  const hyb = isObj(raw.hyb) ? raw.hyb : {}
+  return {
+    ...raw,
+    version: 8,
+    hyb: { plans: asArray(hyb.plans).filter(isObj).map((plan) => normalizeHybPlan(plan, ctx)).filter(Boolean) },
+  }
 }
 
 /* ------------------------------------------------------------------ *

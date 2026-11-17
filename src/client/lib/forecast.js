@@ -8,11 +8,16 @@
    forecast can never disagree with the timetable. Rest blocks are excluded
    from commitment load — sleep is not a meeting.
 
+   HYB plans are reported alongside it (`hybMinutes` per day): a plan that has
+   been put on the schedule is already a block and is never counted twice, and
+   finished or skipped days ask for no time.
+
    Pure: no store, no DOM, no clock beyond the `now` you pass in.
    ------------------------------------------------------------------------- */
 
 import { addDays, dateKey, formatDuration, minutesOfDay, weekdayShort } from './dates.js'
 import { scheduleFor } from './planner.js'
+import { occurrencesOn as hybOccurrences } from './hyb.js'
 
 /** Default length of a focused day, used when working hours are unusable. */
 export const DEFAULT_CAPACITY_MINUTES = 480
@@ -91,6 +96,8 @@ export function buildForecast(state, { todayKey = dateKey(), days = 14 } = {}) {
   let totalConflicts = 0
   let totalTasks = 0
   let totalUnscheduled = 0
+  let totalHybMinutes = 0
+  let totalHybCount = 0
 
   const rows = []
   for (let i = 0; i < safeDays; i += 1) {
@@ -104,6 +111,16 @@ export function buildForecast(state, { todayKey = dateKey(), days = 14 } = {}) {
     const unscheduledMinutes = unscheduled.reduce((sum, task) => sum + (Number(task.estimateMinutes) || 30), 0)
     const loadPct = capacity ? Math.round((plannedMinutes / capacity) * 100) : 0
 
+    // HYB plans still open on this day. Anything already placed on the
+    // schedule arrived above as a real block, so it is excluded here.
+    const placedHyb = new Set()
+    for (const block of blocks) {
+      const planId = block.hybPlanId || (typeof block.id === 'string' && block.id.startsWith('hyb:') ? block.id.slice(4) : null)
+      if (planId) placedHyb.add(planId)
+    }
+    const hybOpen = hybOccurrences(state.hyb?.plans || [], key).filter((occurrence) => !occurrence.done && !occurrence.skipped && !placedHyb.has(occurrence.plan.id))
+    const hybMinutes = hybOpen.reduce((sum, occurrence) => sum + (Number(occurrence.minutes) || 0), 0)
+
     for (const block of blocks) {
       const id = block.cat || 'uncategorised'
       balance.set(id, (balance.get(id) || 0) + Math.max(5, Number(block.duration) || 30))
@@ -114,6 +131,8 @@ export function buildForecast(state, { todayKey = dateKey(), days = 14 } = {}) {
     totalConflicts += conflicts.length
     totalTasks += tasks.length
     totalUnscheduled += unscheduled.length
+    totalHybMinutes += hybMinutes
+    totalHybCount += hybOpen.length
 
     rows.push({
       key,
@@ -128,6 +147,8 @@ export function buildForecast(state, { todayKey = dateKey(), days = 14 } = {}) {
       openTaskCount: openTasks.length,
       unscheduledCount: unscheduled.length,
       unscheduledMinutes,
+      hybCount: hybOpen.length,
+      hybMinutes,
       conflictCount: conflicts.length,
       loadPct,
       status: loadStatus(loadPct, conflicts.length),
@@ -163,6 +184,8 @@ export function buildForecast(state, { todayKey = dateKey(), days = 14 } = {}) {
     totalConflicts,
     totalTasks,
     totalUnscheduled,
+    totalHybMinutes,
+    totalHybCount,
     averagePlanned: Math.round(totalPlanned / safeDays),
     averageLoadPct: Math.round((totalPlanned / (capacity * safeDays)) * 100),
     balance: balanceRows,
@@ -172,7 +195,7 @@ export function buildForecast(state, { todayKey = dateKey(), days = 14 } = {}) {
     carried,
     carriedCount: carried.length,
     overdueMinutes: carried.reduce((sum, task) => sum + (Number(task.estimateMinutes) || 30), 0),
-    empty: totalBlocks === 0 && totalTasks === 0,
+    empty: totalBlocks === 0 && totalTasks === 0 && totalHybCount === 0,
   }
 }
 
@@ -201,6 +224,13 @@ export function forecastAdvice(forecast) {
       tone: 'neutral',
       title: `${forecast.carriedCount} ${forecast.carriedCount === 1 ? 'mission is' : 'missions are'} carried over.`,
       body: `${formatDuration(forecast.overdueMinutes)} of unresolved work is following you into this week. Decide: do it, shrink it, or let it go.`,
+    }
+  }
+  if (forecast.totalHybCount > 0) {
+    return {
+      tone: 'neutral',
+      title: `${formatDuration(forecast.totalHybMinutes)} of HYB plans have no place on the schedule yet.`,
+      body: `${forecast.totalHybCount} ${forecast.totalHybCount === 1 ? 'plan is' : 'plans are'} waiting across the next two weeks. They are real commitments — open the HYB deck and give the ones that matter a time.`,
     }
   }
   return {

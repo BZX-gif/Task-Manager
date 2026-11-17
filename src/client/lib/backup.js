@@ -30,6 +30,7 @@ export function buildExport(state, { now = Date.now(), app = "Kulshresth's Comma
       tasks: data.tasks?.length ?? 0,
       timetable: allTimetableBlocks(data).length,
       focusSessions: data.focus?.sessions?.length ?? 0,
+      hybPlans: data.hyb?.plans?.length ?? 0,
       days: Object.keys(data.completionLog || {}).length,
     },
     data,
@@ -120,6 +121,7 @@ export function validateImport(payload, { now = Date.now(), id = defaultUid } = 
       openTasks: normalized.tasks.filter((t) => !t.done).length,
       recurring: normalized.tasks.filter((t) => t.recurrence).length,
       focusSessions: normalized.focus.sessions.length,
+      hybPlans: normalized.hyb?.plans?.length ?? 0,
       trackedDays: dates.length,
       historyFrom: dates[0] || taskDates[0] || null,
       historyTo: dates[dates.length - 1] || taskDates[taskDates.length - 1] || null,
@@ -137,6 +139,7 @@ export function describeImport(summary) {
     `${summary.focusSessions} focus session${summary.focusSessions === 1 ? '' : 's'}`,
     `${summary.trackedDays} tracked day${summary.trackedDays === 1 ? '' : 's'}`,
   ]
+  if (summary.hybPlans) parts.push(`${summary.hybPlans} HYB plan${summary.hybPlans === 1 ? '' : 's'}`)
   let text = parts.join(' · ')
   if (summary.historyFrom) text += `\nHistory: ${summary.historyFrom} → ${summary.historyTo}`
   return text

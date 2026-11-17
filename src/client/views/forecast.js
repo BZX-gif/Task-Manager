@@ -50,8 +50,8 @@ export function renderForecast() {
           <div class="chart-legend"><span><i></i>Committed</span><span><i class="legend-line"></i>Capacity</span></div>
         </div>
         <div class="chart-wrap chart-tall"><canvas id="forecastChart" role="img" aria-label="Committed minutes per day for the next ${horizon} days against a ${forecast.capacityLabel} capacity"></canvas></div>
-        <details class="chart-data"><summary>View the forecast data</summary><table><thead><tr><th>Day</th><th>Committed</th><th>Blocks</th><th>Status</th></tr></thead><tbody>${forecast.days
-          .map((row) => `<tr><td>${row.key} (${row.weekday})</td><td>${formatDuration(row.plannedMinutes)}</td><td>${row.blockCount}</td><td>${LOAD_LABELS[row.status]}</td></tr>`)
+        <details class="chart-data"><summary>View the forecast data</summary><table><thead><tr><th>Day</th><th>Committed</th><th>Blocks</th><th>HYB unplaced</th><th>Status</th></tr></thead><tbody>${forecast.days
+          .map((row) => `<tr><td>${row.key} (${row.weekday})</td><td>${formatDuration(row.plannedMinutes)}</td><td>${row.blockCount}</td><td>${row.hybCount ? `${formatDuration(row.hybMinutes)} · ${row.hybCount}` : '—'}</td><td>${LOAD_LABELS[row.status]}</td></tr>`)
           .join('')}</tbody></table></details>
       </article>
       <article class="card forecast-balance-card">
@@ -77,14 +77,15 @@ export function renderForecast() {
       </article>
     </div>
     <article class="card forecast-days-card">
-      <div class="card-header"><div><h3>Day by day</h3><p class="meta">Select a day to open its planner</p></div>${icon('calendar')}</div>
+      <div class="card-header"><div><h3>Day by day</h3><p class="meta">${forecast.totalHybCount ? `${formatDuration(forecast.totalHybMinutes)} of HYB plans still unplaced · select a day to open its planner` : 'Select a day to open its planner'}</p></div>${icon('calendar')}</div>
       <div class="forecast-days">
         ${forecast.days
           .map(
-            (row) => `<button class="forecast-day forecast-day--${row.status} ${row.isToday ? 'is-today' : ''}" data-forecast-day="${row.key}" aria-label="${row.key}: ${formatDuration(row.plannedMinutes)} committed, ${LOAD_LABELS[row.status]}">
+            (row) => `<button class="forecast-day forecast-day--${row.status} ${row.isToday ? 'is-today' : ''}" data-forecast-day="${row.key}" aria-label="${row.key}: ${formatDuration(row.plannedMinutes)} committed${row.hybMinutes ? `, ${formatDuration(row.hybMinutes)} of HYB plans unplaced` : ''}, ${LOAD_LABELS[row.status]}">
               <span class="forecast-day-head"><span class="forecast-day-name">${row.isToday ? 'Today' : row.weekday}</span><span class="forecast-day-num">${row.dayOfMonth}</span></span>
               <span class="forecast-day-bar"><i style="width:${Math.min(100, row.loadPct)}%"></i></span>
               <span class="forecast-day-meta">${icon(STATUS_ICON[row.status])}${row.plannedMinutes ? formatDuration(row.plannedMinutes) : 'Free'}</span>
+              ${row.hybCount ? `<span class="forecast-day-hyb">${icon('bolt')}${formatDuration(row.hybMinutes)} HYB</span>` : ''}
               ${row.conflictCount ? `<span class="forecast-day-flag">${row.conflictCount} clash${row.conflictCount === 1 ? '' : 'es'}</span>` : ''}
             </button>`,
           )

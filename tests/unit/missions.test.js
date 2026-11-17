@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { emptyState, migrateState, normalizeTask, normalizeTimetableItem } from '../../src/client/lib/state.js'
 import { activeMission, normalizeMissions } from '../../src/client/lib/missions.js'
+import { STATE_VERSION } from '../../src/client/lib/defaults.js'
 import { buildAiContext } from '../../src/client/lib/ai-context.js'
 
 test('fresh state starts on SSC and retains complete roadmap', () => {
@@ -13,7 +14,8 @@ test('fresh state starts on SSC and retains complete roadmap', () => {
 test('v3 migration preserves records and adds default mission context', () => {
   const old = { version: 3, tasks: [{ id: 'old-task', title: 'Historical' }], timetable: [{ id: 'old-block', title: 'Old block' }], categories: [] }
   const { state, applied } = migrateState(old, { now: 123, uid: () => 'new' })
-  assert.equal(state.version, 7)
+  assert.equal(state.version, STATE_VERSION)
+  assert.ok(applied.includes('migrateStateV7ToV8'), 'the additive HYB migration runs')
   assert.ok(applied.includes('migrateStateV3ToV4'))
   assert.ok(applied.includes('migrateStateV4ToV5'))
   assert.equal(state.tasks[0].id, 'old-task')

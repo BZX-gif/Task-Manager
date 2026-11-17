@@ -18,6 +18,7 @@ import { JSDOM, VirtualConsole } from 'jsdom'
 
 const root = process.cwd()
 const worker = (await import(path.join(root, 'dist', 'index.js'))).default
+const { STATE_VERSION } = await import(path.join(root, 'src', 'client', 'lib', 'defaults.js'))
 
 let shell
 let bundle
@@ -81,7 +82,8 @@ test('a legacy v1 payload boots into v2 with every record intact', async () => {
     await settle(120)
     const state = window.CC.getState()
 
-    assert.equal(state.version, 7)
+    assert.equal(state.version, STATE_VERSION, 'a legacy payload migrates all the way forward')
+    assert.equal(state.hyb.plans.length, 0, 'the HYB migration is additive — no plans are invented')
     assert.equal(state.tasks.length >= 2, true, 'tasks preserved')
     assert.ok(state.tasks.some((t) => t.title === 'Revise Polity' && t.done === true))
     assert.equal(state.timetables.upsc_cse_2028.length, 1, 'the legacy timetable is preserved as the UPSC schedule')

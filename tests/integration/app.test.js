@@ -18,6 +18,7 @@ import { JSDOM, VirtualConsole } from 'jsdom'
 
 const root = process.cwd()
 const worker = (await import(path.join(root, 'dist', 'index.js'))).default
+const { STATE_VERSION } = await import(path.join(root, 'src', 'client', 'lib', 'defaults.js'))
 
 let dom
 let window
@@ -131,7 +132,8 @@ test('the app boots and renders the dashboard', async () => {
   const fresh = state()
   assert.equal(fresh.timetables.ssc_cgl_2027.length, 0, 'a fresh workspace has no invented commitments')
   assert.equal(fresh.tasks.length, 0)
-  assert.equal(fresh.version, 7)
+  assert.equal(fresh.version, STATE_VERSION, 'a fresh workspace starts on the current schema')
+  assert.equal(fresh.hyb.plans.length, 0, 'the HYB layer starts empty')
 })
 
 test('the overview keeps its metrics and actions usable across refreshes', async () => {

@@ -51,7 +51,17 @@ interface Window {
     askAI(text: string): void
     handleChatKey(event: KeyboardEvent): void
     toggleMobileNav(): void
+    closeMobileNav(): void
     checkReminders(): unknown[]
+    /** HYB — the hybrid plan layer (deck, editor, summary). */
+    openHybDeck(options?: { tab?: string | null; date?: string | null; focusInput?: boolean }): void
+    closeHybDeck(options?: { restoreFocus?: boolean }): void
+    toggleHybDeck(): void
+    openHybPlanModal(id?: string | null, options?: { date?: string | null; kind?: string | null }): void
+    refreshHybTriggers(): void
+    hybInfo(): any
+    /** Month grid over every commitment; `date` optional (defaults to today). */
+    openCalendar(date?: string): void
     /** Full-screen "Sir" briefing. Safe to call at any time; idempotent. */
     openBriefing(options?: { auto?: boolean }): any
     closeBriefing(options?: { restoreFocus?: boolean }): void
