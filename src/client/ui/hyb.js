@@ -863,4 +863,26 @@ export function initHyb() {
     if (deckOpen && !document.querySelector('[data-modal-backdrop]')) paintDeck()
   })
   refreshHybTriggers()
+  nudgeOnce()
+}
+
+/**
+ * The one-time nudge the setting promises: on a brand-new workspace with
+ * nothing planned and no missions yet, open the deck once so the HYB button is
+ * not a mystery. It records itself in `state.meta`, so it never repeats — and
+ * an existing workspace is never interrupted.
+ */
+function nudgeOnce() {
+  const settings = state.settings?.hyb
+  if (!settings?.deckOnLoad || state.meta?.hybDeckNudged) return
+  if ((state.hyb?.plans || []).length || (state.tasks || []).length) return
+  // never talk over the morning briefing or an open dialog
+  if (document.querySelector('[data-modal-backdrop]') || document.getElementById('briefing-overlay')) return
+  commit((next) => {
+    next.meta = { ...(next.meta || {}), hybDeckNudged: Date.now() }
+  }, { silent: true, immediate: true })
+  setTimeout(() => {
+    if (deckOpen || document.querySelector('[data-modal-backdrop]') || document.getElementById('briefing-overlay')) return
+    openHybDeck({ focusInput: true })
+  }, 500)
 }

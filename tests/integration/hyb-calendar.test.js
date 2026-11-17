@@ -547,6 +547,44 @@ test('HYB plans survive a reload, and a v7 workspace migrates additively', async
   }
 })
 
+test('the one-time deck nudge respects its setting and never repeats', async () => {
+  const seed = { version: STATE_VERSION, settings: { hyb: { deckOnLoad: true } } }
+  const first = await boot({ seed })
+  try {
+    await settle(700)
+    const briefing = first.$('#briefing-overlay')
+    if (briefing) first.window.CC.closeBriefing?.()
+    await settle(200)
+    assert.equal(first.state().tasks.length, 0, 'the fixture really is a brand-new workspace')
+    assert.ok(first.$('.hyb-deck'), 'an empty workspace with the setting on opens the deck once')
+    assert.ok(first.state().meta.hybDeckNudged, 'and records that it did')
+
+    const persisted = JSON.parse(first.window.localStorage.getItem('kcc_state_v1'))
+    assert.ok(persisted.meta.hybDeckNudged, 'the nudge flag is written to storage')
+
+    const second = await boot({ seed: persisted })
+    try {
+      await settle(700)
+      assert.equal(second.$('.hyb-deck'), null, 'the nudge is a one-time thing')
+    } finally {
+      second.window.close()
+    }
+  } finally {
+    first.window.close()
+  }
+
+  // with the setting off (the default) a fresh workspace is left in peace
+  const quiet = await boot()
+  try {
+    await settle(700)
+    assert.equal(quiet.state().settings.hyb.deckOnLoad, false)
+    assert.equal(quiet.$('.hyb-deck'), null, 'the deck stays closed unless you ask for it')
+    assert.equal(quiet.state().meta.hybDeckNudged, undefined)
+  } finally {
+    quiet.window.close()
+  }
+})
+
 test('a repeating plan is finished day by day and never all at once', async () => {
   const seed = {
     version: 8,

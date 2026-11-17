@@ -95,7 +95,7 @@ working surface rather than a drawer.
 - **Side rail** — today's load, the week strip, the lane balance (minutes per
   lane), what needs attention (overdue and undated) and the streak.
 
-Coverage: `tests/unit/hyb.test.js` (23 cases) and four jsdom flows in
+Coverage: `tests/unit/hyb.test.js` (23 cases) and the jsdom flows in
 `tests/integration/hyb-calendar.test.js`.
 
 ---
@@ -150,8 +150,9 @@ never counted twice.
 Keyboard on the grid: arrows move the selection, `PageUp`/`PageDown` change
 month, `Enter` opens the day in Schedule, `Space` or `+` adds a HYB plan to it.
 
-Coverage: `tests/unit/calendar.test.js` (17 cases) and three jsdom flows in
-`tests/integration/hyb-calendar.test.js`.
+Coverage: `tests/unit/calendar.test.js` (17 cases); the same integration file
+drives the grid, the layers, all three modes, the day rail and the editors that
+open from it.
 
 ---
 
@@ -181,6 +182,10 @@ tells you what is inside it. Safety copies (`kcc_backup_pre_v2`, `_pre_v6`,
 
 Settings → *Your day & HYB* exposes the defaults and the two toggles, with a
 button that opens the deck so you can see what the setting does.
+`deckOnLoad` is a genuine one-time nudge: on a brand-new workspace with no
+plans and no missions, the deck opens once (never over the morning briefing or
+an open dialog) and records itself in `state.meta.hybDeckNudged`, so it cannot
+repeat and an existing workspace is never interrupted.
 
 ---
 
@@ -237,12 +242,13 @@ npm run verify
   ✔ lint passed (72 source files, 24 CC API calls verified)
   ✔ tsc (worker + client) — no errors
   ✔ client built (v4.4)
-  ✔ tests 331 pass / 0 fail   (24 unit + 6 integration files)
+  ✔ tests 332 pass / 0 fail   (24 unit + 6 integration files)
 
 node scripts/smoke-render.mjs
   SMOKE OK — no failures
   (populated + empty workspace, all 16 views including Calendar and HYB Studio,
    HYB parse = 7 fields with one clean tag chip, calendar grid = 42 cells,
+   the deck nudge, the studio scopes,
    week/agenda/month modes, layer toggle, studio cards + lane balance,
    console errors: none)
 ```
