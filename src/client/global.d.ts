@@ -6,6 +6,15 @@
  * verify the rest of the code without per-file casts.
  */
 
+/** What the missions-only clear reports back. */
+interface MissionClearResult {
+  ok: boolean
+  /** 'empty' (nothing to clear) · 'backup' (safety copy failed) · 'cancelled' (dialog declined) */
+  reason?: string
+  plan?: any
+  describe?: string
+}
+
 interface Window {
   /** Small API surface used by inline handlers inside the rendered views. */
   CC: {
@@ -31,6 +40,9 @@ interface Window {
     openScoreInfo(): void
     openCommandPalette(): void
     toggleMission(id: string): boolean
+    /** Empty the missions list only; everything else is preserved. */
+    clearAllMissions(options?: { backup?: boolean, silent?: boolean }): MissionClearResult
+    confirmClearMissions(): Promise<MissionClearResult>
     movePriority(id: string, direction: number): boolean
     toggleScheduleItem(id: string, date?: string): void
     removeFromTop3(id: string): boolean

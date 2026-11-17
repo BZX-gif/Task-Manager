@@ -34,7 +34,7 @@ No account, database, paid client dependency or API key is required for the core
 - **Routines** — ordered activities, weekday schedules, check-ins, consistency history and non-punitive momentum. Missed days are not debts.
 - **Analytics / Weekly Review** — completion, focus time, planned vs completed, categories, productive days, adherence and consistency from recorded data only; private reflections and next-week planning.
 - **Assistant** — optional Cloudflare Worker AI plus useful offline planning tools. AI can suggest; it cannot modify missions or accept a schedule.
-- **Settings** — profile, theme/accent, week start, time format, working hours, focus/break preferences, reminders, categories, protected time, export/import/reset and safety copies.
+- **Settings** — profile, theme/accent, week start, time format, working hours, focus/break preferences, reminders, categories, protected time, export/import, **clear all missions** (missions only), reset and safety copies.
 - **PWA** — installable shell, offline navigation/assets, local data, responsible notification permissions and in-app reminder fallback.
 
 ## The forward view
@@ -93,7 +93,8 @@ Without a key or network, the assistant reports the failure honestly and the bui
 ## Data safety
 
 - Additive migrations preserve existing IDs, tasks, timetables, completion logs, focus history, journal entries and preferences; exports report HYB plan counts so a backup says what is inside it.
-- Pre-upgrade, pre-import, pre-reset and unreadable-data rescue copies are kept when storage permits.
+- **Clear all missions** empties `state.tasks` and nothing else: goals, projects, routines and their history, the journal, HYB plans, focus sessions, study plans and timetables, plain time blocks, protected time, score history, reviews, assistant history and every preference survive byte for byte. It writes its own safety copy first, refuses to run if that copy cannot be written, and the success toast carries a 10-second Undo. See `docs/clear-missions.md` for the exact removal/kept lists.
+- Pre-upgrade, pre-import, pre-mission-clear, pre-reset and unreadable-data rescue copies are kept when storage permits.
 - Import validates the whole file before replacing anything; a safety copy is written first.
 - Storage denial/quota failure is reported visibly; the current tab keeps working and export remains available.
 - Clearing browser data still erases local data — export backups regularly.
@@ -104,4 +105,4 @@ Without a key or network, the assistant reports the failure honestly and the bui
 
 ## Verification
 
-`npm run verify` runs the project lint, Worker/client typechecks, clean production build and the full Node test suite. The transformation also received headless Chromium interaction/viewport/offline QA; see `docs/command-center-final-report.md` for the recorded results and remaining operational limits.
+`npm run verify` runs the project lint, Worker/client typechecks, clean production build and the full Node test suite (**365 tests**, including 16 unit and 9 jsdom integration tests for the surgical mission clear). The transformation also received headless Chromium interaction/viewport/offline QA; see `docs/command-center-final-report.md` for the recorded results and remaining operational limits.
