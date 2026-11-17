@@ -1,5 +1,5 @@
 /** The local-first application shell. All application data stays in the browser. */
-export const APP_VERSION = '4.3'
+export const APP_VERSION = '5.0'
 
 export const NAV_GROUPS = [
   { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['schedule', 'Schedule', 'calendar'], ['tasks', 'Missions', 'missions'], ['forecast', 'Forecast', 'forecast'] ] },
@@ -10,6 +10,7 @@ export const NAV_GROUPS = [
 // These paths are original SVGs embedded by the client, not a remote icon font.
 const ICONS: Record<string, string> = {
   overview: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  moon: '<path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>',
   calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 11h18"/>',
   missions: '<rect x="4" y="4" width="16" height="17" rx="3"/><path d="M9 4V2h6v2M8 12l2 2 5-5"/>',
@@ -61,6 +62,7 @@ export function renderShell(): string {
 <div class="workspace-label"><span class="workspace-avatar">P</span><div><strong>Personal workspace</strong><span>Designed around you</span></div></div>
 <nav id="nav-list" class="sidebar-nav" aria-label="Primary">${nav()}</nav>
 <div class="sidebar-bottom">
+<button class="nav-item ritual-nav" data-close-day>${svg('moon')}<span>Close the day</span><span class="nav-key">E</span></button>
 <button class="nav-item briefing-nav" data-briefing-open>${svg('bell')}<span>Today’s briefing</span><span class="nav-key">B</span></button>
 <button class="nav-item assistant-nav" data-view="assistant">${svg('review')}<span>Planning assistant</span><span class="ai-tag">AI</span></button>
 <button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button>
@@ -80,6 +82,7 @@ export function renderShell(): string {
 <span class="command-strip-label">Next move</span>
 <button class="command-strip-task" id="command-strip-task" type="button" data-briefing-open>Your next mission will show here</button>
 <span class="command-strip-meta" id="command-strip-meta"></span>
+<button class="command-strip-ritual" id="ritual-chip" type="button" data-close-day aria-label="Close the day"><span class="ritual-dot" aria-hidden="true"></span><span id="ritual-chip-label">Close the day</span><kbd>E</kbd></button>
 <button class="btn btn-secondary btn-small command-strip-brief" id="briefing-open-btn" type="button" data-briefing-open>${svg('bell')}<span>Briefing</span><kbd>B</kbd></button>
 </div>
 <div class="mobile-context"><span id="greeting-text">Your personal command center</span><span id="live-clock">--:--</span></div>
@@ -90,7 +93,7 @@ ${['day','schedule','tasks','goals','projects','routines','focus','progress','re
 <footer class="workspace-footer"><span>A little more clarity. A little more progress.</span><span>Private by design <span class="footer-dot">·</span> <span id="app-version">v${APP_VERSION}</span></span></footer>
 </div>
 </div>
-<div id="mobile-nav" class="mobile-nav hidden" role="dialog" aria-modal="true" aria-label="Navigation"><div class="mobile-nav-head"><strong>Your workspace</strong><button id="mobile-nav-close" class="icon-btn" aria-label="Close navigation">${svg('close')}</button></div><nav>${nav(true)}<button class="nav-item" data-briefing-open>${svg('bell')}<span>Today’s briefing</span><span class="nav-key">B</span></button><button class="nav-item" data-view="assistant">${svg('review')}<span>Planning assistant</span></button><button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button></nav></div>
+<div id="mobile-nav" class="mobile-nav hidden" role="dialog" aria-modal="true" aria-label="Navigation"><div class="mobile-nav-head"><strong>Your workspace</strong><button id="mobile-nav-close" class="icon-btn" aria-label="Close navigation">${svg('close')}</button></div><nav>${nav(true)}<button class="nav-item" data-close-day>${svg('moon')}<span>Close the day</span><span class="nav-key">E</span></button><button class="nav-item" data-briefing-open>${svg('bell')}<span>Today’s briefing</span><span class="nav-key">B</span></button><button class="nav-item" data-view="assistant">${svg('review')}<span>Planning assistant</span></button><button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button></nav></div>
 <nav id="mobile-dock" class="mobile-dock" aria-label="Quick navigation"><button class="dock-item is-active" data-view="dashboard">${svg('overview')}<span>Overview</span></button><button class="dock-item" data-view="day">${svg('sun')}<span>My Day</span></button><button class="dock-item" data-view="tasks">${svg('missions')}<span>Missions</span></button><button class="dock-item" data-view="focus">${svg('focus')}<span>Focus</span></button><button class="dock-item" data-briefing-open aria-label="Open today’s briefing">${svg('bell')}<span>Brief</span></button><button id="mobile-more" class="dock-item" aria-label="More navigation">${svg('overview')}<span>More</span></button></nav>
 <div id="modal-root"></div><div id="briefing-root"></div><div id="focus-root"></div><div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div><div id="quote-text" class="sr-only"></div>
 <script defer src="/static/js/app.js"></script>

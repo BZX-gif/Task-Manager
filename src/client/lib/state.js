@@ -17,6 +17,7 @@ import { isValidKey, minutesOfDay } from './dates.js'
 import { normalizeRecurrence } from './recurrence.js'
 import { normalizeJournal } from './journal.js'
 import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
+import { normalizeTrash } from './trash.js'
 
 /** Legacy key kept for backward compatibility with existing installs. */
 export const STORAGE_KEY = 'kcc_state_v1'
@@ -147,6 +148,13 @@ export function normalizeSettings(raw) {
     ...settings,
     focus: { ...DEFAULT_SETTINGS.focus, ...(isObj(settings.focus) ? settings.focus : {}) },
     reminders: { ...DEFAULT_SETTINGS.reminders, ...(isObj(settings.reminders) ? settings.reminders : {}) },
+    shutdown: {
+      ...DEFAULT_SETTINGS.shutdown,
+      ...(isObj(settings.shutdown) ? settings.shutdown : {}),
+      enabled: (isObj(settings.shutdown) ? settings.shutdown.enabled : DEFAULT_SETTINGS.shutdown.enabled) !== false,
+      at: normalizeTime(isObj(settings.shutdown) ? settings.shutdown.at : DEFAULT_SETTINGS.shutdown.at, DEFAULT_SETTINGS.shutdown.at),
+      promptForNote: (isObj(settings.shutdown) ? settings.shutdown.promptForNote : DEFAULT_SETTINGS.shutdown.promptForNote) !== false,
+    },
     onboarding: { ...DEFAULT_SETTINGS.onboarding, ...(isObj(settings.onboarding) ? settings.onboarding : {}) },
     protectedTime: asArray(settings.protectedTime)
       .filter((b) => isObj(b))
@@ -197,6 +205,10 @@ export function emptyState(ctx = makeContext()) {
     reviews: {},
     /** one honest reflection per day; see lib/journal.js */
     journal: {},
+    /** missions removed in the last 30 days; see lib/trash.js */
+    trash: [],
+    /** one closing record per day; see lib/shutdown.js */
+    shutdowns: {},
     top3: {},
     completionLog: {},
     dayPlans: {},
@@ -265,6 +277,12 @@ export function migrateState(raw, ctx = makeContext()) {
     working = migrateStateV6ToV7(working, ctx)
     applied.push('migrateStateV6ToV7')
     version = 7
+  }
+
+  if (version < 8) {
+    working = migrateStateV7ToV8(working, ctx)
+    applied.push('migrateStateV7ToV8')
+    version = 8
   }
 
   const state = normalizeState(working, ctx, warnings)
@@ -613,6 +631,19 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
   state.reviews = {}
   for (const [day, value] of Object.entries(isObj(raw.reviews) ? raw.reviews : {})) if (isValidKey(day) && isObj(value)) state.reviews[day] = { intention: text(value.intention, 1000), reflection: text(value.reflection, 2000), updatedAt: Number.isFinite(value.updatedAt) ? value.updatedAt : ctx.now }
   state.journal = normalizeJournal(raw.journal)
+  state.trash = normalizeTrash(raw.trash, ctx)
+  state.shutdowns = {}
+  for (const [day, record] of Object.entries(isObj(raw.shutdowns) ? raw.shutdowns : {})) {
+    if (!isValidKey(day) || !isObj(record) || record.closed !== true) continue
+    state.shutdowns[day] = {
+      closed: true,
+      at: Number.isFinite(record.at) ? record.at : ctx.now,
+      tomorrow: isValidKey(record.tomorrow) ? record.tomorrow : day,
+      carried: asArray(record.carried).map(String).filter((id) => state.tasks.some((task) => task.id === id)),
+      priorities: asArray(record.priorities).map(String).slice(0, 3),
+      hasNote: record.hasNote === true,
+    }
+  }
   state.meta.legacyStudyPlans = raw.meta?.legacyStudyPlans === true || (Number(raw.version) || 1) < 6
   state.focus.active = state.focus.active ? { ...state.focus.active, mode: ['break', 'stopwatch'].includes(state.focus.active.mode) ? state.focus.active.mode : 'focus', goalId: state.focus.active.goalId ? String(state.focus.active.goalId) : null } : null
 
@@ -625,6 +656,24 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
  */
 export function migrateStateV6ToV7(raw, ctx = makeContext()) {
   return { ...raw, version: 7, journal: isObj(raw.journal) ? raw.journal : {} }
+}
+
+/**
+ * v7 → v8 is additive: recoverable deletes and the evening closing ritual.
+ * No existing record changes shape; a workspace that never uses either feature
+ * simply carries two empty collections.
+ */
+export function migrateStateV7ToV8(raw, ctx = makeContext()) {
+  return {
+    ...raw,
+    version: 8,
+    trash: Array.isArray(raw.trash) ? raw.trash : [],
+    shutdowns: isObj(raw.shutdowns) ? raw.shutdowns : {},
+    settings: {
+      ...(isObj(raw.settings) ? raw.settings : {}),
+      shutdown: { ...(isObj(raw.settings?.shutdown) ? raw.settings.shutdown : {}) },
+    },
+  }
 }
 
 /* ------------------------------------------------------------------ *

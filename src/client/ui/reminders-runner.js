@@ -41,6 +41,7 @@ function reminderAction(reminder) {
   const cc = window.CC
   if (!cc) return undefined
   if (reminder.kind === 'planning') return { label: 'Plan', onClick: () => cc.openDayPlanner() }
+  if (reminder.kind === 'shutdown') return { label: 'Close the day', onClick: () => cc.openShutdown() }
   if (reminder.kind === 'review') return { label: 'Review', onClick: () => cc.openWeeklyReview() }
   if (reminder.kind === 'routine') return { label: 'Open', onClick: () => cc.switchView('routines') }
   if (reminder.kind === 'overdue' || reminder.kind === 'top3') return { label: 'Open', onClick: () => cc.switchView('tasks') }

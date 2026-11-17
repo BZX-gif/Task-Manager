@@ -12,6 +12,7 @@ import { dayStats, materializeDayPlan, streakHistory } from '../lib/daystats.js'
 import { computeStreak } from '../lib/streak.js'
 import { materializeOccurrences, nextOccurrenceAfterCompletion } from '../lib/recurrence.js'
 import { pruneTop3 } from '../lib/top3.js'
+import { purgeTrash } from '../lib/trash.js'
 import { pruneSentLog } from '../lib/reminders.js'
 import { addDays, dateKey, nowMinutes as nowMinutesOf } from '../lib/dates.js'
 import { syncDailyProgress, evaluateTitles, computeDisciplineStreak } from '../lib/achievements.js'
@@ -68,6 +69,8 @@ export function initStore({ now = new Date() } = {}) {
   const { created } = materializeOccurrences({ tasks: state.tasks, todayKey: today, horizonDays: 7, uid })
   if (created.length) state.tasks.push(...created)
   pruneTop3(state)
+  // Recoverable deletes expire quietly after 30 days; nothing is purged early.
+  purgeTrash(state, { now: now.getTime() })
   state.reminders.sent = pruneSentLog(state.reminders.sent, today, 14)
   // v5: day plans are nested per mission — trim each mission's history
   for (const id of Object.keys(state.dayPlans || {})) {
