@@ -4,7 +4,7 @@ import { announceStatus, commit, currentDayKey, ensureRecurringOccurrences, init
 import { addToTop3, removeFromTop3, getTop3Ids, setTop3Ids } from './lib/top3.js'
 import { describeScoreFormula } from './lib/score.js'
 import { initRouter, refreshCurrentView, switchView, getCurrentView } from './ui/router.js'
-import { bindChrome, footerVersion, refreshFocusChip, refreshStreakWidget, renderQuoteInline, startChromeTimers, toggleMobileNav, openCommandPalette, openShortcuts, updateClockAndGreeting } from './ui/chrome.js'
+import { bindChrome, footerVersion, refreshFocusChip, refreshRitualChip, refreshStreakWidget, renderQuoteInline, startChromeTimers, toggleMobileNav, openCommandPalette, openShortcuts, updateClockAndGreeting } from './ui/chrome.js'
 import { dayStatus } from './ui/status.js'
 import { completeFocus, hasRunningSession, initFocus, openFocusMode, pauseFocus, resumeFocus, stopFocus } from './ui/focus.js'
 import { handleChatKey, sendMessage, runLocalCommand } from './views/assistant.js'
@@ -23,9 +23,12 @@ import { toggleMission, applyTheme } from './core/actions.js'
 import { handleTitlesUnlocked } from './ui/titles.js'
 import { icon } from './ui/icons.js'
 import { closeBriefing, initBriefing, isBriefingOpen, openBriefing, refreshCommandStrip, briefingInfo, saveBriefingIntention, speakBriefing } from './ui/briefing.js'
+import { openShutdown } from './ui/shutdown.js'
+import { openTrashManager, trashMission } from './ui/trash-actions.js'
+import { exportCalendar, openPrintSheet } from './ui/calendar-actions.js'
 
-const APP_VERSION='4.3'
-function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshCurrentView()}
+const APP_VERSION='5.0'
+function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshRitualChip();refreshCommandStrip();refreshCurrentView()}
 function streakInfo(){const result=streak();return{...result,recent:result.recent.map((day)=>({...day,status:dayStatus(state,day.dateKey).status}))}}
 function disciplineInfo(){return disciplineStreak()}
 function titles(){return titlesInfo()}
@@ -57,6 +60,11 @@ window.CC = {
   openShortcuts,
   openBriefing,
   closeBriefing,
+  openShutdown,
+  openTrashManager,
+  trashMission,
+  exportCalendar,
+  openPrintSheet,
   briefingInfo,
   saveIntention:saveBriefingIntention,
   speakBriefing,
@@ -84,7 +92,8 @@ window.CC = {
   checkReminders:()=>checkReminders(),
   refreshQuoteInline:renderQuoteInline,
 }
-function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
+function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='e'){event.preventDefault();openShutdown()}
+if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
 let lastDay=currentDayKey(),reminderInterval=null,minuteInterval=null,recurrenceInterval=null
 function boot(){
   initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();startChromeTimers();bindChrome();initRouter();initFocus();initPwa();bindKeyboard()
@@ -92,12 +101,12 @@ function boot(){
   document.getElementById('focus-mini-start')?.addEventListener('click',()=>openFocusRoom())
   document.getElementById('active-timer-chip')?.addEventListener('click',()=>openFocusMode())
   on('focus:tick',()=>{refreshFocusChip();paintFocusRoom()})
-  on('store:change',()=>{refreshStreakWidget();refreshFocusChip();refreshCommandStrip();applyTheme()})
+  on('store:change',()=>{refreshStreakWidget();refreshFocusChip();refreshRitualChip();refreshCommandStrip();applyTheme()})
   on('titles:unlocked',(detail)=>handleTitlesUnlocked(detail))
   const persist=()=>{syncScoreHistory(currentDayKey());flush()};window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else{updateClockAndGreeting();refreshCommandStrip();refreshCurrentView();checkReminders()}});window.addEventListener('pagehide',persist)
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&isFocusFullscreen())exitFocusFullscreen()})
   refreshAll();switchView('dashboard');reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing()
-  minuteInterval=setInterval(()=>{if(document.visibilityState!=='visible')return;const day=currentDayKey();if(day!==lastDay){lastDay=day;ensureRecurringOccurrences(day);syncScoreHistory(day);commit(()=>{},{immediate:true});refreshCommandStrip();return}refreshCommandStrip();if(!isModalOpen()&&!isBriefingOpen()&&!['settings','assistant','focus'].includes(getCurrentView())&&!document.querySelector('.calendar-event.is-dragging'))refreshCurrentView()},60000)
+  minuteInterval=setInterval(()=>{if(document.visibilityState!=='visible')return;refreshRitualChip();const day=currentDayKey();if(day!==lastDay){lastDay=day;ensureRecurringOccurrences(day);syncScoreHistory(day);commit(()=>{},{immediate:true});refreshCommandStrip();return}refreshCommandStrip();if(!isModalOpen()&&!isBriefingOpen()&&!['settings','assistant','focus'].includes(getCurrentView())&&!document.querySelector('.calendar-event.is-dragging'))refreshCurrentView()},60000)
   recurrenceInterval=setInterval(()=>{const created=ensureRecurringOccurrences();if(created.length)commit(()=>{},{immediate:true})},3600000)
   const action=new URLSearchParams(location.search).get('action');if(action==='capture')openQuickCapture();if(action==='focus')openFocusRoom()
 }

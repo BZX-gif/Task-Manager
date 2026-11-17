@@ -33,11 +33,15 @@ No account, database, paid client dependency or API key is required for the core
 - **Analytics / Weekly Review** — completion, focus time, planned vs completed, categories, productive days, adherence and consistency from recorded data only; private reflections and next-week planning.
 - **Assistant** — optional Cloudflare Worker AI plus useful offline planning tools. AI can suggest; it cannot modify missions or accept a schedule.
 - **Settings** — profile, theme/accent, week start, time format, working hours, focus/break preferences, reminders, categories, protected time, export/import/reset and safety copies.
+- **Close the day** — the evening half of the loop: an honest summary, chosen carry-over into tomorrow, tomorrow’s three priorities and one honest line in the journal. Nothing is applied until you confirm, and every closing can be reopened.
+- **Workspace search** — one ranked, grouped index across missions, notes, subtasks, goals, milestones, projects, routines and journal entries. Word-start hits, token matching and ordered subsequences; results are highlighted and keyboard-first.
+- **Calendar & paper** — export real commitments as a standards-compliant `.ics` (Google/Apple/Outlook) or print a quiet one-page day sheet. Recovery blocks are left out of both.
+- **Recently deleted** — deleting a mission is reversible for 30 days, including its scheduled blocks and priority slot. Focus history is never rewritten.
 - **PWA** — installable shell, offline navigation/assets, local data, responsible notification permissions and in-app reminder fallback.
 
 ## The forward view
 
-The workspace answers three questions in order: **what needs me now** (the briefing), **what does the next fortnight look like** (Forecast), and **what actually happened** (Journal). Forecast counts only real commitments from your schedule — sleep and protected windows are excluded — and reports clashes and carried-over work without blame. The Journal stores one entry per day (note, win, next step, mood, energy) inside state schema **v7**, with an additive migration and no change to existing records. Quick capture understands dates, times, durations, priorities, categories and repetition, and mirrors every parsed field into the visible controls before anything is saved. See `docs/workspace-4.3.md` for the full behaviour tables and recorded verification.
+The workspace answers four questions in order: **what needs me now** (the briefing), **what does the next fortnight look like** (Forecast), **what happened** (Journal), and **what comes with me tomorrow** (Close the day). Forecast counts only real commitments from your schedule — sleep and protected windows are excluded — and reports clashes and carried-over work without blame. The Journal stores one entry per day (note, win, next step, mood, energy) inside state schema **v8**, with additive migrations and no change to existing records; the closing ritual writes to the same entry. Quick capture understands dates, times, durations, priorities, categories and repetition, and mirrors every parsed field into the visible controls before anything is saved. See `docs/workspace-4.3.md` and `docs/command-5.md` for the full behaviour tables and recorded verification.
 
 ## The briefing
 
@@ -62,11 +66,12 @@ Nothing in the briefing is invented and nothing is written except your intention
 | Client | Vanilla JS ES modules, no UI framework |
 | Build | esbuild client bundle, compiled Tailwind, Vite Worker build |
 | Charts | locally bundled Chart.js |
-| Storage | browser `localStorage`, key `kcc_state_v1`, schema **v6** |
+| Storage | browser `localStorage`, key `kcc_state_v1`, schema **v8** |
 | Typography/icons | system font stack + inline local SVG |
 
 ```text
-src/client/lib/      pure planning, briefing, score, focus, recurrence, relationships, routines, backup…
+src/client/lib/      pure planning, briefing, shutdown, search, calendar export, trash,
+                     score, focus, recurrence, relationships, routines, backup…
 src/client/core/     store, actions, DOM/dialogs, charts, event bus
 src/client/ui/       shell chrome, router, focus overlay, capture, reminders, PWA
 src/client/views/    Overview, My Day, Schedule, Missions, Goals, Projects, Routines,
@@ -97,8 +102,8 @@ Without a key or network, the assistant reports the failure honestly and the bui
 
 ## Keyboard
 
-`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `F` Focus Room · `N` capture · `J` Journal · `O` Forecast · `1–9` main views · `Esc` close/minimise · calendar `Alt + ↑/↓` reschedule · assistant `Enter` send / `Shift + Enter` newline.
+`B` briefing · `E` close the day · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` workspace search · `F` Focus Room · `N` capture · `J` Journal · `O` Forecast · `1–9` main views · `Esc` close/minimise · calendar `Alt + ↑/↓` reschedule · assistant `Enter` send / `Shift + Enter` newline.
 
 ## Verification
 
-`npm run verify` runs the project lint, Worker/client typechecks, clean production build and the full Node test suite. The transformation also received headless Chromium interaction/viewport/offline QA; see `docs/command-center-final-report.md` for the recorded results and remaining operational limits.
+`npm run verify` runs the project lint, Worker/client typechecks, clean production build and the full Node test suite (319 tests, including real-bundle jsdom flows for the closing ritual, search, recoverable deletes and export). The 4.x transformation additionally received headless Chromium interaction/viewport/offline QA (recorded in `docs/command-center-final-report.md`); Command 5.0 was verified through the real-bundle jsdom flows above plus a full fourteen-view smoke pass, lint, typecheck and production build. See `docs/command-5.md` for the design and feature dossier.

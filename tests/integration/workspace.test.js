@@ -229,13 +229,13 @@ test('the shortcut sheet opens on ? and documents the new keys', async () => {
   }
 })
 
-test('version 4.3 is visible in the shell and the client', async () => {
+test('version 5.0 is visible in the shell and the client', async () => {
   const { window, $ } = await boot()
   try {
-    assert.equal(window.CC.version, '4.3')
-    assert.equal($('#app-version').textContent, 'v4.3')
+    assert.equal(window.CC.version, '5.0')
+    assert.equal($('#app-version').textContent, 'v5.0')
     const state = window.CC.getState()
-    assert.equal(state.version, 7, 'schema v7 carries the journal')
+    assert.equal(state.version, 8, 'schema v8 carries the journal, recoverable deletes and the closing ritual')
     assert.equal(Object.keys(state.journal).length, 0)
   } finally {
     window.close()

@@ -59,6 +59,12 @@ interface Window {
     saveIntention(value: string): string
     speakBriefing(briefing?: any, options?: { notify?: boolean }): boolean
     refreshQuoteInline(): void
+    /** The evening closing ritual: honest summary, carry-over, tomorrow’s three. */
+    openShutdown(): void
+    openTrashManager(): void
+    trashMission(id: string, options?: { silent?: boolean }): any
+    exportCalendar(options?: { from?: string; days?: number; label?: string }): { ok: boolean; events: number; filename: string }
+    openPrintSheet(date?: string, options?: { autoPrint?: boolean }): void
   }
   webkitAudioContext?: typeof AudioContext
 }

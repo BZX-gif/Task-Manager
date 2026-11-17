@@ -3,7 +3,7 @@
    Kept separate from the store so tests and migrations can import them alone.
    ------------------------------------------------------------------------- */
 
-export const STATE_VERSION = 7
+export const STATE_VERSION = 8
 
 export const DEFAULT_CATEGORIES = [
   { id: 'personal', name: 'Personal', color: '#a99af1' },
@@ -158,6 +158,14 @@ export const DEFAULT_SETTINGS = {
   },
   /** optional protected / sleep windows the scheduler must avoid */
   protectedTime: [],
+  /** the evening closing ritual */
+  shutdown: {
+    enabled: true,
+    /** local time for the gentle “close the day” nudge */
+    at: '21:30',
+    /** include the one-line journal prompt in the ritual */
+    promptForNote: true,
+  },
   /** one-time flags */
   onboarding: { seen: false },
 }

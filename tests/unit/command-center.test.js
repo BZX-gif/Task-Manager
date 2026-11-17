@@ -226,7 +226,7 @@ test('a quiet day never erases meaningful-day momentum', () => {
 test('storage denial and quota failures are reported instead of crashing', () => {
   const denied = { getItem() { throw new Error('denied') }, setItem() { throw new Error('denied') } }
   const loaded = loadState({ storage: denied, now: 1 })
-  assert.equal(loaded.state.version, 7)
+  assert.equal(loaded.state.version, 8)
   assert.equal(saveState(loaded.state, { storage: denied }), false)
   assert.deepEqual(storageUsage({ storage: denied }), { bytes: 0, kb: 0 })
 })

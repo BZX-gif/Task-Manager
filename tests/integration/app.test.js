@@ -131,7 +131,7 @@ test('the app boots and renders the dashboard', async () => {
   const fresh = state()
   assert.equal(fresh.timetables.ssc_cgl_2027.length, 0, 'a fresh workspace has no invented commitments')
   assert.equal(fresh.tasks.length, 0)
-  assert.equal(fresh.version, 7)
+  assert.equal(fresh.version, 8)
 })
 
 test('the overview keeps its metrics and actions usable across refreshes', async () => {

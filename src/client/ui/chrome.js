@@ -1,4 +1,6 @@
 import { MOTIVATIONAL_QUOTES } from '../lib/defaults.js'
+import { COMMANDS, SEARCH_KINDS, highlightMatch, searchCommands, searchWorkspace } from '../lib/search.js'
+import { isDayClosed } from '../lib/shutdown.js'
 import { greetingLine, salutationOf } from '../lib/briefing.js'
 import { escapeHtml, el, closeModal, openModal, qsa, toast } from '../core/dom.js'
 import { commit, currentDayKey, state } from '../core/store.js'
@@ -30,7 +32,17 @@ export function updateClockAndGreeting(){
   if(dayBar&&dayFill){const toMin=(t)=>{const p=String(t||'').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)};const ws=state.settings.workingHours||{};const start=toMin(ws.start||'08:00');let end=toMin(ws.end||'20:00');if(end<=start)end=start+60;const pct=Math.max(0,Math.min(100,Math.round((now.getHours()*60+now.getMinutes()-start)/(end-start)*100)));dayFill.style.width=pct+'%';dayBar.setAttribute('role','img');dayBar.setAttribute('aria-label',pct+'% of your available hours used')}
 }
 export function rotateQuote(force=false){const node=el('quote-text');if(!node)return;const i=Math.floor(Math.random()*MOTIVATIONAL_QUOTES.length);if(!force&&node.dataset.index===String(i))return;node.dataset.index=String(i);node.textContent=MOTIVATIONAL_QUOTES[i]}
-export function startChromeTimers(){updateClockAndGreeting();if(clockTimer)clearInterval(clockTimer);clockTimer=setInterval(updateClockAndGreeting,1000);rotateQuote(true);if(quoteTimer)clearInterval(quoteTimer);quoteTimer=setInterval(()=>rotateQuote(),120000)}
+export function startChromeTimers(){updateClockAndGreeting();refreshRitualChip();if(clockTimer)clearInterval(clockTimer);clockTimer=setInterval(updateClockAndGreeting,1000);rotateQuote(true);if(quoteTimer)clearInterval(quoteTimer);quoteTimer=setInterval(()=>rotateQuote(),120000)}
+/** The command strip's evening affordance: honest state, one click to close. */
+export function refreshRitualChip(){
+  const chip=el('ritual-chip'),label=el('ritual-chip-label');if(!chip||!label)return
+  const today=currentDayKey(),closed=isDayClosed(state,today)
+  const open=(state.tasks||[]).filter((task)=>task.date===today&&!task.done&&!task.inbox&&task.status!=='cancelled').length
+  const next=closed?'Day closed':open?`Close the day · ${open} open`:'Close the day'
+  if(label.textContent!==next)label.textContent=next
+  chip.classList.toggle('is-closed',closed)
+  chip.setAttribute('aria-label',closed?'The day is closed. Open the ritual to review or reopen it.':`Close the day${open?` — ${open} mission${open===1?'':'s'} still open`:''}`)
+}
 export function refreshStreakWidget(){const node=el('focus-mini-time');if(node)node.textContent=formatDuration(sessionTotals(state.focus.sessions,currentDayKey()).focusedMinutes);const workspace=document.querySelector('.workspace-label strong');if(workspace)workspace.textContent=userName()?`${userName()}’s workspace`:'Personal workspace'}
 export function refreshFocusChip(){const chip=el('active-timer-chip'),text=el('active-timer-chip-text');if(!chip||!text)return;const session=state.focus?.active;chip.classList.toggle('hidden',!session);chip.classList.toggle('is-paused',!!session&&!session.running);if(!session)return;const now=Date.now();text.textContent=session.running?formatClock(session.mode==='stopwatch'?elapsedSeconds(session,now):remainingSeconds(session,now)):'Paused';chip.title=session.mode==='break'?'Recharge session':session.mode==='stopwatch'?'Stopwatch session':'Focus session';chip.setAttribute('aria-label',`${session.running?'Open':'Resume'} ${session.mode} session, ${text.textContent}`)}
 export function renderQuoteInline(){rotateQuote(true)}
@@ -42,6 +54,7 @@ export function bindChrome(){
   el('sidebar-collapse')?.addEventListener('click',()=>{commit((s)=>s.settings.sidebarCollapsed=!s.settings.sidebarCollapsed,{silent:true,immediate:true});applyTheme();el('sidebar-collapse')?.setAttribute('aria-expanded',String(!state.settings.sidebarCollapsed));el('sidebar-collapse')?.setAttribute('aria-label',state.settings.sidebarCollapsed?'Expand sidebar':'Collapse sidebar')})
   el('theme-toggle')?.addEventListener('click',()=>{commit((s)=>s.settings.theme=document.documentElement.dataset.theme==='light'?'dark':'light',{silent:true,immediate:true});applyTheme();el('theme-toggle').innerHTML=icon(document.documentElement.dataset.theme==='light'?'moon':'sun')})
   el('command-search')?.addEventListener('click',openCommandPalette)
+  qsa(document,'[data-close-day]').forEach((button)=>button.addEventListener('click',()=>{setMobileNav(false);window.CC.openShutdown()}))
   qsa(document,'[data-briefing-open]').forEach((button)=>button.addEventListener('click',()=>{setMobileNav(false);window.CC.openBriefing()}))
   el('mobile-menu-btn')?.addEventListener('click',()=>toggleMobileNav());el('mobile-more')?.addEventListener('click',()=>toggleMobileNav());el('mobile-nav-close')?.addEventListener('click',()=>setMobileNav(false))
   el('mobile-nav')?.addEventListener('click',(e)=>{if(e.target===el('mobile-nav'))setMobileNav(false)})
@@ -55,21 +68,115 @@ export function bindChrome(){
 export function openShortcuts(){
   /** @type {Array<[string, Array<[string, string]>]>} */
   const groups=[
-    ['Getting around',[['⌘K / Ctrl K','Quick capture'],['⇧⌘K','Command palette'],['1 – 9','Jump to a view'],['B','Today’s briefing'],['J','Journal'],['O','Forecast'],['F','Focus Room'],['N','Quick capture'],['Esc','Close whatever is open']]],
+    ['Getting around',[['⌘K / Ctrl K','Quick capture'],['⇧⌘K','Command palette'],['1 – 9','Jump to a view'],['B','Today’s briefing'],['E','Close the day'],['J','Journal'],['O','Forecast'],['F','Focus Room'],['N','Quick capture'],['Esc','Close whatever is open']]],
     ['While writing',[['⌘Enter / Ctrl Enter','Save the open form'],['Tab','Move between fields'],['Esc','Cancel without saving']]],
   ]
   openModal({title:'Keyboard shortcuts',body:`<div class="shortcut-sheet">${groups.map(([label,rows])=>`<div class="shortcut-group"><p class="field-label">${escapeHtml(label)}</p>${rows.map(([keys,what])=>`<div class="shortcut-row"><span>${escapeHtml(what)}</span><span>${keys.split(' / ').flatMap((part)=>part.split(' ')).filter(Boolean).map((part)=>/^[⌘⇧⌥]$/.test(part)?`<kbd class="kbd">${part}</kbd>`:`<kbd class="kbd">${escapeHtml(part)}</kbd>`).join('')}</span></div>`).join('')}</div>`).join('')}</div><p class="form-hint" style="margin-top:16px">Shortcuts pause while you are typing, so nothing fires mid-sentence.</p><div class="form-footer"><button class="btn-primary" data-modal-close>Got it</button></div>`})
 }
 
 export function openCommandPalette(){
-  /** @type {any[]} */ const commands=Object.entries(VIEW_LABELS).filter(([key])=>VIEWS.includes(key)).map(([key,title])=>({key,title,subtitle:'Go to '+title,icon:key==='dashboard'?'overview':key==='tasks'?'missions':key==='progress'?'analytics':key==='review'?'review':key==='settings'?'settings':key,view:key}))
-  commands.push({key:'shortcuts',title:'Keyboard shortcuts',subtitle:'Every shortcut, in one place',icon:'info',action:()=>openShortcuts()},{key:'briefing',title:'Open the briefing',subtitle:`At your command, ${salutation()}`,icon:'bell',action:()=>window.CC.openBriefing()},{key:'new',title:'Create a mission',subtitle:'A clear next step',icon:'plus',action:()=>window.CC.openTaskModal()},{key:'capture',title:'Quick capture',subtitle:'Get it out of your head',icon:'inbox',action:()=>window.CC.openQuickCapture()},{key:'plan',title:'Plan my day',subtitle:'Review a realistic proposal',icon:'sun',action:()=>window.CC.openDayPlanner()},{key:'recover',title:'Recover my day',subtitle:'Start again without losing your work',icon:'recover',action:()=>window.CC.openRecoveryModal()})
-  const results=[...commands,...state.tasks.map((t)=>({key:t.id,title:t.title,subtitle:`Mission · ${t.done?'Completed':t.date?formatKeyLabel(t.date):'Inbox'}`,icon:'missions',action:()=>window.CC.openTaskModal(t.id)})),...state.goals.map((g)=>({key:g.id,title:g.title,subtitle:'Goal · '+g.category,icon:'target',action:()=>window.CC.openGoalDetail(g.id)})),...state.projects.map((p)=>({key:p.id,title:p.title,subtitle:'Project',icon:'projects',action:()=>window.CC.openProjectDetail(p.id)})),...state.routines.filter((r)=>!r.archived).map((r)=>({key:r.id,title:r.title,subtitle:'Routine',icon:'routines',action:()=>window.CC.openRoutineModal(r.id)}))]
-  openModal({title:'Find your next move',body:`<div class="command-palette"><div class="toolbar-search">${icon('search')}<input class="input-field" id="palette-query" placeholder="Search missions, goals, or commands…" autocomplete="off" aria-label="Search your workspace" role="combobox" aria-expanded="true" aria-controls="palette-results"></div><div id="palette-results" role="listbox"></div><p class="form-hint" style="margin-top:14px">↑ ↓ to move · Enter to open · Esc to close</p></div>`,onMount:(box)=>{
-    const input=box.querySelector('#palette-query'),list=box.querySelector('#palette-results');let active=0,matches=[]
-    const render=()=>{const query=input.value.trim().toLowerCase();matches=results.filter((r)=>`${r.title} ${r.subtitle}`.toLowerCase().includes(query)).slice(0,query?16:10);active=Math.min(active,Math.max(0,matches.length-1));list.innerHTML=matches.length?matches.map((r,i)=>`<button class="palette-result ${i===active?'is-active':''}" data-result="${i}" role="option" aria-selected="${i===active}">${icon(r.icon)}<span><strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.subtitle)}</small></span>${icon('arrow')}</button>`).join(''):`<div class="empty-state">${icon('search')}<p>No matches, yet.</p><p>Try another word, or press Enter to capture this as a mission.</p></div>`;list.querySelectorAll('[data-result]').forEach((b)=>b.addEventListener('click',()=>select(Number(b.dataset.result))))}
-    const select=(i)=>{const match=matches[i];closeModal();if(match?.view)window.CC.switchView(match.view);else match?.action?.()};render();input.focus()
-    input.addEventListener('input',()=>{active=0;render()});input.addEventListener('keydown',(e)=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();active=Math.max(0,Math.min(matches.length-1,active+(e.key==='ArrowDown'?1:-1)));render()}if(e.key==='Enter'){e.preventDefault();if(matches.length)select(active);else{const text=input.value.trim();closeModal();window.CC.openQuickCapture({prefill:text})}}})
+  const today = currentDayKey()
+  const viewCommands = Object.entries(VIEW_LABELS).filter(([key]) => VIEWS.includes(key)).map(([key, title]) => ({ id: `view-${key}`, title: `Go to ${title}`, subtitle: 'View', icon: key === 'dashboard' ? 'overview' : key === 'tasks' ? 'missions' : key === 'progress' ? 'analytics' : key, action: 'view', view: key }))
+  const actionFor = (action) => {
+    const cc = window.CC
+    if (action === 'capture') cc.openQuickCapture()
+    else if (action === 'new-mission') cc.openTaskModal()
+    else if (action === 'plan') cc.openDayPlanner()
+    else if (action === 'recover') cc.openRecoveryModal()
+    else if (action === 'close-day') cc.openShutdown()
+    else if (action === 'briefing') cc.openBriefing()
+    else if (action === 'export-calendar') cc.exportCalendar({ days: 14 })
+    else if (action === 'print-day') cc.openPrintSheet(today)
+    else if (action === 'shortcuts') openShortcuts()
+  }
+  const openResult = (item) => {
+    closeModal()
+    const cc = window.CC
+    if (item.kind === 'mission') cc.openTaskModal(item.id)
+    else if (item.kind === 'goal') cc.openGoalDetail(item.id)
+    else if (item.kind === 'project') cc.openProjectDetail(item.id)
+    else if (item.kind === 'routine') cc.openRoutineModal(item.id)
+    else if (item.kind === 'journal') cc.switchView('journal')
+  }
+  const recentMissions = [...state.tasks].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5)
+
+  openModal({ title: 'Find your next move', body: `<div class="command-palette"><div class="toolbar-search">${icon('search')}<input class="input-field" id="palette-query" placeholder="Search missions, notes, journal, or a command…" autocomplete="off" aria-label="Search your workspace" role="combobox" aria-expanded="true" aria-controls="palette-results"></div><div id="palette-results" role="listbox" class="palette-results"></div><p class="form-hint palette-hint">↑ ↓ to move · Enter to open · Esc to close · <kbd class="kbd">⌘</kbd><kbd class="kbd">K</kbd> anytime</p></div>`, onMount: (box) => {
+    const input = box.querySelector('#palette-query')
+    const list = box.querySelector('#palette-results')
+    let active = 0
+    let flat = []
+
+    const commandGroup = (query) => {
+      const matches = searchCommands(query, COMMANDS).slice(0, query ? 4 : 6)
+      return matches.length ? [{ kind: 'commands', label: query ? 'Actions' : 'At your command', icon: 'bolt', entries: matches.map((command) => ({ type: 'command', ...command })) }] : []
+    }
+    const viewGroup = (query) => {
+      if (!query) return []
+      const matches = searchCommands(query, viewCommands).slice(0, 3)
+      return matches.length ? [{ kind: 'views', label: 'Go to', icon: 'overview', entries: matches.map((command) => ({ type: 'command', ...command })) }] : []
+    }
+    const recentGroup = (query) => {
+      if (query || !recentMissions.length) return []
+      return [{ kind: 'recent', label: 'Continue where you left off', icon: 'clock', entries: recentMissions.map((task) => ({ type: 'result', kind: 'mission', id: task.id, title: task.title, subtitle: task.done ? 'Completed mission' : task.inbox ? 'Inbox' : task.date || 'No date', icon: 'missions' })) }]
+    }
+
+    const render = () => {
+      const query = input.value.trim()
+      const search = query ? searchWorkspace(state, query, { limit: 24 }) : { groups: [] }
+      const groups = [
+        ...commandGroup(query),
+        ...search.groups.map((group) => ({ kind: group.kind, label: group.label, icon: group.icon, entries: group.items.map((item) => ({ type: 'result', ...item })) })),
+        ...viewGroup(query),
+        ...recentGroup(query),
+      ]
+      flat = groups.flatMap((group) => group.entries)
+      active = Math.max(0, Math.min(active, flat.length - 1))
+      if (!flat.length) {
+        list.innerHTML = `<div class="empty-state">${icon('search')}<p>No matches, yet.</p><p>Press Enter to capture “${escapeHtml(query)}” as a mission. Nothing is lost.</p></div>`
+        return
+      }
+      let index = 0
+      list.innerHTML = groups.map((group) => `<div class="palette-group"><p class="palette-group-label">${icon(group.icon)}${escapeHtml(group.label)}<span>${group.entries.length}</span></p>${group.entries.map((entry) => {
+        const current = index++
+        if (entry.type === 'command') {
+          return `<button class="palette-result ${current === active ? 'is-active' : ''}" data-result="${current}" role="option" aria-selected="${current === active}"><span class="palette-result-icon">${icon(entry.icon)}</span><span class="palette-result-copy"><strong>${highlightMatch(entry.title, query)}</strong><small>${escapeHtml(entry.subtitle)}</small></span><kbd class="palette-enter">↵</kbd></button>`
+        }
+        return `<button class="palette-result ${current === active ? 'is-active' : ''} ${entry.done ? 'is-done' : ''}" data-result="${current}" role="option" aria-selected="${current === active}"><span class="palette-result-icon">${icon(SEARCH_KINDS[entry.kind]?.icon || 'search')}</span><span class="palette-result-copy"><strong>${highlightMatch(entry.title, query)}</strong><small>${escapeHtml(entry.snippet ? `${entry.subtitle} — ${entry.snippet}` : entry.subtitle)}</small></span>${icon('arrow')}</button>`
+      }).join('')}</div>`).join('')
+      try { list.querySelector('.is-active')?.scrollIntoView?.({ block: 'nearest' }) } catch { /* jsdom */ }
+    }
+
+    const select = (index) => {
+      const entry = flat[index]
+      if (!entry) {
+        const text = input.value.trim()
+        if (text) { closeModal(); window.CC.openQuickCapture({ prefill: text }) }
+        return
+      }
+      if (entry.type === 'command') {
+        closeModal()
+        if (entry.action === 'view') window.CC.switchView(entry.view)
+        else actionFor(entry.action)
+      } else openResult(entry)
+    }
+
+    render()
+    input.focus()
+    // Delegated: results are re-rendered on every keystroke.
+    list.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-result]')
+      if (button) select(Number(button.dataset.result))
+    })
+    input.addEventListener('input', () => { active = 0; render() })
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        if (!flat.length) return
+        active = (active + (event.key === 'ArrowDown' ? 1 : -1) + flat.length) % flat.length
+        render()
+      }
+      if (event.key === 'Enter') { event.preventDefault(); select(active) }
+    })
   }})
 }
 export function openNotifications(){

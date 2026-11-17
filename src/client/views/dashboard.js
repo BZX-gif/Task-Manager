@@ -10,6 +10,7 @@ import { drawChart, chartColors } from '../core/charts.js'
 import { icon, ring, empty, metric, timeLabel, bindCommon } from '../ui/common.js'
 import { updateClockAndGreeting } from '../ui/chrome.js'
 import { greetingLine, intentionFor, salutationOf } from '../lib/briefing.js'
+import { shutdownSummary } from '../lib/shutdown.js'
 
 export function renderDashboard() {
   const section = document.getElementById('view-dashboard')
@@ -33,6 +34,7 @@ export function renderDashboard() {
   const adherence = stats.blocksElapsed ? Math.round(stats.adherence*100) : null
   const salute = salutationOf(state)
   const intention = intentionFor(state, today)
+  const ritual = shutdownSummary(state, { today, now })
   const briefingDate = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
   section.innerHTML = `
     <div class="overview-greeting"><div class="greeting-copy"><p class="eyebrow">COMMAND BRIEFING · ${briefingDate.toUpperCase()}</p><h1 id="overview-greeting">${escapeHtml(greetingLine(state, now))}</h1><p>${command ? `At your command, ${escapeHtml(salute)}. One clear move is waiting below.` : `At your command, ${escapeHtml(salute)}. Let’s give the day a shape.`}</p><button class="greeting-intention ${intention ? '' : 'is-empty'}" data-common="briefing">${icon('flag')}<span>${intention ? escapeHtml(intention) : 'Set today’s intention'}</span>${icon('chevron')}</button></div><div class="date-block"><p class="date-day">${briefingDate}</p><p class="date-clock" id="overview-clock"></p><div class="day-progress" id="day-progress"><i id="day-progress-fill"></i></div><button class="btn btn-secondary btn-small greeting-brief" data-common="briefing">${icon('bell')}Full briefing</button></div></div>
@@ -50,6 +52,18 @@ export function renderDashboard() {
       ${top3.total < 3 ? `<div class="priority-bottom">${candidates.length ? `<select class="input-field" data-priority-picker aria-label="Choose a priority">${candidates.map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`).join('')}</select><button class="btn btn-secondary" data-priority-add>${icon('plus')}Add priority</button>` : `<button class="text-button" data-common="new-task">${icon('plus')}Add a priority</button>`}</div>` : ''}
     </article><article class="card up-next-card"><div class="card-header"><h3>Coming up</h3><button class="text-button" data-common="schedule" aria-label="Open schedule">${icon('upRight')}</button></div>${upcoming.length ? `<div class="timeline-mini">${upcoming.map((b) => `<div class="timeline-mini-row ${blockState(state,b,today,now,today)==='active'?'is-active':''}"><span class="timeline-mini-time">${timeLabel(b.time)}</span><span class="timeline-mini-dot"></span><div class="timeline-mini-info"><strong>${escapeHtml(b.title)}</strong><p>${formatDuration(b.duration)}${b.protected?' · Protected':''}</p>${b.priority === 'high' ? '<span class="chip chip-accent">High priority</span>' : ''}</div></div>`).join('')}</div>` : empty('calendar','Room to breathe.','No upcoming commitments. Make space for focused work or a well-earned break.',`<button class="text-button" data-common="plan">Plan your afternoon ${icon('arrow')}</button>`)}</article></div>
     <div class="metric-strip">${metric('missions','Missions completed',`${stats.tasksDone}<small> / ${stats.tasksPlanned}</small>`,`${openTasks.length} remaining today`)}${metric('focus','Focused time',`${stats.focusedMinutes}<small> min</small>`,`${Math.min(100,Math.round(stats.focusedMinutes/focusTarget*100))}% of your daily intention`)}${metric('calendar','Schedule adherence',adherence == null ? '—' : `${adherence}<small>%</small>`,`${stats.blocksDone} of ${stats.blocksElapsed} elapsed blocks`)}${metric('routines','Consistency',`${week.filter((d) => d.hasAnyActivity).length}<small> / 7 days</small>`,'Showing up counts. Keep going.')}</div>
+    <article class="card ritual-card ${ritual.closed ? 'is-closed' : ''}">
+      <div class="ritual-card-mark">${icon('moon')}</div>
+      <div class="ritual-card-copy">
+        <p class="eyebrow">THE EVENING RITUAL</p>
+        <h3>${ritual.closed ? `Day closed${ritual.closedAt ? ` at ${new Date(ritual.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}. Rest is part of the work.` : ritual.unfinished.length ? 'Close the day with intention.' : 'Everything is settled. Close the day.'}</h3>
+        <p>${ritual.closed ? `Tomorrow: ${ritual.tomorrow.missions} mission${ritual.tomorrow.missions === 1 ? '' : 's'}${ritual.tomorrow.priorities ? ` · ${ritual.tomorrow.priorities} priorit${ritual.tomorrow.priorities === 1 ? 'y' : 'ies'}` : ''}${ritual.tomorrow.firstBlock ? ` · first at ${ritual.tomorrow.firstBlock}` : ''}.` : `${ritual.unfinished.length ? `${ritual.unfinished.length} open mission${ritual.unfinished.length === 1 ? '' : 's'} can come with you.` : 'No open work to carry.'} Choose tomorrow’s three and leave one honest line.`}</p>
+      </div>
+      <div class="ritual-card-action">
+        <span class="ritual-card-focus">${ritual.focusMinutes}<small> min focused</small></span>
+        <button class="btn btn-secondary btn-small" data-dashboard-close>${icon(ritual.closed ? 'review' : 'moon')}${ritual.closed ? 'Review the day' : 'Close the day'}</button>
+      </div>
+    </article>
     <div class="overview-bottom"><article class="card week-chart-card"><div class="card-header"><div><h3>Your week, in perspective</h3><p class="meta" style="margin-top:5px">Small steps. Visible progress.</p></div><div class="chart-legend"><span><i></i>Execution score</span></div><button class="text-button" data-common="progress" aria-label="Open analytics">${icon('upRight')}</button></div><div class="chart-wrap"><canvas id="overviewWeekChart" role="img" aria-label="Daily execution scores for the last seven days"></canvas></div>${!week.some((d)=>d.hasAnyActivity)?'<p class="meta" style="text-align:center;margin-top:8px">Your first session is the beginning of this story.</p>':''}</article><article class="card quick-actions-card"><div class="card-header"><h3>A little momentum</h3>${icon('bolt')}</div>${[['briefing','bell','Open today’s briefing'],['new-task','plus','Add a mission'],['focus','focus','Start a focus session'],['plan','sun','Plan my day'],['goal','target','Set a meaningful goal'],['capture','inbox','Quick capture']].map(([a,i,l])=>`<button class="quick-action" data-common="${a}">${icon(i)}${l}${icon('chevron')}</button>`).join('')}</article></div>
     <div class="overview-goal-banner">${icon('target')}<span>${state.goals.length ? `${state.goals.length} meaningful goal${state.goals.length===1?'':'s'}. Every mission is a step toward something bigger.` : 'Connect what you do today to who you want to become.'}</span><button class="text-button" data-common="goals">${state.goals.length?'Explore your goals':'Create your first goal'} ${icon('arrow')}</button></div>`
   bindCommon(section)
@@ -64,6 +78,7 @@ export function renderDashboard() {
   qs(section, '[data-command-delay]')?.addEventListener('click',(e)=>window.CC.openRescheduleModal(e.currentTarget.dataset.commandDelay))
   qs(section, '[data-command-block]')?.addEventListener('click',(e)=>window.CC.toggleScheduleItem(e.currentTarget.dataset.commandBlock,today))
   qs(section, '[data-score-info]')?.addEventListener('click',()=>window.CC.openScoreInfo())
+  qs(section, '[data-dashboard-close]')?.addEventListener('click',()=>window.CC.openShutdown())
   const colors = chartColors()
   drawChart('overviewWeekChart',{type:'bar',data:{labels:week.map((d)=>weekdayShort(new Date(d.dateKey+'T12:00:00').getDay())),datasets:[{label:'Execution score',data:week.map((d)=>d.hasAnyActivity?d.score:0),backgroundColor:week.map((d)=>d.dateKey===today?colors.accent:colors.series),hoverBackgroundColor:week.map((d)=>d.dateKey===today?colors.accent:colors.seriesHover),borderRadius:5,maxBarThickness:27}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:colors.tooltipBg,titleColor:'#fff',bodyColor:colors.muted,borderColor:colors.tooltipBorder,borderWidth:1,padding:12,cornerRadius:10,callbacks:{label:(c)=>week[c.dataIndex].hasAnyActivity?`Score: ${c.raw}/100`:'No activity recorded'}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:colors.muted,font:{size:10}}},y:{min:0,max:100,border:{display:false},grid:{color:colors.border},ticks:{stepSize:50,color:colors.muted,font:{size:9}}}}}})
   updateClockAndGreeting()

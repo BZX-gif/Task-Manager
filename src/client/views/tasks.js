@@ -12,6 +12,7 @@ import { minutesByTask } from '../lib/focus.js'
 import { uid, MISSION_STATUSES } from '../lib/state.js'
 import { icon, pageHeading, empty, bindCommon, goalOptions, projectOptions, timeLabel } from '../ui/common.js'
 import { categoryColor, categoryName, categoryOptions, priorityRank } from './shared.js'
+import { trashMission } from '../ui/trash-actions.js'
 
 export const FILTERS=['today','upcoming','inbox','recurring','all','done']
 const FILTER_LABELS={today:'Today',upcoming:'Upcoming',inbox:'Inbox',recurring:'Repeating',all:'All missions',done:'Completed'}
@@ -40,7 +41,11 @@ function bindRows(section){
   qsa(section, '[data-task-focus]').forEach((b)=>b.addEventListener('click',()=>window.CC.openFocusMode(b.dataset.taskFocus)))
   qsa(section, '[data-task-delete]').forEach((b)=>b.addEventListener('click',()=>deleteMission(b.dataset.taskDelete)))
 }
-async function deleteMission(id){const task=state.tasks.find((t)=>t.id===id);if(!task)return;if(!await confirmDialog({title:'Delete this mission?',message:'Its scheduled block will be removed. Focus sessions and their recorded time remain in your history.',confirmText:'Delete mission',danger:true}))return;commit((s)=>{s.tasks=s.tasks.filter((t)=>t.id!==id);if(task.seriesId===id)s.tasks.filter((t)=>t.seriesId===id).forEach((t)=>{t.recurrence=null;t.seriesId=null;t.occurrenceDate=null});for(const date of Object.keys(s.top3))s.top3[date]=s.top3[date].filter((x)=>x!==id);for(const date of Object.keys(s.schedule.days))s.schedule.days[date]=s.schedule.days[date].filter((b)=>b.taskId!==id);for(const log of Object.values(s.completionLog))log.taskDone=log.taskDone.filter((x)=>x!==id);if(s.focus.active?.taskId===id){s.focus.active.taskId=null;s.focus.active.taskTitle=task.title}});toast('Mission removed. Recorded focus time is preserved.','info')}
+async function deleteMission(id){
+  const task=state.tasks.find((t)=>t.id===id);if(!task)return
+  if(!await confirmDialog({title:'Move this mission to Recently deleted?',message:'Its scheduled block leaves your calendar. You can restore the mission, its blocks and its priority slot for 30 days. Focus sessions and recorded time are never touched.',confirmText:'Move to Recently deleted'}))return
+  trashMission(id)
+}
 
 export function openTaskModal(id=null,options={}){
   const task=state.tasks.find((t)=>t.id===id),today=currentDayKey(),date=options.date||task?.date||today
