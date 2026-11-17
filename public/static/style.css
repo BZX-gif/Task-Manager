@@ -1765,3 +1765,9 @@ body.hyb-deck-open{overflow:hidden}
 .cal-cell.is-quiet .cal-cell-day{color:var(--muted)}
 .hyb-week-card{padding:16px}
 .hyb-week-card .card-header{margin-bottom:14px}
+
+/* 4.4 · on a phone the toasts sit above the floating HYB button, not behind it */
+@media (max-width:767px){
+  .toast-container{bottom:calc(134px + env(safe-area-inset-bottom))}
+  body.hyb-deck-open .toast-container{bottom:calc(16px + env(safe-area-inset-bottom))}
+}
