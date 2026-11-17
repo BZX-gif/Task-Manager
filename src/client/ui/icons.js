@@ -49,6 +49,21 @@ const paths = {
   board: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16m6-16v16"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h1m-1 6h1m-1 6h1"/>',
   leaf: '<path d="M20 3C8 2 2 8 5 15s17 7 15-12ZM4 21 15 10"/>',
+  filter: '<path d="M3 5h18l-7 8v6l-4 2v-8Z"/>',
+  sparkles: '<path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4ZM20 2v4m-2-2h4"/>',
+  wallet: '<path d="M3 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 8V7a2 2 0 0 1 2-2h9M16 12h2"/>',
+  card: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h4"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/>',
+  scale: '<path d="M12 3v18M7 21h10M4 8h16M4 8l-2 6a3 3 0 0 0 6 0ZM20 8l2 6a3 3 0 0 1-6 0Z"/>',
+  repeat: '<path d="M17 3l3 3-3 3"/><path d="M4 12V9a3 3 0 0 1 3-3h13"/><path d="M7 21l-3-3 3-3"/><path d="M20 12v3a3 3 0 0 1-3 3H4"/>',
+  users: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3 3 0 0 1 0 5.5M18 20a5 5 0 0 0-2-4"/>',
+  lock: '<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 15v2"/>',
+  command: '<path d="M8 4a2 2 0 1 1 4 0v16a2 2 0 1 1-4 0ZM16 4a2 2 0 1 0-4 0v16a2 2 0 1 0 4 0ZM4 8a2 2 0 1 1 0 4h16a2 2 0 1 1 0 4H4"/>',
+  gauge: '<path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 12l4-4"/><circle cx="12" cy="12" r="1.6"/>',
+  trend: '<path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/>',
+  coins: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  archive: '<rect x="3" y="4" width="18" height="5" rx="2"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/>',
+  print: '<path d="M7 8V3h10v5M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7Z"/>',
 }
 export function icon(name, cls = '') { return `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.overview}</svg>` }
 export function brandMark() { return '<span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>' }

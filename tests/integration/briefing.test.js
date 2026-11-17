@@ -125,6 +125,8 @@ test('the app greets Sir and names the current mission in the command strip', as
     assert.equal($('#command-strip-task').textContent, 'Finish the strategy brief')
     assert.match($('#command-strip-meta').textContent, /priorit/i)
 
+    // the Command Center is home in 5.0; the classic greeting lives on Overview
+    window.CC.switchView('dashboard')
     const greeting = $('#overview-greeting').textContent.trim()
     assert.match(greeting, /Good morning|Good afternoon|Good evening|A quiet moment|Time to wind down/)
     assert.match(greeting, /Sir\.$/)

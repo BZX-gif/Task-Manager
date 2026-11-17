@@ -133,6 +133,7 @@ function briefingHtml(b, now) {
   if (focus.priority === 'high') chips.push(`<span class="chip chip-accent">High priority</span>`)
   const relation = focus.goalTitle || focus.projectTitle
   if (relation) chips.push(`<span>${icon('target')}${escapeHtml(relation)}</span>`)
+  if (b.load && b.load.share > 100) chips.push(`<span class="chip chip-warn">${icon('gauge')}Week at ${b.load.share}%</span>`)
 
   const openLine = counts.open
     ? `${counts.open} mission${counts.open === 1 ? '' : 's'} left today`
@@ -152,6 +153,7 @@ function briefingHtml(b, now) {
     ['Focused', formatDuration(counts.focusMinutes), `of ${formatDuration(counts.focusTarget)}`],
     ['From earlier', String(counts.overdue), counts.overdue ? 'still open' : 'nothing overdue'],
   ]
+  if (b.load) statRows.push(['Week', `${b.load.share}%`, b.load.overcommitted ? `${b.load.overcommitted} day(s) over capacity` : `${formatDuration(b.load.freeMinutes)} unclaimed`])
   if (counts.streak != null) statRows.push(['Streak', `${counts.streak} day${counts.streak === 1 ? '' : 's'}`, counts.bestStreak ? `best ${counts.bestStreak}` : 'showing up'])
 
   return `

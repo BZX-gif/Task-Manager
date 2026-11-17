@@ -20,6 +20,8 @@ import { sessionTotals } from './focus.js'
 import { scheduleFor, itemDone, scheduleConflicts } from './planner.js'
 import { goalProgress } from './relationships.js'
 import { routineDue, routineDone } from './routines.js'
+import { formatMoney, monthSummary, plannedBudget } from './ledger.js'
+import { commandIndex, loadPlan } from './command.js'
 
 export const MAX_CONTEXT_CHARS = 1800
 
@@ -90,6 +92,20 @@ export function buildAiContext(state, options = {}) {
   ]
   if (state.settings?.protectedTime?.length) {
     lines.push(`Protected time: ${state.settings.protectedTime.map((b) => `${b.label} ${b.start}-${b.end}`).join('; ')}`)
+  }
+
+  // v8 — the executive view: capacity, index and money. Only ever the summary
+  // totals; no account numbers, no individual personal notes beyond what the
+  // user already wrote into titles.
+  const capacity = loadPlan(state, { todayKey, now, days: 7 })
+  lines.push(`Week capacity: ${capacity.share}% of realistic working hours already promised across seven days (${capacity.overcommitted} day(s) over capacity)`)
+  const index = commandIndex(state, { todayKey, now })
+  if (index.index != null) lines.push(`Command index: ${index.index}/100 (${index.pillars.filter((p) => p.available).map((p) => `${p.label} ${p.value}`).join(', ')})`)
+  if (state.ledger?.accounts?.length) {
+    const currency = state.settings?.money?.currency || 'INR'
+    const money = monthSummary(state.ledger, todayKey.slice(0, 7), { categories: state.categories || [] })
+    const budget = plannedBudget(state.ledger)
+    lines.push(`Money this month (private, totals only): in ${formatMoney(money.income, { currency })}, out ${formatMoney(money.expense, { currency })}, kept ${formatMoney(money.net, { currency, sign: true })}${budget ? `, budgets total ${formatMoney(budget, { currency })}` : ''}`)
   }
 
   const text = lines.join('\n')

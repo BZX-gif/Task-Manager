@@ -31,6 +31,8 @@ export function buildExport(state, { now = Date.now(), app = "Kulshresth's Comma
       timetable: allTimetableBlocks(data).length,
       focusSessions: data.focus?.sessions?.length ?? 0,
       days: Object.keys(data.completionLog || {}).length,
+      transactions: data.ledger?.transactions?.length ?? 0,
+      accounts: data.ledger?.accounts?.length ?? 0,
     },
     data,
   }
@@ -75,7 +77,7 @@ export function validateImport(payload, { now = Date.now(), id = defaultUid } = 
     warnings.push('Legacy backup detected (raw state file) — it will be migrated to the current schema.')
   }
 
-  const hasAnything = ['tasks', 'timetable', 'timetables', 'completionLog', 'focus', 'categories', 'settings'].some((key) => key in data)
+  const hasAnything = ['tasks', 'timetable', 'timetables', 'completionLog', 'focus', 'categories', 'settings', 'ledger'].some((key) => key in data)
   if (!hasAnything) {
     return { ok: false, errors: ['This JSON has no Command Center data (no tasks, timetable or history found).'], warnings, state: null, summary: null, sourceVersion }
   }
@@ -124,6 +126,8 @@ export function validateImport(payload, { now = Date.now(), id = defaultUid } = 
       historyFrom: dates[0] || taskDates[0] || null,
       historyTo: dates[dates.length - 1] || taskDates[taskDates.length - 1] || null,
       protectedWindows: normalized.settings.protectedTime.length,
+      accounts: normalized.ledger.accounts.length,
+      transactions: normalized.ledger.transactions.length,
     },
   }
 }
@@ -137,6 +141,7 @@ export function describeImport(summary) {
     `${summary.focusSessions} focus session${summary.focusSessions === 1 ? '' : 's'}`,
     `${summary.trackedDays} tracked day${summary.trackedDays === 1 ? '' : 's'}`,
   ]
+  if (summary.transactions) parts.push(`${summary.transactions} ledger entr${summary.transactions === 1 ? 'y' : 'ies'} across ${summary.accounts} account${summary.accounts === 1 ? '' : 's'}`)
   let text = parts.join(' · ')
   if (summary.historyFrom) text += `\nHistory: ${summary.historyFrom} → ${summary.historyTo}`
   return text

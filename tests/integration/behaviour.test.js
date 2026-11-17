@@ -81,7 +81,7 @@ test('a legacy v1 payload boots into v2 with every record intact', async () => {
     await settle(120)
     const state = window.CC.getState()
 
-    assert.equal(state.version, 7)
+    assert.equal(state.version, 8)
     assert.equal(state.tasks.length >= 2, true, 'tasks preserved')
     assert.ok(state.tasks.some((t) => t.title === 'Revise Polity' && t.done === true))
     assert.equal(state.timetables.upsc_cse_2028.length, 1, 'the legacy timetable is preserved as the UPSC schedule')
@@ -96,6 +96,7 @@ test('a legacy v1 payload boots into v2 with every record intact', async () => {
     assert.equal(raw.settings.geminiApiKey, undefined, 'the key is not persisted again')
     assert.ok(window.localStorage.getItem('kcc_backup_pre_v2'), 'pre-migration safety copy is stored')
     assert.ok(toasts.some((t) => /upgraded/i.test(t)), `migration toast shown (${toasts.join(' | ')})`)
+    window.CC.switchView('dashboard')
     assert.equal($('#view-dashboard').innerHTML.length > 500, true)
     assert.deepEqual(errors, [])
   } finally {
@@ -107,8 +108,10 @@ test('an unreadable payload is rescued, reported and never silently dropped', as
   const { window, errors, toasts, $ } = await boot({ seed: '{not json' })
   try {
     assert.equal(window.CC.getState().timetables.ssc_cgl_2027.length, 0, 'corrupt data never creates fictional commitments')
+    assert.ok($('#view-command').innerHTML.length > 500, 'a usable home renders from a fresh workspace')
     assert.equal(window.localStorage.getItem('kcc_backup_unreadable'), '{not json', 'a copy is parked under a rescue key')
     assert.ok(toasts.some((t) => /could not be read/i.test(t)), `the user is told (${toasts.join(' | ')})`)
+    window.CC.switchView('dashboard')
     assert.equal($('#view-dashboard').innerHTML.length > 100, true)
     assert.deepEqual(errors, [])
   } finally {
@@ -177,6 +180,9 @@ test('changes are persisted and visible after a restart', async () => {
     await settle(100)
     const tasks = second.window.CC.getState().tasks
     assert.ok(tasks.some((t) => t.title === 'Persistence check'))
+    assert.match(second.window.CC.getState().top3[second.window.CC.todayKey()].join(','), /,|./)
+    assert.match(second.$('#view-command').textContent, /Persistence check|Command index/)
+    second.window.CC.switchView('dashboard')
     assert.match(second.$('.priority-card').textContent, /Persistence check/)
   } finally {
     window.close()

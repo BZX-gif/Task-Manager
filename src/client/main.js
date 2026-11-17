@@ -23,8 +23,10 @@ import { toggleMission, applyTheme } from './core/actions.js'
 import { handleTitlesUnlocked } from './ui/titles.js'
 import { icon } from './ui/icons.js'
 import { closeBriefing, initBriefing, isBriefingOpen, openBriefing, refreshCommandStrip, briefingInfo, saveBriefingIntention, speakBriefing } from './ui/briefing.js'
+import { openAccountModal, openBudgetModal, openNoteModal, openRecurringModal, openTransactionModal } from './views/money.js'
+import { commandIndex, headline, indexVerdict, loadPlan } from './lib/command.js'
 
-const APP_VERSION='4.3'
+const APP_VERSION='5.0'
 function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshCurrentView()}
 function streakInfo(){const result=streak();return{...result,recent:result.recent.map((day)=>({...day,status:dayStatus(state,day.dateKey).status}))}}
 function disciplineInfo(){return disciplineStreak()}
@@ -34,6 +36,10 @@ function addTaskToTop3(taskId){
   let result={ok:false,reason:'Mission not found.',ids:[]};commit((s)=>{result=addToTop3(s,currentDayKey(),taskId)});return result}
 function movePriority(id,direction){const date=currentDayKey();commit((s)=>{const ids=getTop3Ids(s,date),index=ids.indexOf(id),next=index+Number(direction);if(index<0||next<0||next>=ids.length)return;[ids[index],ids[next]]=[ids[next],ids[index]];setTop3Ids(s,date,ids)});return true}
 function openScoreInfo(){const stats=todayStats();openModal({title:'A number with nothing hidden.',body:`<p class="section-sub" style="margin-bottom:20px">Your execution score reflects the commitments you chose. It is not a measure of your worth.</p><div class="score-formula">${stats.scoreParts.map((p)=>`<div><span>${icon(p.key==='tasks'?'missions':p.key==='top3'?'target':p.key==='focus'?'focus':'calendar')}<strong>${p.label}</strong></span><span>${p.available?`${p.detail} · ${p.contribution}/${p.maxContribution} points`:'No data · excluded'}</span><div class="progress-track"><div class="progress-fill" style="width:${p.maxContribution?p.contribution/p.maxContribution*100:0}%"></div></div></div>`).join('')}</div><div class="notice" style="margin-top:20px">${icon('info')}<span>${describeScoreFormula().map(escapeHtml).join('<br>')}</span></div><p class="form-hint" style="margin-top:16px">Today: ${stats.hasData?stats.score+'/100':'not enough activity for a meaningful score'}. ${stats.penalty?`${stats.penalty} points reflect overdue missions (capped at 15).`:''} Components with no data are excluded and remaining weights are redistributed. Future time blocks aren’t counted against you.</p><div class="form-footer"><button class="btn-primary" data-modal-close>That makes sense</button></div>`})}
+function openIndexInfo(){
+  const today=currentDayKey(),index=commandIndex(state,{todayKey:today})
+  openModal({title:'One number, nothing hidden.',body:`<p class="section-sub" style="margin-bottom:20px">The command index is a weighted average of four pillars, built only from records you made. A pillar with no data is excluded and the remaining weights are redistributed — an empty workspace can never look like a good one.</p><div class="score-formula">${index.pillars.map((p)=>`<div><span>${icon(p.icon)}<strong>${p.label}</strong></span><span>${p.available?`${p.value}/100 · ${Math.round(p.weight*100)}% weight`:'No data · excluded'}</span><div class="progress-track"><div class="progress-fill" style="width:${p.available?p.value:0}%"></div></div><small>${escapeHtml(p.caption)}</small></div>`).join('')}</div><div class="notice" style="margin-top:20px">${icon('shield')}<span>${escapeHtml(indexVerdict(index.index))}</span></div><p class="form-hint" style="margin-top:16px">Current index: ${index.index==null?'not enough data yet':`${index.index}/100`}. The money pillar only appears once an account exists. Nothing here is sent anywhere.</p><div class="form-footer"><button class="btn-primary" data-modal-close>That is clear</button></div>`})
+}
 window.CC = {
   version:APP_VERSION,
   switchView,
@@ -53,6 +59,12 @@ window.CC = {
   openRescheduleModal,
   openFocusRoom,
   openScoreInfo,
+  openTransactionModal,
+  openAccountModal,
+  openBudgetModal,
+  openRecurringModal,
+  openNoteModal,
+  openIndexInfo,
   openCommandPalette,
   openShortcuts,
   openBriefing,
@@ -84,7 +96,7 @@ window.CC = {
   checkReminders:()=>checkReminders(),
   refreshQuoteInline:renderQuoteInline,
 }
-function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
+function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='m'){event.preventDefault();switchView('money')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['command','dashboard','day','schedule','tasks','goals','projects','routines','focus'];switchView(views[Number(event.key)-1])}})}
 let lastDay=currentDayKey(),reminderInterval=null,minuteInterval=null,recurrenceInterval=null
 function boot(){
   initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();startChromeTimers();bindChrome();initRouter();initFocus();initPwa();bindKeyboard()
@@ -96,7 +108,7 @@ function boot(){
   on('titles:unlocked',(detail)=>handleTitlesUnlocked(detail))
   const persist=()=>{syncScoreHistory(currentDayKey());flush()};window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else{updateClockAndGreeting();refreshCommandStrip();refreshCurrentView();checkReminders()}});window.addEventListener('pagehide',persist)
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&isFocusFullscreen())exitFocusFullscreen()})
-  refreshAll();switchView('dashboard');reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing()
+  refreshAll();switchView('command');reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing()
   minuteInterval=setInterval(()=>{if(document.visibilityState!=='visible')return;const day=currentDayKey();if(day!==lastDay){lastDay=day;ensureRecurringOccurrences(day);syncScoreHistory(day);commit(()=>{},{immediate:true});refreshCommandStrip();return}refreshCommandStrip();if(!isModalOpen()&&!isBriefingOpen()&&!['settings','assistant','focus'].includes(getCurrentView())&&!document.querySelector('.calendar-event.is-dragging'))refreshCurrentView()},60000)
   recurrenceInterval=setInterval(()=>{const created=ensureRecurringOccurrences();if(created.length)commit(()=>{},{immediate:true})},3600000)
   const action=new URLSearchParams(location.search).get('action');if(action==='capture')openQuickCapture();if(action==='focus')openFocusRoom()

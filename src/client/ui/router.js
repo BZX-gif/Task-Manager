@@ -14,12 +14,14 @@ import { renderAssistant } from '../views/assistant.js'
 import { renderSettings } from '../views/settings.js'
 import { renderForecast } from '../views/forecast.js'
 import { renderJournal } from '../views/journal.js'
+import { renderCommand } from '../views/command.js'
+import { renderMoney } from '../views/money.js'
 import { setMobileNav, updateBreadcrumb } from './chrome.js'
 import { icon } from './icons.js'
 
-export const VIEWS = ['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings']
-const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,schedule:renderSchedule,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,assistant:renderAssistant,settings:renderSettings}
-let currentView='dashboard',refreshTimer=null;const enterTimers={}
+export const VIEWS = ['command','dashboard','day','schedule','tasks','goals','projects','routines','focus','progress','review','journal','forecast','money','assistant','settings']
+const RENDERERS = {command:renderCommand,money:renderMoney,dashboard:renderDashboard,day:renderMyDay,schedule:renderSchedule,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,assistant:renderAssistant,settings:renderSettings}
+let currentView='command',refreshTimer=null;const enterTimers={}
 export function getCurrentView(){return currentView}
 export function switchView(view){
   if(!VIEWS.includes(view))return

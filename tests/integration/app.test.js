@@ -123,24 +123,30 @@ test('worker serves the shell, static assets and the ai endpoint', async () => {
   assert.ok(!JSON.stringify(aiBody).includes('at '), 'no stack traces leaked')
 })
 
-test('the app boots and renders the dashboard', async () => {
+test('the app boots and renders the command center', async () => {
   await settle(60)
   assert.equal(errors.length, 0, `boot errors: ${errors.join(' | ')}`)
-  assert.ok($('#view-dashboard').innerHTML.length > 500, 'dashboard rendered content')
+  assert.ok($('#view-command').innerHTML.length > 500, 'the command center rendered content')
+  assert.ok($('#view-command .command-focus-card'), 'one decision leads the screen')
+  assert.ok($('#view-command .command-index-card'), 'the command index is present')
+  assert.equal($$('#view-command .command-signal').length, 7, 'seven health signals')
+  window.CC.switchView('dashboard')
+  assert.ok($('#view-dashboard').innerHTML.length > 500, 'the classic overview still renders')
   assert.match(window.document.getElementById('greeting-text').textContent, /Good morning|Good afternoon|Good evening|A quiet moment|Time to wind down/)
   const fresh = state()
   assert.equal(fresh.timetables.ssc_cgl_2027.length, 0, 'a fresh workspace has no invented commitments')
   assert.equal(fresh.tasks.length, 0)
-  assert.equal(fresh.version, 7)
+  assert.equal(fresh.version, 8)
 })
 
 test('the overview keeps its metrics and actions usable across refreshes', async () => {
-  assert.equal($$('.metric-strip .metric').length, 4)
+  window.CC.switchView('dashboard')
+  assert.equal($$('#view-dashboard .metric-strip .metric').length, 4)
   assert.ok($('.command-card'), 'today command card exists')
   assert.ok($('.score-card'), 'daily score card exists')
   window.CC.refreshCurrentView()
   await settle()
-  assert.equal($$('.metric-strip .metric').length, 4, 'metrics survive refresh')
+  assert.equal($$('#view-dashboard .metric-strip .metric').length, 4, 'metrics survive refresh')
   click('.quick-actions-card [data-common="new-task"]')
   await settle()
   assert.ok($('[data-modal-box]'), 'quick action opens mission creation')
@@ -149,15 +155,16 @@ test('the overview keeps its metrics and actions usable across refreshes', async
 })
 
 test('overview shortcuts and mobile dock navigate to the right workspace', () => {
-  click('.up-next-card [data-common="schedule"]')
+  click('#view-dashboard .up-next-card [data-common="schedule"]')
   assert.equal($('#view-schedule').classList.contains('hidden'), false)
   assert.equal($('.nav-item[data-view="schedule"]').getAttribute('aria-current'), 'page')
   click('#mobile-dock [data-view="tasks"]')
   assert.equal($('#view-tasks').classList.contains('hidden'), false)
   assert.equal($('#mobile-dock [data-view="tasks"]').getAttribute('aria-current'), 'page')
   assert.equal($('#mobile-dock [data-view="focus"]').hasAttribute('aria-current'), false)
-  click('#mobile-dock [data-view="dashboard"]')
-  assert.equal($('#view-dashboard').classList.contains('hidden'), false)
+  click('#mobile-dock [data-view="command"]')
+  assert.equal($('#view-command').classList.contains('hidden'), false)
+  assert.equal($('#mobile-dock [data-view="command"]').getAttribute('aria-current'), 'page')
 })
 
 test('the original PWA identity is included in the offline shell', async () => {
@@ -171,11 +178,12 @@ test('the original PWA identity is included in the offline shell', async () => {
 })
 
 test('the overview shows the current day and opens the schedule', () => {
+  window.CC.switchView('dashboard')
   assert.ok($('.date-block .date-day').textContent.trim().length > 0)
   assert.ok($('.command-card h2').textContent.trim().length > 0)
-  click('.up-next-card [data-common="schedule"]')
+  click('#view-dashboard .up-next-card [data-common="schedule"]')
   assert.equal($('#view-schedule').classList.contains('hidden'), false)
-  window.CC.switchView('dashboard')
+  window.CC.switchView('command')
 })
 
 test('the design system is bundled for offline use without remote fonts', async () => {

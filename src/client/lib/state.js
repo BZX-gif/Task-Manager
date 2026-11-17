@@ -17,6 +17,7 @@ import { isValidKey, minutesOfDay } from './dates.js'
 import { normalizeRecurrence } from './recurrence.js'
 import { normalizeJournal } from './journal.js'
 import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
+import { normalizeLedger } from './ledger.js'
 
 /** Legacy key kept for backward compatibility with existing installs. */
 export const STORAGE_KEY = 'kcc_state_v1'
@@ -172,6 +173,10 @@ export function normalizeSettings(raw) {
     defaultTaskMinutes: clampNumber(settings.defaultTaskMinutes, 5, 600, 30),
     weekStart: settings.weekStart === 0 ? 0 : 1,
     dayEnd: normalizeTime(settings.dayEnd, '23:30'),
+    money: {
+      currency: /^[A-Z]{3}$/.test(String(settings.money?.currency || '')) ? String(settings.money.currency) : DEFAULT_SETTINGS.money.currency,
+      showInOverview: settings.money?.showInOverview !== false,
+    },
     // The Gemini key never belongs to the browser any more (server secret).
     geminiApiKey: undefined,
   }
@@ -197,6 +202,8 @@ export function emptyState(ctx = makeContext()) {
     reviews: {},
     /** one honest reflection per day; see lib/journal.js */
     journal: {},
+    /** private money ledger — accounts, transactions, budgets, IOUs */
+    ledger: { accounts: [], transactions: [], budgets: [], recurring: [], notes: [], updatedAt: null },
     top3: {},
     completionLog: {},
     dayPlans: {},
@@ -265,6 +272,12 @@ export function migrateState(raw, ctx = makeContext()) {
     working = migrateStateV6ToV7(working, ctx)
     applied.push('migrateStateV6ToV7')
     version = 7
+  }
+
+  if (version < 8) {
+    working = migrateStateV7ToV8(working, ctx)
+    applied.push('migrateStateV7ToV8')
+    version = 8
   }
 
   const state = normalizeState(working, ctx, warnings)
@@ -616,6 +629,9 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
   state.meta.legacyStudyPlans = raw.meta?.legacyStudyPlans === true || (Number(raw.version) || 1) < 6
   state.focus.active = state.focus.active ? { ...state.focus.active, mode: ['break', 'stopwatch'].includes(state.focus.active.mode) ? state.focus.active.mode : 'focus', goalId: state.focus.active.goalId ? String(state.focus.active.goalId) : null } : null
 
+  // --- v8: private ledger (money is never shared, never uploaded) ---
+  state.ledger = normalizeLedger(raw.ledger, ctx, { categoryIds: catIds })
+
   return state
 }
 
@@ -625,6 +641,19 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
  */
 export function migrateStateV6ToV7(raw, ctx = makeContext()) {
   return { ...raw, version: 7, journal: isObj(raw.journal) ? raw.journal : {} }
+}
+
+/**
+ * v7 → v8: the private ledger (accounts, transactions, budgets, recurring
+ * charges, IOUs) arrives. Purely additive — every existing record is kept
+ * byte-for-byte, and a workspace that never used the ledger stays empty.
+ */
+export function migrateStateV7ToV8(raw, ctx = makeContext()) {
+  return {
+    ...raw,
+    version: 8,
+    ledger: isObj(raw.ledger) ? raw.ledger : { accounts: [], transactions: [], budgets: [], recurring: [], notes: [] },
+  }
 }
 
 /* ------------------------------------------------------------------ *

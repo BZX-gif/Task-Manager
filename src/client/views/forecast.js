@@ -11,6 +11,7 @@ import { addDays, formatDuration } from '../lib/dates.js'
 import { buildForecast, forecastAdvice, busyShare, LOAD_LABELS } from '../lib/forecast.js'
 import { drawChart, chartColors } from '../core/charts.js'
 import { icon, pageHeading, metric, empty, bindCommon } from '../ui/common.js'
+import { formatMoney, monthSummary, recurringMonthlyTotal, upcomingObligations } from '../lib/ledger.js'
 
 let horizon = 14
 
@@ -91,6 +92,7 @@ export function renderForecast() {
           .join('')}
       </div>
     </article>
+    ${moneyFuture(today)}
     ${
       forecast.carriedCount
         ? `<article class="card forecast-carried-card"><div class="card-header"><div><h3>Following you forward</h3><p class="meta">Missions from earlier days that are still open</p></div>${icon('recover')}</div>
@@ -121,6 +123,29 @@ export function renderForecast() {
   section.querySelector('[data-forecast-plan]')?.addEventListener('click', () => window.CC.openDayPlanner({ date: today }))
 
   drawForecastChart(forecast)
+}
+
+/**
+ * The same forward view, applied to money: recurring charges and IOUs already
+ * promised inside the visible horizon. Silent when there is no ledger.
+ */
+function moneyFuture(today) {
+  const ledger = state.ledger || {}
+  if (!ledger.accounts?.length && !ledger.recurring?.length) return ''
+  const currency = state.settings.money?.currency || 'INR'
+  const due = upcomingObligations(ledger, { todayKey: today, days: horizon, currency })
+  const recurring = recurringMonthlyTotal(ledger)
+  const month = monthSummary(ledger, today.slice(0, 7), { categories: state.categories })
+  const total = due.reduce((sum, row) => sum + row.amount, 0)
+  return `<article class="card forecast-money-card">
+    <div class="card-header"><div><h3>Money already promised</h3><p class="meta">${due.length ? `${due.length} charge${due.length === 1 ? '' : 's'} inside the next ${horizon} days` : `Nothing falls due in the next ${horizon} days`}</p></div><button class="text-button" data-common="money">Ledger ${icon('arrow')}</button></div>
+    <div class="forecast-money-strip">
+      <div><span>${icon('repeat')}Due in ${horizon} days</span><strong>${formatMoney(total, { currency })}</strong></div>
+      <div><span>${icon('calendar')}Recurring monthly</span><strong>${formatMoney(recurring, { currency })}</strong></div>
+      <div><span>${icon('scale')}Kept so far</span><strong class="${month.net >= 0 ? 'success' : 'danger'}">${formatMoney(month.net, { currency, sign: true })}</strong></div>
+    </div>
+    ${due.length ? `<div class="forecast-money-due">${due.slice(0, 6).map((row) => `<div><span>${escapeHtml(row.label)}</span><small>${row.date.slice(5)}</small><strong>${formatMoney(row.amount, { currency })}</strong></div>`).join('')}</div>` : `<p class="form-hint">Nothing is hidden. Add recurring charges in the ledger and they appear here before they happen.</p>`}
+  </article>`
 }
 
 function drawForecastChart(forecast) {

@@ -3,7 +3,7 @@
    Kept separate from the store so tests and migrations can import them alone.
    ------------------------------------------------------------------------- */
 
-export const STATE_VERSION = 7
+export const STATE_VERSION = 8
 
 export const DEFAULT_CATEGORIES = [
   { id: 'personal', name: 'Personal', color: '#a99af1' },
@@ -160,6 +160,8 @@ export const DEFAULT_SETTINGS = {
   protectedTime: [],
   /** one-time flags */
   onboarding: { seen: false },
+  /** private money ledger preferences (currency is never guessed from locale) */
+  money: { currency: 'INR', weekStartMonday: true, showInOverview: true },
 }
 
 export const FOCUS_PRESETS = [25, 50, 90]

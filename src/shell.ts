@@ -1,15 +1,18 @@
 /** The local-first application shell. All application data stays in the browser. */
-export const APP_VERSION = '4.3'
+export const APP_VERSION = '5.0'
 
 export const NAV_GROUPS = [
-  { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['schedule', 'Schedule', 'calendar'], ['tasks', 'Missions', 'missions'], ['forecast', 'Forecast', 'forecast'] ] },
-  { label: 'THE BIGGER PICTURE', items: [ ['goals', 'Goals', 'target'], ['projects', 'Projects', 'projects'], ['routines', 'Routines', 'routines'] ] },
-  { label: 'YOUR SPACE', items: [ ['focus', 'Focus Room', 'focus'], ['progress', 'Analytics', 'analytics'], ['review', 'Weekly Review', 'review'], ['journal', 'Journal', 'journal'] ] },
+  { label: 'COMMAND', items: [ ['command', 'Command Center', 'command'], ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'] ] },
+  { label: 'EXECUTION', items: [ ['schedule', 'Schedule', 'calendar'], ['tasks', 'Missions', 'missions'], ['forecast', 'Forecast', 'forecast'], ['focus', 'Focus Room', 'focus'] ] },
+  { label: 'THE LONG GAME', items: [ ['goals', 'Goals', 'target'], ['projects', 'Projects', 'projects'], ['routines', 'Routines', 'routines'], ['money', 'Money', 'wallet'] ] },
+  { label: 'IN REVIEW', items: [ ['progress', 'Analytics', 'analytics'], ['review', 'Weekly Review', 'review'], ['journal', 'Journal', 'journal'] ] },
 ]
 
 // These paths are original SVGs embedded by the client, not a remote icon font.
 const ICONS: Record<string, string> = {
   overview: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  command: '<path d="M12 3v3m0 12v3M3 12h3m12 0h3M6 6l2 2m8 8 2 2M6 18l2-2m8-8 2-2"/><circle cx="12" cy="12" r="4.2"/>',
+  wallet: '<path d="M3 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 8V7a2 2 0 0 1 2-2h9M16 12h2"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>',
   calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 11h18"/>',
   missions: '<rect x="4" y="4" width="16" height="17" rx="3"/><path d="M9 4V2h6v2M8 12l2 2 5-5"/>',
@@ -38,7 +41,7 @@ export function renderShell(): string {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Command · Your Personal Command Center</title>
-<meta name="description" content="A calmer place to plan your day, connect your goals and do your best work. Private, local-first and ready offline." />
+<meta name="description" content="Command 5.0 — a private command center for the work that matters: missions, time, focus, goals and money in one calm, local-first workspace." />
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
 <link rel="manifest" href="/manifest.webmanifest" />
 <meta name="theme-color" content="#080808" />
@@ -84,14 +87,14 @@ export function renderShell(): string {
 </div>
 <div class="mobile-context"><span id="greeting-text">Your personal command center</span><span id="live-clock">--:--</span></div>
 <main id="main-content" tabindex="-1" class="main-content">
-<section id="view-dashboard" class="view-section" aria-label="Overview"><div class="boot-skeleton"><div></div><div></div><div></div></div></section>
-${['day','schedule','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings'].map((view) => `<section id="view-${view}" class="view-section hidden" aria-label="${view}"></section>`).join('')}
+<section id="view-command" class="view-section" aria-label="Command Center"><div class="boot-skeleton command-skeleton"><div></div><div></div><div></div><div></div></section></section>
+${['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress','review','journal','forecast','money','assistant','settings'].map((view) => `<section id="view-${view}" class="view-section hidden" aria-label="${view}"></section>`).join('')}
 </main>
 <footer class="workspace-footer"><span>A little more clarity. A little more progress.</span><span>Private by design <span class="footer-dot">·</span> <span id="app-version">v${APP_VERSION}</span></span></footer>
 </div>
 </div>
 <div id="mobile-nav" class="mobile-nav hidden" role="dialog" aria-modal="true" aria-label="Navigation"><div class="mobile-nav-head"><strong>Your workspace</strong><button id="mobile-nav-close" class="icon-btn" aria-label="Close navigation">${svg('close')}</button></div><nav>${nav(true)}<button class="nav-item" data-briefing-open>${svg('bell')}<span>Today’s briefing</span><span class="nav-key">B</span></button><button class="nav-item" data-view="assistant">${svg('review')}<span>Planning assistant</span></button><button class="nav-item" data-view="settings">${svg('settings')}<span>Settings</span></button></nav></div>
-<nav id="mobile-dock" class="mobile-dock" aria-label="Quick navigation"><button class="dock-item is-active" data-view="dashboard">${svg('overview')}<span>Overview</span></button><button class="dock-item" data-view="day">${svg('sun')}<span>My Day</span></button><button class="dock-item" data-view="tasks">${svg('missions')}<span>Missions</span></button><button class="dock-item" data-view="focus">${svg('focus')}<span>Focus</span></button><button class="dock-item" data-briefing-open aria-label="Open today’s briefing">${svg('bell')}<span>Brief</span></button><button id="mobile-more" class="dock-item" aria-label="More navigation">${svg('overview')}<span>More</span></button></nav>
+<nav id="mobile-dock" class="mobile-dock" aria-label="Quick navigation"><button class="dock-item is-active" data-view="command">${svg('command')}<span>Command</span></button><button class="dock-item" data-view="tasks">${svg('missions')}<span>Missions</span></button><button class="dock-item" data-view="focus">${svg('focus')}<span>Focus</span></button><button class="dock-item" data-view="money">${svg('wallet')}<span>Money</span></button><button class="dock-item" data-view="day">${svg('sun')}<span>My Day</span></button><button class="dock-item" data-briefing-open aria-label="Open today’s briefing">${svg('bell')}<span>Brief</span></button><button id="mobile-more" class="dock-item" aria-label="More navigation">${svg('menu')}<span>More</span></button></nav>
 <div id="modal-root"></div><div id="briefing-root"></div><div id="focus-root"></div><div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div><div id="quote-text" class="sr-only"></div>
 <script defer src="/static/js/app.js"></script>
 </body></html>`

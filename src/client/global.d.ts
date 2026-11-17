@@ -59,6 +59,12 @@ interface Window {
     saveIntention(value: string): string
     speakBriefing(briefing?: any, options?: { notify?: boolean }): boolean
     refreshQuoteInline(): void
+    openTransactionModal(id?: string | null): void
+    openAccountModal(id?: string | null): void
+    openBudgetModal(categoryId?: string | null): void
+    openRecurringModal(id?: string | null): void
+    openNoteModal(id?: string | null): void
+    openIndexInfo(): void
   }
   webkitAudioContext?: typeof AudioContext
 }

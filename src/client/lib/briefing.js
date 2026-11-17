@@ -20,6 +20,7 @@
 import { addDays, minutesOfDay } from './dates.js'
 import { PRIORITY_ORDER } from './defaults.js'
 import { sessionTotals } from './focus.js'
+import { loadPlan } from './command.js'
 
 export const DAY_PARTS = ['early', 'morning', 'afternoon', 'evening', 'night']
 
@@ -204,9 +205,21 @@ export function buildBriefing(state, { now = new Date(), todayKey = null, blocks
       priority: block.priority || 'medium',
     }))
 
+  // 5.0 — how the week physically fits. Purely additive: an incomplete or
+  // partial state object simply omits the field instead of guessing.
+  let capacity = null
+  try {
+    capacity = loadPlan(state, { todayKey: day, now, days: 7 })
+  } catch {
+    capacity = null
+  }
+
   return {
     todayKey: day,
     part: dayPart(now),
+    load: capacity
+      ? { share: capacity.share, overcommitted: capacity.overcommitted, freeMinutes: capacity.freeMinutes, emptyDays: capacity.emptyDays }
+      : null,
     salutation: salutationOf(state),
     addressee: addresseeOf(state),
     greeting: greetingLine(state, now),
@@ -346,6 +359,9 @@ export function briefingSpeech(briefing) {
     lines.push(`Tomorrow begins with ${briefing.tomorrow.title}.`)
   }
   if (briefing?.intention) lines.push(`Today's intention: ${briefing.intention}.`)
+  const load = briefing?.load
+  if (load && load.overcommitted) lines.push(`Watch the week: ${load.overcommitted} day${load.overcommitted === 1 ? '' : 's'} are already over capacity.`)
+  else if (load && load.freeMinutes > 240) lines.push('There is room in the week if you want to use it.')
   return lines.join(' ')
 }
 
