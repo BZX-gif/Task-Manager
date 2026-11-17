@@ -563,9 +563,4 @@ export function planFromInput(input, { now = Date.now(), todayKey = null, id = n
   return { plan, parsed }
 }
 
-/** Total minutes of open HYB work in the next `days` days (used by Forecast). */
-export function hybCommitmentMinutes(plans, todayKey, days = 14) {
-  return upcoming(plans, todayKey, days).reduce((sum, day) => sum + day.minutes, 0)
-}
-
 export { toHHMM, formatDuration }

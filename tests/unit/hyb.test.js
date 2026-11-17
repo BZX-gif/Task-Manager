@@ -18,7 +18,6 @@ import {
   HYB_KIND_IDS,
   HYB_REPEATS,
   energyOf,
-  hybCommitmentMinutes,
   hybContext,
   hybLoad,
   hybStreak,
@@ -275,7 +274,11 @@ test('the next fourteen days are counted, and finished work stops counting', () 
   const finished = [{ ...plans[0], log: { [TODAY]: 'done' } }, plans[1]]
   assert.equal(upcoming(finished, TODAY, 1)[0].minutes, 0, 'a finished day asks for no more time')
   assert.equal(upcoming(finished, TODAY, 1)[0].done, 1)
-  assert.equal(hybCommitmentMinutes(plans, TODAY, 14), 30 * 14 + 90)
+  assert.equal(
+    upcoming(plans, TODAY, 14).reduce((sum, day) => sum + day.minutes, 0),
+    30 * 14 + 90,
+    'the window total is what the Forecast and the studio both read',
+  )
 })
 
 test('one day of HYB load reports count, minutes and completion', () => {
