@@ -1792,3 +1792,9 @@ body.hyb-deck-open{overflow:hidden}
   .hyb-day-card .heading-actions{gap:4px}
   .hyb-day-row{gap:9px;padding:10px 4px}
 }
+
+/* 4.4 · Settings: clearing missions is careful, resetting everything is final */
+.mission-clear-zone{border-color:rgba(215,181,130,.26);background:rgba(215,181,130,.06)}
+.mission-clear-zone .btn-danger{background:var(--glass-interactive-bg);border:1px solid rgba(215,181,130,.4);color:var(--warning);box-shadow:none}
+.mission-clear-zone .btn-danger:hover{background:rgba(215,181,130,.16);border-color:var(--warning);color:var(--text)}
+:root[data-theme=light] .mission-clear-zone{border-color:rgba(141,103,48,.28);background:rgba(141,103,48,.06)}

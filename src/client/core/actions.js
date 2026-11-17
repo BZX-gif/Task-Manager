@@ -1,8 +1,10 @@
-import { commit, currentDayKey, rollSeriesForward, state } from './store.js'
-import { toast } from './dom.js'
+import { commit, currentDayKey, replaceState, rollSeriesForward, state } from './store.js'
+import { confirmDialog, toast } from './dom.js'
 import { scheduleFor } from '../lib/planner.js'
 import { addDays } from '../lib/dates.js'
-import { uid } from '../lib/state.js'
+import { getStorage, uid } from '../lib/state.js'
+import { buildExport } from '../lib/backup.js'
+import { MISSION_CLEAR_BACKUP_KEY, applyMissionClear, describeMissionClear, hasMissionsToClear, missionClearPlan } from '../lib/clear-missions.js'
 
 /** Every calendar edit is dated and undoable; recurring templates are never rewritten. */
 export function saveDay(date, blocks, label = 'Schedule updated', { undoable = true, before = scheduleFor(state,date), taskSnapshots = null, createdTaskIds = [] } = {}) {
@@ -99,4 +101,103 @@ export function applyTheme() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f4f1' : '#080808')
   const toggle = document.getElementById('theme-toggle')
   toggle?.setAttribute('aria-label', `Switch to ${theme === 'light' ? 'dark' : 'light'} theme`)
+}
+
+/**
+ * Empty the missions list — and only the missions list.
+ *
+ * A safety copy of the whole workspace is written to the browser first; if that
+ * fails nothing is touched, exactly like Reset and Import. The toast carries an
+ * Undo that restores the snapshot taken immediately before the change, so a
+ * mis-click costs nothing.
+ *
+ * @param {{backup?: boolean, silent?: boolean}} [options]
+ * @returns {{ok: boolean, reason?: string, plan: any}}
+ */
+/**
+ * Empty the missions list — and only the missions list.
+ * Writes a safety copy to localStorage first, snapshots state for the toast's
+ * Undo, then commits the surgical clear.
+ * @param {{backup?: boolean, silent?: boolean}} [options]
+ * @returns {MissionClearResult}
+ */
+export function clearAllMissions({ backup = true, silent = false } = {}) {
+  const before = missionClearPlan(state)
+  if (!hasMissionsToClear(state)) {
+    if (!silent) toast('There are no missions to clear. Your list is already fresh.', 'info')
+    return { ok: false, reason: 'empty', plan: before }
+  }
+
+  let snapshot = null
+  if (backup) {
+    // the same promise Reset makes: no destructive write without a way back
+    try {
+      getStorage()?.setItem(MISSION_CLEAR_BACKUP_KEY, JSON.stringify(buildExport(state).data))
+    } catch {
+      if (!silent) toast('Clear stopped: a safety copy could not be saved. Export your data first, then try again. Nothing was changed.', 'error', { timeout: 9000 })
+      return { ok: false, reason: 'backup', plan: before }
+    }
+    try {
+      snapshot = JSON.parse(JSON.stringify(state))
+    } catch {
+      snapshot = null
+    }
+  }
+
+  // commit() returns nothing, so the report comes back through the closure
+  let plan = before
+  commit((next) => {
+    plan = applyMissionClear(next) || before
+  })
+
+  if (!silent) {
+    toast(
+      `Missions cleared · ${plan.missions} removed. Goals, projects, routines, journal, HYB plans and focus history are untouched.`,
+      'success',
+      snapshot
+        ? {
+            timeout: 10000,
+            action: {
+              label: 'Undo',
+              onClick: () => {
+                replaceState(snapshot)
+                applyTheme()
+                toast('Missions restored.', 'info')
+              },
+            },
+          }
+        : { timeout: 8000 },
+    )
+  }
+  return { ok: true, plan, describe: describeMissionClear(plan) }
+}
+
+/** The confirmation step, kept next to the action so every entry point asks the same way. */
+export function missionClearPrompt() {
+  const plan = missionClearPlan(state)
+  return {
+    title: 'Clear every mission?',
+    message: 'Your missions list will be emptied so you can start fresh. Nothing else is touched.',
+    details: describeMissionClear(plan),
+    confirmText: `Clear ${plan.missions || ''} mission${plan.missions === 1 ? '' : 's'}`.replace('  ', ' ').trim(),
+    danger: true,
+  }
+}
+
+/**
+ * Ask, then clear. Every entry point (Settings, the command palette, the
+ * console) goes through here so the question is always the same and always
+ * shows real numbers.
+ */
+/** @returns {Promise<MissionClearResult>} */
+export async function confirmClearMissions() {
+  if (!hasMissionsToClear(state)) {
+    toast('There are no missions to clear. Your list is already fresh.', 'info')
+    return { ok: false, reason: 'empty' }
+  }
+  if (!(await confirmDialog(missionClearPrompt()))) return { ok: false, reason: 'cancelled' }
+  const result = clearAllMissions()
+  // land them where they can start again straight away
+  if (result.ok) window.CC?.switchView?.('tasks')
+  return result
 }

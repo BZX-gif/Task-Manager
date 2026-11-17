@@ -19,7 +19,7 @@ import { openProjectModal, openProjectDetail } from './views/projects.js'
 import { openRoutineModal } from './views/routines.js'
 import { openRescheduleModal, toggleScheduleItem } from './views/schedule.js'
 import { openFocusRoom, paintFocusRoom, exitFocusFullscreen, isFocusFullscreen } from './views/focus-room.js'
-import { toggleMission, applyTheme } from './core/actions.js'
+import { toggleMission, applyTheme, clearAllMissions, confirmClearMissions } from './core/actions.js'
 import { handleTitlesUnlocked } from './ui/titles.js'
 import { icon } from './ui/icons.js'
 import { closeBriefing, initBriefing, isBriefingOpen, openBriefing, refreshCommandStrip, briefingInfo, saveBriefingIntention, speakBriefing } from './ui/briefing.js'
@@ -27,7 +27,7 @@ import { closeHybDeck, initHyb, isHybDeckOpen, openHybDeck, openHybPlanModal, re
 import { hybSummary } from './core/hyb.js'
 import { setCalendarDate } from './views/calendar.js'
 
-const APP_VERSION='4.4'
+const APP_VERSION='4.4.1'
 function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshHybTriggers();refreshCurrentView()}
 function streakInfo(){const result=streak();return{...result,recent:result.recent.map((day)=>({...day,status:dayStatus(state,day.dateKey).status}))}}
 function disciplineInfo(){return disciplineStreak()}
@@ -74,6 +74,8 @@ window.CC = {
   speakBriefing,
   closeModal,
   toggleMission,
+  clearAllMissions,
+  confirmClearMissions,
   movePriority,
   toggleScheduleItem,
   removeFromTop3(taskId){commit((s)=>removeFromTop3(s,currentDayKey(),taskId));return true},

@@ -286,3 +286,26 @@ forward to v8, keep every record, and arrive with an empty `hyb.plans` and all
 six calendar layers on.
 
 No new network calls, no new dependencies, no remote assets.
+
+---
+
+## 4.4.1 · Clearing missions without clearing a life
+
+A follow-up patch added one destructive action that was missing: emptying the
+missions list on its own. **Settings → Clear all missions** (also in the command
+palette and as `CC.confirmClearMissions()`) removes `state.tasks`, the schedule
+blocks those missions placed, their Top 3 picks, their completion marks and
+their reminder log entries — and keeps every other byte: goals, projects,
+routines and routine history, the journal, HYB plans, focus sessions, study
+plans and timetables, plain time blocks, protected time, score history,
+reviews, assistant history and all preferences. It writes its own safety copy
+(`kcc_backup_before_mission_clear`) first, refuses to run if that copy cannot be
+written, and the success toast carries a 10-second Undo.
+
+Version `4.4.1` in the shell, the client and the footer; service worker cache
+`v4-4-1` so returning clients pick up the new bundle from the cache-first asset
+strategy.
+
+Removed/kept lists, the confirmation copy, the behaviour table and the recorded
+verification (365 tests: 16 unit + 9 integration for this feature) live in
+[`docs/clear-missions.md`](./clear-missions.md).
