@@ -32,9 +32,9 @@ Pressing it opens the **HYB deck** — a right-hand panel (a bottom sheet under
 | Part | What it does |
 |---|---|
 | Quick add | One line of natural language, with a lane picker and day/time/length fields. Everything understood is mirrored back as chips **before** anything is saved. |
-| Tabs | **Today**, **Next 7 days**, **Someday** (undated) and **Finished**. |
+| Tabs | **Today**, **Next 7**, **Someday** (undated and overdue) and **Finished**, each with its own count. |
 | Rows | Each plan shows its lane stripe, title, meta line, steps progress and the actions: finish, skip, put on schedule, edit. |
-| Footer | The current streak, a hint line, and buttons for HYB Studio and a full plan. |
+| Footer | A hint line (`H` anywhere, `⌘/Ctrl + ↵` to add) and buttons for HYB Studio and a full plan. |
 
 The button is never decoration: it carries a live count of what is still open
 today, and a pulse dot when something is waiting.
