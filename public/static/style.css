@@ -1771,3 +1771,8 @@ body.hyb-deck-open{overflow:hidden}
   .toast-container{bottom:calc(134px + env(safe-area-inset-bottom))}
   body.hyb-deck-open .toast-container{bottom:calc(16px + env(safe-area-inset-bottom))}
 }
+
+/* 4.4 · the Forecast day card also reports unplaced HYB time */
+.forecast-day-hyb{display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-size:9px;font-weight:550;color:var(--accent)}
+.forecast-day-hyb .icon{width:11px;height:11px}
+.forecast-day--over .forecast-day-hyb,.forecast-day--conflict .forecast-day-hyb{color:var(--warning)}

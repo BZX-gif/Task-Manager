@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { emptyState } from '../../src/client/lib/state.js'
 import { buildForecast, capacityMinutesOf, commitmentBlocks, findConflicts, forecastAdvice, loadStatus, busyShare } from '../../src/client/lib/forecast.js'
+import { addDays } from '../../src/client/lib/dates.js'
 
 const TODAY = '2026-11-16'
 
@@ -137,4 +138,97 @@ test('load status thresholds are stable', () => {
 test('busy share reports overloaded and clashing days', () => {
   const forecast = buildForecast(stateWith({ [TODAY]: [block({ duration: 520 })] }), { todayKey: TODAY })
   assert.equal(busyShare(forecast), 7)
+})
+
+/* ------------------------------------------------------- HYB plans (4.4) */
+
+function hybPlan(overrides = {}) {
+  return {
+    id: overrides.id || 'h1',
+    title: 'Evening revision',
+    date: TODAY,
+    startTime: '18:00',
+    minutes: 60,
+    kind: 'study',
+    priority: 'medium',
+    energy: 'steady',
+    repeat: 'none',
+    status: 'planned',
+    steps: [],
+    tags: [],
+    log: {},
+    ...overrides,
+  }
+}
+
+test('open HYB plans are reported per day and across the window', () => {
+  const state = stateWith()
+  state.hyb.plans = [hybPlan({ id: 'h1', minutes: 60 }), hybPlan({ id: 'h2', date: addDays(TODAY, 2), minutes: 90, kind: 'body' })]
+  const forecast = buildForecast(state, { todayKey: TODAY, days: 7 })
+
+  assert.equal(forecast.days[0].hybCount, 1)
+  assert.equal(forecast.days[0].hybMinutes, 60)
+  assert.equal(forecast.days[2].hybMinutes, 90)
+  assert.equal(forecast.days[1].hybCount, 0)
+  assert.equal(forecast.totalHybCount, 2)
+  assert.equal(forecast.totalHybMinutes, 150)
+  assert.equal(forecast.totalPlanned, 0, 'a plan that is not on the schedule is not committed time')
+})
+
+test('a HYB plan already on the schedule is never counted twice', () => {
+  const state = stateWith({ [TODAY]: [{ ...block({ id: 'hyb:h1', duration: 60 }), hybPlanId: 'h1' }] })
+  state.hyb.plans = [hybPlan({ id: 'h1', minutes: 60 })]
+  const forecast = buildForecast(state, { todayKey: TODAY })
+  assert.equal(forecast.days[0].hybCount, 0, 'the block already carries it')
+  assert.equal(forecast.days[0].hybMinutes, 0)
+  assert.equal(forecast.days[0].plannedMinutes, 60, 'and its minutes are counted once, as a block')
+  assert.equal(forecast.totalHybCount, 0)
+})
+
+test('finished, skipped and dropped HYB days ask for no time', () => {
+  const state = stateWith()
+  state.hyb.plans = [
+    hybPlan({ id: 'done', status: 'done' }),
+    hybPlan({ id: 'daily', repeat: 'daily', date: addDays(TODAY, -4), log: { [TODAY]: 'skipped' } }),
+    hybPlan({ id: 'dropped', status: 'dropped' }),
+    hybPlan({ id: 'open', minutes: 25 }),
+  ]
+  const forecast = buildForecast(state, { todayKey: TODAY })
+  assert.equal(forecast.days[0].hybCount, 1)
+  assert.equal(forecast.days[0].hybMinutes, 25)
+})
+
+test('a repeating HYB plan reaches every day it belongs to', () => {
+  const state = stateWith()
+  state.hyb.plans = [hybPlan({ id: 'daily', repeat: 'daily', date: addDays(TODAY, -1), minutes: 20 })]
+  const forecast = buildForecast(state, { todayKey: TODAY, days: 7 })
+  assert.equal(forecast.days.every((row) => row.hybMinutes === 20), true)
+  assert.equal(forecast.totalHybMinutes, 140)
+})
+
+test('HYB plans alone are enough to make the forecast meaningful', () => {
+  const state = stateWith()
+  state.hyb.plans = [hybPlan({ minutes: 45 })]
+  const forecast = buildForecast(state, { todayKey: TODAY })
+  assert.equal(forecast.empty, false, 'a workspace with only HYB plans is not empty')
+  const advice = forecastAdvice(forecast)
+  assert.equal(advice.tone, 'neutral')
+  assert.match(advice.title, /45m of HYB plans have no place/)
+  assert.match(advice.body, /HYB deck/)
+})
+
+test('clashes, heavy days and carried missions still outrank the HYB nudge', () => {
+  const clash = stateWith({ [TODAY]: [block({ id: 'a', time: '09:00', duration: 90 }), block({ id: 'b', time: '09:30', duration: 60 })] })
+  clash.hyb.plans = [hybPlan()]
+  assert.equal(forecastAdvice(buildForecast(clash, { todayKey: TODAY })).tone, 'warn')
+
+  const carried = stateWith()
+  carried.hyb.plans = [hybPlan()]
+  carried.tasks = [{ id: 't1', title: 'Old work', date: addDays(TODAY, -3), done: false, status: 'ready', inbox: false, estimateMinutes: 30 }]
+  const carriedAdvice = forecastAdvice(buildForecast(carried, { todayKey: TODAY }))
+  assert.match(carriedAdvice.title, /carried over/)
+
+  const placed = stateWith({ [TODAY]: [{ ...block({ id: 'hyb:h1', duration: 60 }), hybPlanId: 'h1' }] })
+  placed.hyb.plans = [hybPlan({ id: 'h1' })]
+  assert.equal(forecastAdvice(buildForecast(placed, { todayKey: TODAY })).tone, 'good', 'once plans are placed, nothing is nagging')
 })
