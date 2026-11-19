@@ -97,6 +97,7 @@ export function applyTheme() {
   document.documentElement.dataset.accent = settings.accent
   if (settings.premiumUnlocked && ['atelier-300', 'atelier-400', 'monograph-2000', 'obsidian-2000'].includes(settings.premiumEdition)) document.documentElement.dataset.edition = settings.premiumEdition
   else delete document.documentElement.dataset.edition
+  document.documentElement.dataset.signatureFont = ['edition', 'editorial', 'instrument'].includes(settings.signatureFont) ? settings.signatureFont : 'edition'
   document.documentElement.classList.toggle('sidebar-collapsed', !!settings.sidebarCollapsed)
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f4f1' : '#080808')
   const toggle = document.getElementById('theme-toggle')
