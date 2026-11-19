@@ -88,7 +88,7 @@ test('worker serves the shell, static assets and the ai endpoint', async () => {
 
   // static assets are served by Cloudflare's asset layer (before the worker),
   // so verify they are present in the build output the worker deploys with
-  const shellAssets = ['static/js/app.js', 'static/tailwind.css', 'static/style.css', 'static/studio.css', 'static/favicon.svg', 'manifest.webmanifest', 'icons/apple-touch-icon.png']
+  const shellAssets = ['static/js/app.js', 'static/tailwind.css', 'static/style.css', 'static/studio.css', 'static/favicon.svg', 'static/favicon-crown.svg', 'manifest.webmanifest', 'icons/apple-touch-icon.png']
   const optionalAssets = ['sw.js', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png']
   for (const asset of [...shellAssets, ...optionalAssets]) {
     const content = await readFile(path.join(root, 'dist', asset)).catch(() => null)
