@@ -1805,3 +1805,70 @@ body.hyb-deck-open{overflow:hidden}
 :root[data-edition=atelier-300] body::before{background:radial-gradient(900px 600px at 85% -8%,rgba(155,117,64,.12),transparent 62%),radial-gradient(900px 700px at 12% 100%,rgba(255,255,255,.55),transparent 60%)}
 :root[data-edition=atelier-400] body::before{background:radial-gradient(900px 620px at 85% -8%,rgba(201,173,112,.1),transparent 62%),radial-gradient(760px 620px at 5% 100%,rgba(255,255,255,.025),transparent 60%)}
 @media(max-width:700px){.edition-grid{grid-template-columns:1fr}}
+
+/* SIGNATURE DESIGN SYSTEMS — deliberately structural, not palette swaps. */
+.edition-card-monograph-2000,.edition-card-obsidian-2000{border-radius:18px}
+.edition-monograph-2000{background:linear-gradient(115deg,#f5eedf 0 68%,#e8dcc6);color:#352f27}
+.edition-monograph-2000>i{border-radius:0;transform:rotate(35deg);width:105px;height:150px;right:34px;top:22px;border-color:#8a6b4566;box-shadow:none}
+.edition-monograph-2000>b{font:italic 82px Georgia,serif;right:24px;bottom:-14px;color:#705a3f}
+.edition-monograph-2000>small,.edition-obsidian-2000>small{position:absolute;left:14px;bottom:12px;font:italic 12px Georgia,serif;letter-spacing:.02em}
+.edition-obsidian-2000{background:radial-gradient(ellipse at 72% 12%,#3c291b,#101012 53%,#08090a);color:#e6c694}
+.edition-obsidian-2000>i{width:114px;height:114px;border-color:#df9b534d;right:21px;top:36px;box-shadow:inset 0 0 30px #db8c3014,0 0 34px #d48a291f}
+.edition-obsidian-2000>b{font:500 62px Georgia,serif;right:49px;bottom:5px;color:#e2ad68}
+:root[data-edition=monograph-2000]{color-scheme:light;--bg:#e9e1d2;--bg-secondary:#ded4c2;--surface:#f6f0e5;--surface-elevated:#eee5d5;--surface-hover:#e5dac8;--surface-sunken:#e3dacb;--text:#28241e;--text-secondary:#5c5141;--muted:#837763;--border:rgba(71,55,35,.17);--border-strong:rgba(71,55,35,.28);--accent:#8d5134;--accent-rgb:141,81,52;--accent-ink:#fff8ec;--accent-hover:#713c27;--accent-border:rgba(141,81,52,.32);--accent-soft:rgba(141,81,52,.1);--glass-primary-bg:#f4eddf;--glass-primary-border:rgba(77,60,37,.17);--glass-secondary-bg:#e9dfce;--glass-secondary-border:rgba(77,60,37,.15);--glass-floating-bg:rgba(246,240,229,.98);--glass-navigation-bg:#e6dccb;--glass-navigation-border:rgba(77,60,37,.18);--glass-interactive-bg:rgba(255,252,244,.55);--glass-interactive-border:rgba(77,60,37,.19);--glass-border-lit:rgba(141,81,52,.45);--radius-lg:9px;--radius-md:7px;--font-body:Georgia,'Times New Roman',serif;--font-display:Georgia,'Times New Roman',serif;--shadow-modal:0 24px 80px rgba(56,43,26,.2)}
+:root[data-edition=monograph-2000] body::before{background:radial-gradient(ellipse at 84% 3%,rgba(255,255,255,.58),transparent 44%),linear-gradient(90deg,transparent 0 48px,rgba(139,81,52,.045) 48px 49px,transparent 49px)}
+:root[data-edition=monograph-2000] body::after{background:none}
+:root[data-edition=monograph-2000] .sidebar{width:88px;padding:25px 10px;background:#e1d6c4;box-shadow:inset -1px 0 rgba(80,62,39,.13)}
+:root[data-edition=monograph-2000] .brand-lockup{justify-content:center;padding:0}
+:root[data-edition=monograph-2000] .brand-name,:root[data-edition=monograph-2000] .workspace-label,:root[data-edition=monograph-2000] .nav-label,:root[data-edition=monograph-2000] .nav-item>span,:root[data-edition=monograph-2000] .sidebar-focus,:root[data-edition=monograph-2000] .local-note{display:none}
+:root[data-edition=monograph-2000] .collapse-control{display:none}
+:root[data-edition=monograph-2000] .sidebar-nav{margin-top:52px}
+:root[data-edition=monograph-2000] .nav-group{margin-bottom:22px}
+:root[data-edition=monograph-2000] .nav-item{justify-content:center;padding:12px 8px;border-radius:5px;min-height:44px;color:#665744}
+:root[data-edition=monograph-2000] .nav-item.active-nav{background:transparent;border-color:transparent;color:#8d5134}
+:root[data-edition=monograph-2000] .nav-item.active-nav::before{left:-10px;height:27px;width:2px}
+:root[data-edition=monograph-2000] .workspace-main{margin-left:88px;width:calc(100% - 88px)}
+:root[data-edition=monograph-2000] .topbar{background:#eee6d8;border-bottom:1px solid rgba(71,55,35,.17)}
+:root[data-edition=monograph-2000] .main-content{max-width:1500px;padding-top:44px}
+:root[data-edition=monograph-2000] .page-heading h1,:root[data-edition=monograph-2000] .overview-greeting h1,:root[data-edition=monograph-2000] .view-heading .section-title{font-family:Georgia,serif;font-weight:400;letter-spacing:-.055em;font-size:clamp(34px,4vw,52px)}
+:root[data-edition=monograph-2000] .eyebrow,:root[data-edition=monograph-2000] .nav-label{font-family:var(--font-body);letter-spacing:.2em;color:#8d5134}
+:root[data-edition=monograph-2000] .card,:root[data-edition=monograph-2000] .glass-card{border-radius:8px;box-shadow:0 2px 0 rgba(75,55,32,.06),0 12px 28px rgba(75,55,32,.07)}
+:root[data-edition=monograph-2000] .command-card{background:linear-gradient(120deg,#f8f3e9,#eee2ce);border-color:#d8c8ae;min-height:310px}
+:root[data-edition=monograph-2000] .command-card h2{font:italic 400 clamp(27px,3vw,40px)/1.16 Georgia,serif;max-width:72%}
+:root[data-edition=monograph-2000] .orbital-art{opacity:.33;filter:sepia(.5)}
+:root[data-edition=monograph-2000] .metric-strip{background:#f4eddf;border-radius:8px}
+:root[data-edition=monograph-2000] .metric strong{font:400 31px Georgia,serif}
+:root[data-edition=monograph-2000] .btn-primary{border-radius:3px;letter-spacing:.055em;text-transform:uppercase;font-size:10px}
+:root[data-edition=monograph-2000] .topbar .btn-primary{border-radius:3px}
+:root[data-edition=monograph-2000] .chip{border-radius:2px}
+:root[data-edition=monograph-2000] .task-row,:root[data-edition=monograph-2000] .priority-row{border-bottom:1px solid rgba(71,55,35,.16)}
+:root[data-edition=monograph-2000] .settings-section{border-radius:7px}
+:root[data-edition=obsidian-2000]{--bg:#090a0b;--bg-secondary:#0d0e10;--surface:#121416;--surface-elevated:#191a1c;--surface-hover:#222427;--surface-sunken:#0b0c0d;--text:#f4eee4;--text-secondary:#c4b9a7;--muted:#898071;--border:rgba(222,164,96,.13);--border-strong:rgba(222,164,96,.24);--accent:#e1a25f;--accent-rgb:225,162,95;--accent-ink:#21160b;--accent-hover:#f0b878;--accent-border:rgba(225,162,95,.32);--accent-soft:rgba(225,162,95,.1);--glass-primary-bg:linear-gradient(145deg,#171819,#111214);--glass-primary-border:rgba(222,164,96,.16);--glass-secondary-bg:#121315;--glass-secondary-border:rgba(222,164,96,.12);--glass-floating-bg:rgba(17,18,19,.98);--glass-navigation-bg:#0c0d0e;--glass-navigation-border:rgba(222,164,96,.13);--glass-interactive-bg:rgba(255,255,255,.035);--glass-interactive-border:rgba(222,164,96,.16);--glass-border-lit:rgba(225,162,95,.45);--glass-shadow-depth:0 1px 0 rgba(255,255,255,.025),0 18px 48px rgba(0,0,0,.36);--glass-edge:inset 0 1px 0 rgba(255,255,255,.045);--radius-lg:16px;--radius-md:11px}
+:root[data-edition=obsidian-2000] body::before{background:radial-gradient(900px 650px at 75% -5%,rgba(206,125,49,.11),transparent 65%),radial-gradient(700px 560px at 8% 85%,rgba(69,90,100,.1),transparent 64%),linear-gradient(130deg,transparent 0 72%,rgba(225,162,95,.025))}
+:root[data-edition=obsidian-2000] body::after{background:radial-gradient(110% 90% at 50% 45%,transparent 45%,rgba(0,0,0,.55))}
+:root[data-edition=obsidian-2000] .sidebar{width:252px;background:linear-gradient(180deg,#111213,#0a0b0c);border-right:1px solid #d99a5830;box-shadow:8px 0 48px #0005}
+:root[data-edition=obsidian-2000] .brand-lockup{padding-bottom:17px;border-bottom:1px solid var(--border)}
+:root[data-edition=obsidian-2000] .brand-mark{filter:drop-shadow(0 0 9px #e1a25f55)}
+:root[data-edition=obsidian-2000] .workspace-label{padding:12px 10px;margin:18px 0 20px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(110deg,#d9974a12,transparent)}
+:root[data-edition=obsidian-2000] .nav-label{color:#d4a66e;letter-spacing:.2em}
+:root[data-edition=obsidian-2000] .nav-item{border-radius:7px;margin:4px 0;padding:11px 12px}
+:root[data-edition=obsidian-2000] .nav-item.active-nav{background:linear-gradient(100deg,#df9e501a,#df9e5005);box-shadow:inset 2px 0 #e1a25f;border-color:#e1a25f20}
+:root[data-edition=obsidian-2000] .nav-item.active-nav::before{display:none}
+:root[data-edition=obsidian-2000] .sidebar-focus{background:linear-gradient(145deg,#1b1712,#101113);border-color:#e1a25f33}
+:root[data-edition=obsidian-2000] .sidebar-focus p{font:400 32px Georgia,serif;color:#e8bd84}
+:root[data-edition=obsidian-2000] .topbar{height:70px;background:#0d0e0ff2;border-color:var(--border)}
+:root[data-edition=obsidian-2000] .command-strip{border-bottom:1px solid #e1a25f24;background:linear-gradient(90deg,#17130f,#101113 70%);box-shadow:0 8px 26px #0003}
+:root[data-edition=obsidian-2000] .command-strip-label{color:#e1a25f}
+:root[data-edition=obsidian-2000] .main-content{max-width:1540px;padding:38px 42px}
+:root[data-edition=obsidian-2000] .page-heading h1,:root[data-edition=obsidian-2000] .overview-greeting h1{font-weight:500;letter-spacing:-.05em}
+:root[data-edition=obsidian-2000] .card,:root[data-edition=obsidian-2000] .glass-card{box-shadow:inset 0 1px #ffffff06,0 18px 48px #0004}
+:root[data-edition=obsidian-2000] .command-card{background:radial-gradient(ellipse at 86% 10%,#df9c5017,transparent 46%),linear-gradient(145deg,#171819,#101113);min-height:290px}
+:root[data-edition=obsidian-2000] .command-card::before{content:'COMMAND / 01';position:absolute;right:20px;bottom:18px;font:10px ui-monospace,monospace;letter-spacing:.2em;color:#e1a25f76}
+:root[data-edition=obsidian-2000] .orbital-art{opacity:.8;filter:drop-shadow(0 0 14px #e1a25f16)}
+:root[data-edition=obsidian-2000] .score-ring{filter:drop-shadow(0 0 10px #e1a25f25)}
+:root[data-edition=obsidian-2000] .btn-primary{box-shadow:0 5px 22px #e1a25f20;border-radius:7px}
+:root[data-edition=obsidian-2000] .input-field{background:#0d0e0f;border-color:#e1a25f26}
+:root[data-edition=monograph-2000] .edition-card-monograph-2000,:root[data-edition=obsidian-2000] .edition-card-obsidian-2000{outline:1px solid var(--accent-border)}
+@media(max-width:1000px){:root[data-edition=obsidian-2000] .sidebar{width:var(--sidebar-width)}:root[data-edition=obsidian-2000] .workspace-main{margin-left:var(--sidebar-width);width:calc(100% - var(--sidebar-width))}}
+@media(max-width:760px){:root[data-edition=monograph-2000] .sidebar{display:none}:root[data-edition=monograph-2000] .workspace-main{margin-left:0;width:100%}:root[data-edition=monograph-2000] .main-content,:root[data-edition=obsidian-2000] .main-content{padding:24px 16px}}
+@media(prefers-reduced-motion:reduce){:root[data-edition] *,:root[data-edition] *::before,:root[data-edition] *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
