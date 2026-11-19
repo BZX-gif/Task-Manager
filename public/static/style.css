@@ -1884,7 +1884,7 @@ body.hyb-deck-open{overflow:hidden}
 .signature-window-track{display:block;height:3px;border-radius:9px;background:var(--glass-channel-bg);overflow:hidden}.signature-window-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),rgba(var(--accent-rgb),.58));border-radius:inherit;box-shadow:0 0 12px rgba(var(--accent-rgb),.5);transition:width 1s linear}
 .signature-hyb-window.is-window-complete .signature-window-status{color:var(--success)}.signature-hyb-window.is-window-complete .signature-window-track i{background:var(--success);box-shadow:0 0 12px rgba(138,198,173,.35)}
 :root[data-edition=monograph-2000] .signature-hyb-window{border-radius:2px;border-color:#8d51344d;background:#8d51340a}.edition-monograph-2000 .signature-window-track i{background:#8d5134}
-:root[data-edition=obsidian-2000] .signature-hyb-window{box-shadow:inset 0 0 20px #e1a25f08,0 0 16px #e1a25f08}.
+:root[data-edition=obsidian-2000] .signature-hyb-window{box-shadow:inset 0 0 20px #e1a25f08,0 0 16px #e1a25f08}
 @media(prefers-reduced-motion:reduce){.signature-crown,.signature-crown svg{animation:none}}
 
 /* User-tunable signature typography — local system stacks, no network fonts. */
@@ -1895,3 +1895,54 @@ body.hyb-deck-open{overflow:hidden}
 :root[data-edition][data-signature-font=instrument] body{font-size:13px;letter-spacing:-.018em}
 :root[data-edition][data-signature-font=editorial] .page-heading h1,:root[data-edition][data-signature-font=editorial] .overview-greeting h1,:root[data-edition][data-signature-font=editorial] .view-heading .section-title{font-style:italic;font-weight:400}
 @media(max-width:620px){.signature-type-panel{grid-template-columns:1fr}.signature-font-options{width:100%}.signature-font-option{flex:1}}
+
+/* HYB Crown Studio — activation has a signature transition, living chrome and a purpose-built focus sanctuary. */
+.brand-name>.brand-name-label{color:var(--text)}.brand-name>.brand-name-dot{color:var(--accent)}
+.brand-crown{display:none;width:29px;height:29px;fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 8px rgba(var(--accent-rgb),.42))}
+.brand-name-dot[hidden]{display:none}
+.focus-nav-crown{display:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+:root[data-edition=monograph-2000] .brand-mark,:root[data-edition=obsidian-2000] .brand-mark{display:none}
+:root[data-edition=monograph-2000] .brand-crown,:root[data-edition=obsidian-2000] .brand-crown{display:block}
+:root[data-edition=monograph-2000] .brand-name-label,:root[data-edition=obsidian-2000] .brand-name-label{font-family:Georgia,serif;letter-spacing:.06em}
+:root[data-edition=monograph-2000] .focus-nav-crown,:root[data-edition=obsidian-2000] .focus-nav-crown{display:block}
+:root[data-edition=monograph-2000] .nav-item[data-view=focus] .nav-item-icon,:root[data-edition=obsidian-2000] .nav-item[data-view=focus] .icon{display:none}
+:root[data-edition=obsidian-2000] .brand-crown{filter:drop-shadow(0 0 12px #e1a25f99)}
+:root.signature-enter .app-shell{animation:signatureReveal .85s cubic-bezier(.2,.75,.15,1) both}
+:root.signature-enter .brand-crown{animation:crownBrandReveal 1s cubic-bezier(.16,1,.3,1) both}
+@keyframes signatureReveal{from{opacity:.72;transform:translateY(7px);filter:saturate(.7)}to{opacity:1;transform:none;filter:none}}
+@keyframes crownBrandReveal{0%{transform:scale(.55) rotate(-14deg);opacity:0}65%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+:root[data-edition=obsidian-2000] .focus-overlay{background:radial-gradient(ellipse at 50% 36%,#352619 0,#111111 43%,#060707 100%);isolation:isolate}
+:root[data-edition=obsidian-2000] .focus-overlay::before{content:'';position:absolute;inset:4vh 5vw;border:1px solid #e1a25f24;border-radius:32px;pointer-events:none;box-shadow:inset 0 0 90px #e1a25f08,0 0 90px #e1a25f08}
+:root[data-edition=obsidian-2000] .focus-panel{position:relative;max-width:760px!important;padding:62px 56px!important;border:1px solid #e1a25f2b!important;border-radius:28px!important;background:linear-gradient(145deg,#171615f5,#0b0c0df5)!important;box-shadow:0 35px 130px #000b,inset 0 1px #fff1!important;animation:focusSanctuaryIn .65s cubic-bezier(.16,1,.3,1) both}
+:root[data-edition=obsidian-2000] .focus-clock{font-family:Georgia,serif!important;color:#f3dfbd!important;text-shadow:0 0 40px #e1a25f30}
+:root[data-edition=obsidian-2000] .focus-energy-track{height:5px;background:#e1a25f1c}
+:root[data-edition=obsidian-2000] .focus-energy-fill{background:linear-gradient(90deg,#7a4827,#e1a25f,#f4d49a)!important;box-shadow:0 0 22px #e1a25f70}
+:root[data-edition=obsidian-2000] .focus-mission-title{font-family:Georgia,serif!important;font-size:clamp(24px,3vw,38px)!important;color:#f2e7d5!important}
+:root[data-edition=obsidian-2000] .focus-primary{box-shadow:0 0 0 1px #e1a25f55,0 10px 36px #e1a25f27!important}
+:root[data-edition=monograph-2000] .focus-overlay{background:#e9e1d2!important;color:#30271c}
+:root[data-edition=monograph-2000] .focus-panel{max-width:760px!important;padding:55px 52px!important;border:1px solid #8d513436!important;border-radius:4px!important;background:repeating-linear-gradient(0deg,#f4edde,#f4edde 39px,#8d51340c 40px)!important;box-shadow:0 30px 95px #503b241f!important}
+:root[data-edition=monograph-2000] .focus-clock{font-family:Georgia,serif!important;color:#392e22!important}
+:root[data-edition=monograph-2000] .focus-mission-title{font-family:Georgia,serif!important;font-style:italic;color:#392e22!important}
+:root[data-edition=monograph-2000] .focus-energy-track{background:#8d51341f}
+:root[data-edition=monograph-2000] .focus-energy-fill{background:#8d5134!important;box-shadow:0 0 12px #8d513455}
+:root[data-edition=monograph-2000] .focus-exit{color:#554431;border-color:#8d513433;background:#8d51340a}
+:root[data-edition=obsidian-2000] .focus-ambient .fz-orb{opacity:.2;background:#e1a25f}
+:root[data-edition=monograph-2000] .focus-ambient .fz-orb{opacity:.16;background:#8d5134}
+@keyframes focusSanctuaryIn{from{opacity:0;transform:translateY(22px) scale(.975)}to{opacity:1;transform:none}}
+:root[data-edition=obsidian-2000] .focus-crown-mini{width:23px;height:23px;filter:drop-shadow(0 0 9px #e1a25f88)}
+:root[data-edition=obsidian-2000] .focus-phase-chip{border-color:#e1a25f36;background:#e1a25f0c}
+:root[data-edition=monograph-2000] .focus-phase-chip{border-radius:2px;border-color:#8d51344c;background:#8d513408;color:#8d5134}
+:root[data-edition] .view-section{animation:signatureViewEnter .44s cubic-bezier(.2,.7,.2,1) both}
+:root[data-edition] .view-section .card{animation:signatureCardRise .5s cubic-bezier(.2,.7,.2,1) both}
+:root[data-edition] .view-section .card:nth-child(2){animation-delay:45ms}:root[data-edition] .view-section .card:nth-child(3){animation-delay:90ms}:root[data-edition] .view-section .card:nth-child(4){animation-delay:135ms}
+@keyframes signatureViewEnter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes signatureCardRise{from{opacity:.84;transform:translateY(5px)}to{opacity:1;transform:none}}
+:root[data-edition=obsidian-2000] .hyb-card:hover{border-color:#e1a25f66;box-shadow:0 18px 48px #0005,0 0 24px #e1a25f0d;transform:translateY(-3px)}
+:root[data-edition=obsidian-2000] .hyb-check.checked{box-shadow:0 0 0 4px #e1a25f17,0 0 18px #e1a25f62}
+:root[data-edition=monograph-2000] .hyb-card{border-radius:4px;box-shadow:0 7px 22px #503b2410}
+:root[data-edition=monograph-2000] .hyb-card-title strong{font-family:Georgia,serif;font-weight:500}
+:root[data-edition=monograph-2000] .hyb-check.checked{background:#8d5134;border-color:#8d5134}
+:root[data-edition] .btn-primary,:root[data-edition] .nav-item,:root[data-edition] .hyb-card,:root[data-edition] .dock-item{transition:transform .24s cubic-bezier(.2,.7,.2,1),box-shadow .24s,border-color .24s,background-color .24s,color .24s}
+:root[data-edition=obsidian-2000] .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 34px #e1a25f37}
+@media(max-width:640px){:root[data-edition=obsidian-2000] .focus-panel,:root[data-edition=monograph-2000] .focus-panel{padding:42px 20px!important;border-radius:18px!important}:root[data-edition=obsidian-2000] .focus-overlay::before{inset:8px;border-radius:22px}}
+@media(prefers-reduced-motion:reduce){:root.signature-enter .app-shell,:root.signature-enter .brand-crown,:root[data-edition] .view-section,:root[data-edition] .view-section .card,:root[data-edition] .focus-panel{animation:none!important;transition:none!important}}

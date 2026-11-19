@@ -92,14 +92,30 @@ export function skipMission(id) {
 
 export function applyTheme() {
   const settings = state.settings
+  const previousEdition = document.documentElement.dataset.edition || ''
   const theme = settings.theme === 'system' ? (typeof matchMedia==='function'&&matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : settings.theme
   document.documentElement.dataset.theme = theme
   document.documentElement.dataset.accent = settings.accent
   if (settings.premiumUnlocked && ['atelier-300', 'atelier-400', 'monograph-2000', 'obsidian-2000'].includes(settings.premiumEdition)) document.documentElement.dataset.edition = settings.premiumEdition
   else delete document.documentElement.dataset.edition
+  const signature = settings.premiumUnlocked && ['monograph-2000', 'obsidian-2000'].includes(settings.premiumEdition)
+  const brandLabel = document.querySelector('.brand-name-label')
+  const brandDot = document.querySelector('.brand-name-dot')
+  const brandHome = document.querySelector('.brand-home')
+  if (brandLabel) brandLabel.textContent = signature ? 'HYB' : 'command'
+  if (brandDot) { if (signature) brandDot.setAttribute('hidden', ''); else brandDot.removeAttribute('hidden') }
+  brandHome?.setAttribute('aria-label', signature ? 'HYB Crown Studio overview' : 'Command overview')
+  document.title = signature ? 'HYB · Crown Studio' : 'Command · Your Personal Command Center'
+  const favicon = document.querySelector('link[rel="icon"]')
+  if (favicon) favicon.setAttribute('href', signature ? '/static/favicon-crown.svg' : '/static/favicon.svg')
+  if (previousEdition !== (document.documentElement.dataset.edition || '')) {
+    document.documentElement.classList.remove('signature-enter')
+    requestAnimationFrame(() => document.documentElement.classList.add('signature-enter'))
+    setTimeout(() => document.documentElement.classList.remove('signature-enter'), 1100)
+  }
   document.documentElement.dataset.signatureFont = ['edition', 'editorial', 'instrument'].includes(settings.signatureFont) ? settings.signatureFont : 'edition'
   document.documentElement.classList.toggle('sidebar-collapsed', !!settings.sidebarCollapsed)
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f4f1' : '#080808')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', signature ? (settings.premiumEdition === 'monograph-2000' ? '#e9e1d2' : '#090a0b') : theme === 'light' ? '#f6f4f1' : '#080808')
   const toggle = document.getElementById('theme-toggle')
   toggle?.setAttribute('aria-label', `Switch to ${theme === 'light' ? 'dark' : 'light'} theme`)
 }

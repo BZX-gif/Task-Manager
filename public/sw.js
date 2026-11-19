@@ -18,6 +18,7 @@ const SHELL_ASSETS = [
   '/static/tailwind.css',
   '/static/js/app.js',
   '/static/favicon.svg',
+  '/static/favicon-crown.svg',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',

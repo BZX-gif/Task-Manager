@@ -31,7 +31,7 @@ const ICONS: Record<string, string> = {
   arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
 }
 const svg = (name: string) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.overview}</svg>`
-const nav = (mobile = false) => NAV_GROUPS.map((group) => `<div class="nav-group"><p class="nav-label">${group.label}</p>${group.items.map(([view,label,icon]) => `<button data-view="${view}" class="nav-item${view === 'hyb' ? ' nav-item-hyb' : ''}" title="${label}">${svg(icon)}<span>${label}</span>${view === 'focus' ? '<span class="nav-key">F</span>' : view === 'calendar' ? '<span class="nav-key">C</span>' : view === 'hyb' ? '<span class="nav-key">H</span>' : ''}</button>`).join('')}</div>`).join('')
+const nav = (mobile = false) => NAV_GROUPS.map((group) => `<div class="nav-group"><p class="nav-label">${group.label}</p>${group.items.map(([view,label,icon]) => `<button data-view="${view}" class="nav-item${view === 'hyb' ? ' nav-item-hyb' : ''}" title="${label}">${svg(icon)}<span>${label}</span>${view === 'focus' ? '<svg class="focus-nav-crown" viewBox="0 0 64 64" aria-hidden="true"><path d="M9 45 5 17l15 12L32 7l12 22 15-12-4 28H9Zm2 6h42"/></svg><span class="nav-key">F</span>' : view === 'calendar' ? '<span class="nav-key">C</span>' : view === 'hyb' ? '<span class="nav-key">H</span>' : ''}</button>`).join('')}</div>`).join('')
 
 export function renderShell(): string {
   return `<!DOCTYPE html>
@@ -50,7 +50,7 @@ export function renderShell(): string {
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Command" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-<script>try{const s=JSON.parse(localStorage.getItem('kcc_state_v1')||'{}').settings||{};const t=s.theme==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):s.theme==='light'?'light':'dark';document.documentElement.dataset.theme=t;document.documentElement.dataset.accent=['ember','iris','blue','sage','amber','rose'].includes(s.accent)?s.accent:'ember';if(s.premiumUnlocked&&['atelier-300','atelier-400','monograph-2000','obsidian-2000'].includes(s.premiumEdition))document.documentElement.dataset.edition=s.premiumEdition;document.documentElement.dataset.signatureFont=['edition','editorial','instrument'].includes(s.signatureFont)?s.signatureFont:'edition';if(s.sidebarCollapsed)document.documentElement.classList.add('sidebar-collapsed')}catch(e){}</script>
+<script>try{const s=JSON.parse(localStorage.getItem('kcc_state_v1')||'{}').settings||{};const t=s.theme==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):s.theme==='light'?'light':'dark';document.documentElement.dataset.theme=t;document.documentElement.dataset.accent=['ember','iris','blue','sage','amber','rose'].includes(s.accent)?s.accent:'ember';if(s.premiumUnlocked&&['atelier-300','atelier-400','monograph-2000','obsidian-2000'].includes(s.premiumEdition)){document.documentElement.dataset.edition=s.premiumEdition;if(['monograph-2000','obsidian-2000'].includes(s.premiumEdition)){document.title='HYB · Crown Studio';const icon=document.querySelector('link[rel=icon]');if(icon)icon.href='/static/favicon-crown.svg'}}document.documentElement.dataset.signatureFont=['edition','editorial','instrument'].includes(s.signatureFont)?s.signatureFont:'edition';if(s.sidebarCollapsed)document.documentElement.classList.add('sidebar-collapsed')}catch(e){}</script>
 <link href="/static/tailwind.css" rel="stylesheet" />
 <link href="/static/style.css" rel="stylesheet" />
 <link href="/static/studio.css" rel="stylesheet" />
@@ -59,7 +59,7 @@ export function renderShell(): string {
 <a href="#main-content" class="skip-link">Skip to content</a>
 <div id="app" class="app-shell">
 <aside id="sidebar" class="sidebar" aria-label="Workspace">
-<div class="brand-lockup"><a href="/" class="brand-home" aria-label="Command overview"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span><span class="brand-name">command<span>.</span></span></a><button id="sidebar-collapse" class="icon-btn collapse-control" aria-label="Collapse sidebar" aria-expanded="true">${svg('overview')}</button></div>
+<div class="brand-lockup"><a href="/" class="brand-home" aria-label="Command overview"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span><svg class="brand-crown" viewBox="0 0 64 64" aria-hidden="true"><path d="M9 45 5 17l15 12L32 7l12 22 15-12-4 28H9Zm2 6h42"/></svg><span class="brand-name"><span class="brand-name-label">command</span><span class="brand-name-dot">.</span></span></a><button id="sidebar-collapse" class="icon-btn collapse-control" aria-label="Collapse sidebar" aria-expanded="true">${svg('overview')}</button></div>
 <div class="workspace-label"><span class="workspace-avatar">P</span><div><strong>Personal workspace</strong><span>Designed around you</span></div></div>
 <nav id="nav-list" class="sidebar-nav" aria-label="Primary">${nav()}</nav>
 <div class="sidebar-bottom">
