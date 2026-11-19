@@ -98,6 +98,22 @@ test('normalizeSettings keeps the Reminders and Focus sections intact', () => {
   assert.deepEqual(settings.protectedTime[0].days, [0, 1])
 })
 
+test('premium design unlock and selection are normalized and persist in local state', () => {
+  const defaults = normalizeSettings({ premiumUnlocked: true, premiumEdition: 'atelier-400' })
+  assert.equal(defaults.premiumUnlocked, true)
+  assert.equal(defaults.premiumEdition, 'atelier-400')
+  assert.equal(normalizeSettings({ premiumUnlocked: true, premiumEdition: 'unknown' }).premiumEdition, '')
+  assert.equal(normalizeSettings({ premiumUnlocked: 'yes', premiumEdition: 'atelier-300' }).premiumUnlocked, false)
+  const storage = fakeStorage()
+  const state = emptyState(makeContext({ now: 10, id: () => 'i' }))
+  state.settings.premiumUnlocked = true
+  state.settings.premiumEdition = 'atelier-300'
+  saveState(state, { storage, now: 11 })
+  const loaded = loadState({ storage, now: 12, id: () => 'i' }).state
+  assert.equal(loaded.settings.premiumUnlocked, true)
+  assert.equal(loaded.settings.premiumEdition, 'atelier-300')
+})
+
 test('emptyState is complete and versioned', () => {
   const state = emptyState(makeContext({ now: 5, id: () => 'z' }))
   assert.equal(state.version, STATE_VERSION)

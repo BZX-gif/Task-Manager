@@ -95,6 +95,8 @@ export function applyTheme() {
   const theme = settings.theme === 'system' ? (typeof matchMedia==='function'&&matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : settings.theme
   document.documentElement.dataset.theme = theme
   document.documentElement.dataset.accent = settings.accent
+  if (settings.premiumUnlocked && ['atelier-300', 'atelier-400'].includes(settings.premiumEdition)) document.documentElement.dataset.edition = settings.premiumEdition
+  else delete document.documentElement.dataset.edition
   document.documentElement.classList.toggle('sidebar-collapsed', !!settings.sidebarCollapsed)
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f4f1' : '#080808')
   const toggle = document.getElementById('theme-toggle')

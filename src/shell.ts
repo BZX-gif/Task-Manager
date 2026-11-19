@@ -50,7 +50,7 @@ export function renderShell(): string {
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Command" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-<script>try{const s=JSON.parse(localStorage.getItem('kcc_state_v1')||'{}').settings||{};const t=s.theme==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):s.theme==='light'?'light':'dark';document.documentElement.dataset.theme=t;document.documentElement.dataset.accent=['ember','iris','blue','sage','amber','rose'].includes(s.accent)?s.accent:'ember';if(s.sidebarCollapsed)document.documentElement.classList.add('sidebar-collapsed')}catch(e){}</script>
+<script>try{const s=JSON.parse(localStorage.getItem('kcc_state_v1')||'{}').settings||{};const t=s.theme==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):s.theme==='light'?'light':'dark';document.documentElement.dataset.theme=t;document.documentElement.dataset.accent=['ember','iris','blue','sage','amber','rose'].includes(s.accent)?s.accent:'ember';if(s.premiumUnlocked&&['atelier-300','atelier-400'].includes(s.premiumEdition))document.documentElement.dataset.edition=s.premiumEdition;if(s.sidebarCollapsed)document.documentElement.classList.add('sidebar-collapsed')}catch(e){}</script>
 <link href="/static/tailwind.css" rel="stylesheet" />
 <link href="/static/style.css" rel="stylesheet" />
 <link href="/static/studio.css" rel="stylesheet" />
