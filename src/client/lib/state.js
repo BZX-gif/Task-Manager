@@ -165,7 +165,7 @@ export function normalizeSettings(raw) {
       }),
     theme: ['dark', 'light', 'system'].includes(settings.theme) ? settings.theme : 'dark',
     accent: ['ember', 'iris', 'blue', 'sage', 'amber', 'rose'].includes(settings.accent) ? settings.accent : 'ember',
-    premiumEdition: ['atelier-300', 'atelier-400'].includes(settings.premiumEdition) ? settings.premiumEdition : '',
+    premiumEdition: ['atelier-300', 'atelier-400', 'monograph-2000', 'obsidian-2000'].includes(settings.premiumEdition) ? settings.premiumEdition : '',
     premiumUnlocked: settings.premiumUnlocked === true,
     timeFormat: settings.timeFormat === '24h' ? '24h' : '12h',
     userName: String(settings.userName || '').slice(0, 60),
