@@ -557,6 +557,7 @@ function launchHtml(launch) {
 
 function sessionHtml(session) {
   if (pendingStop) return stopConfirmHtml(session)
+  const signature = ['monograph-2000', 'obsidian-2000'].includes(document.documentElement.dataset.edition)
 
   const isBreak = session.mode === 'break'
   const tasks = state.tasks.filter((t) => !t.done && (!t.date || t.date === currentDayKey())).slice(0, 40)
@@ -566,8 +567,8 @@ function sessionHtml(session) {
   const chain = momentumChain(state.focus.sessions, currentDayKey(), { includeCurrent: !isBreak })
   return overlayShell(`
     <p class="focus-eyebrow">${isBreak ? 'Focus Room · Break' : session.mode === 'stopwatch' ? 'Focus Room · Stopwatch' : 'Focus Room'}</p>
-    <div class="focus-phase-chip" id="focus-phase-chip">
-      <span class="focus-phase-dot" aria-hidden="true"></span>
+    <div class="focus-phase-chip ${signature ? 'signature-focus-chip' : ''}" id="focus-phase-chip">
+      ${signature ? '<svg class="focus-crown-mini" viewBox="0 0 64 64" aria-hidden="true"><path d="M9 45 5 17l15 12L32 7l12 22 15-12-4 28H9Zm2 6h42"/></svg>' : ''}<span class="focus-phase-dot" aria-hidden="true"></span>
       <span id="focus-phase">${missionPhase(progressRatio(session, Date.now()), session.mode).label}</span>
       <span class="focus-phase-sep" aria-hidden="true">·</span>
       <span id="focus-percent" class="tabular-nums">0%</span>
@@ -651,9 +652,11 @@ function stopConfirmHtml(session) {
 
 function ceremonyHtml(c) {
   const title = c.task ? c.task.title : c.linkedTitle
+  const signature = ['monograph-2000', 'obsidian-2000'].includes(document.documentElement.dataset.edition)
   return overlayShell(`
     <div class="focus-ceremony">
       <span class="fz-burst" aria-hidden="true"></span>
+      ${signature ? '<div class="signature-crown" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M9 45 5 17l15 12L32 7l12 22 15-12-4 28H9Z"/><path d="M11 51h42"/><circle cx="5" cy="15" r="3"/><circle cx="32" cy="6" r="3"/><circle cx="59" cy="15" r="3"/></svg></div>' : ''}
       <p class="fz-complete-eyebrow"><span aria-hidden="true">✦</span> SESSION COMPLETE <span aria-hidden="true">✦</span></p>
       <p class="focus-clock font-display tabular-nums mt-5">${formatClock(c.record.focusedSeconds)}</p>
       <p class="text-[11px] uppercase tracking-[0.3em] text-slate-400 font-bold mt-2">Focus Session</p>

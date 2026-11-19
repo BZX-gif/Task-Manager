@@ -39,6 +39,7 @@ let scope = 'today'
 let lane = 'all'
 let energy = 'all'
 let query = ''
+let signatureProgressTimer = null
 
 export function setHybScope(next) {
   if (SCOPES.some(([id]) => id === next)) scope = next
@@ -159,6 +160,11 @@ export function renderHyb() {
 
   bindCommon(section)
   bindStudio(section, today, stats)
+  if (signatureProgressTimer) clearInterval(signatureProgressTimer)
+  if (['monograph-2000', 'obsidian-2000'].includes(document.documentElement.dataset.edition)) {
+    updateSignatureWindows(section)
+    signatureProgressTimer = setInterval(() => updateSignatureWindows(section), 30000)
+  }
 }
 
 function balanceRowHtml(row, stats) {
@@ -199,11 +205,12 @@ function studioRowHtml(item, today) {
   const steps = plan.steps || []
   const stepsDone = steps.filter((step) => step.done).length
   const percent = steps.length ? Math.round((stepsDone / steps.length) * 100) : Number(plan.progress) || 0
+  const signatureWindow = ['monograph-2000', 'obsidian-2000'].includes(document.documentElement.dataset.edition) && item.date === today && !!plan.startTime
   const goal = plan.goalId ? state.goals.find((entry) => entry.id === plan.goalId) : null
   const project = plan.projectId ? state.projects.find((entry) => entry.id === plan.projectId) : null
   const mission = plan.missionId ? state.tasks.find((entry) => entry.id === plan.missionId) : null
   return `
-    <article class="hyb-card hyb-card--${kind.id} ${done ? 'is-done' : ''} ${item.skipped ? 'is-skipped' : ''} ${plan.status === 'dropped' ? 'is-aside' : ''}" data-hyb-card="${escapeHtml(plan.id)}">
+    <article class="hyb-card hyb-card--${kind.id} ${done ? 'is-done' : ''} ${item.skipped ? 'is-skipped' : ''} ${plan.status === 'dropped' ? 'is-aside' : ''}" data-hyb-card="${escapeHtml(plan.id)}" data-hyb-date="${escapeHtml(item.date || '')}" data-hyb-window-done="${done}">
       <span class="hyb-card-lane" aria-hidden="true"></span>
       <div class="hyb-card-top">
         <button type="button" class="hyb-check ${done ? 'checked' : ''}" data-hyb-toggle="${escapeHtml(plan.id)}" data-hyb-date="${escapeHtml(item.date || '')}" aria-pressed="${done}" aria-label="${done ? 'Reopen' : 'Finish'} ${escapeHtml(plan.title)}">${icon('check')}</button>
@@ -231,6 +238,7 @@ function studioRowHtml(item, today) {
           </div>
         </div>
       </div>
+      ${signatureWindow ? `<div class="signature-hyb-window" data-signature-window="${escapeHtml(plan.id)}" data-window-start="${escapeHtml(plan.startTime)}" data-window-minutes="${Number(plan.minutes) || 0}" role="status"><div class="signature-hyb-window-head"><span class="signature-window-status">Loading schedule</span><span class="signature-window-clock"></span></div><span class="signature-window-track"><i></i></span></div>` : ''}
       ${plan.notes ? `<p class="hyb-card-notes">${escapeHtml(plan.notes)}</p>` : ''}
       ${steps.length ? `<div class="hyb-card-steps">
         ${steps
@@ -251,6 +259,30 @@ function studioRowHtml(item, today) {
         </span>
       </footer>
     </article>`
+}
+
+function updateSignatureWindows(root) {
+  if (!root?.isConnected) { if (signatureProgressTimer) clearInterval(signatureProgressTimer); signatureProgressTimer = null; return }
+  const now = new Date()
+  const current = now.getHours() * 60 + now.getMinutes()
+  root.querySelectorAll('[data-signature-window]').forEach((node) => {
+    const startParts = String(node.dataset.windowStart || '').split(':').map(Number)
+    const start = startParts[0] * 60 + startParts[1]
+    const duration = Math.max(1, Number(node.dataset.windowMinutes) || 1)
+    const elapsed = current - start
+    const pct = Math.max(0, Math.min(100, Math.round(elapsed / duration * 100)))
+    const done = node.closest('[data-hyb-card]')?.dataset.hybWindowDone === 'true'
+    const status = node.querySelector('.signature-window-status')
+    const clock = node.querySelector('.signature-window-clock')
+    const fill = node.querySelector('.signature-window-track i')
+    if (fill) fill.style.width = `${done ? 100 : pct}%`
+    if (clock) clock.textContent = `${timeLabel(node.dataset.windowStart, true)} – ${timeLabel(`${String(Math.floor((start + duration) / 60) % 24).padStart(2, '0')}:${String((start + duration) % 60).padStart(2, '0')}`, true)}`
+    if (!status) return
+    if (done) { status.textContent = 'Completed'; node.classList.add('is-window-complete') }
+    else if (elapsed < 0) { const remaining = Math.abs(elapsed); status.textContent = `Starts in ${Math.floor(remaining / 60)}h ${remaining % 60}m`; node.classList.remove('is-window-complete') }
+    else if (elapsed < duration) { status.textContent = 'In your planned window'; node.classList.remove('is-window-complete') }
+    else { status.textContent = 'Planned window elapsed'; node.classList.remove('is-window-complete') }
+  })
 }
 
 function emptyStudioHtml() {

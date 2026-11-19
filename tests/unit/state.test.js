@@ -105,6 +105,8 @@ test('premium design unlock and selection are normalized and persist in local st
   assert.equal(normalizeSettings({ premiumUnlocked: true, premiumEdition: 'unknown' }).premiumEdition, '')
   assert.equal(normalizeSettings({ premiumUnlocked: true, premiumEdition: 'monograph-2000' }).premiumEdition, 'monograph-2000')
   assert.equal(normalizeSettings({ premiumUnlocked: true, premiumEdition: 'obsidian-2000' }).premiumEdition, 'obsidian-2000')
+  assert.equal(normalizeSettings({ signatureFont: 'instrument' }).signatureFont, 'instrument')
+  assert.equal(normalizeSettings({ signatureFont: 'invalid' }).signatureFont, 'edition')
   assert.equal(normalizeSettings({ premiumUnlocked: 'yes', premiumEdition: 'atelier-300' }).premiumUnlocked, false)
   const storage = fakeStorage()
   const state = emptyState(makeContext({ now: 10, id: () => 'i' }))

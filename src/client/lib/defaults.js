@@ -116,6 +116,7 @@ export const DEFAULT_SETTINGS = {
   accent: 'ember',
   premiumEdition: '',
   premiumUnlocked: false,
+  signatureFont: 'edition',
   timeFormat: '12h',
   sidebarCollapsed: false,
   workingHours: { start: '09:00', end: '18:00' },
