@@ -114,6 +114,8 @@ export function starterTimetableFor(missionId) {
 export const DEFAULT_SETTINGS = {
   theme: 'dark',
   accent: 'ember',
+  premiumEdition: '',
+  premiumUnlocked: false,
   timeFormat: '12h',
   sidebarCollapsed: false,
   workingHours: { start: '09:00', end: '18:00' },
