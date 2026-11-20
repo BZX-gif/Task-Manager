@@ -491,6 +491,22 @@ function bindDeck(root, today) {
   )
 
   qsa(root, '[data-hyb-close]').forEach((button) => button.addEventListener('click', () => closeHybDeck()))
+  // The deck declares aria-modal, so Tab must stay inside it while it is open.
+  root.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab') return
+    const focusable = qsa(root, 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      .filter((node) => !node.closest('.hidden, [hidden]'))
+    if (!focusable.length) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  })
 
   repaintChips()
 }

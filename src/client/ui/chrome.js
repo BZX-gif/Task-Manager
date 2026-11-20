@@ -1,6 +1,6 @@
 import { MOTIVATIONAL_QUOTES } from '../lib/defaults.js'
 import { greetingLine, salutationOf } from '../lib/briefing.js'
-import { escapeHtml, el, closeModal, openModal, qsa, toast } from '../core/dom.js'
+import { escapeHtml, el, closeModal, openModal, qsa, scrollToNode, toast } from '../core/dom.js'
 import { commit, currentDayKey, state } from '../core/store.js'
 import { elapsedSeconds, remainingSeconds, sessionTotals } from '../lib/focus.js'
 import { formatClock, formatDuration, formatKeyLabel } from '../lib/dates.js'
@@ -10,7 +10,7 @@ import { on } from '../core/bus.js'
 import { VIEWS } from './router.js'
 
 const VIEW_LABELS = {dashboard:'Overview',day:'My Day',calendar:'Calendar',schedule:'Schedule',hyb:'HYB Studio',tasks:'Missions',goals:'Goals',projects:'Projects',routines:'Routines',focus:'Focus Room',progress:'Analytics',review:'Weekly Review',journal:'Journal',forecast:'Forecast',assistant:'Planning assistant',settings:'Settings'}
-let clockTimer=null, quoteTimer=null, mobileOpen=false, notificationsBound=false
+let clockTimer=null, quoteTimer=null, mobileOpen=false, notificationsBound=false, activationBound=false
 const recentReminders=[]
 export function userName(){return state.settings.userName?.trim()||''}
 export function salutation(){return salutationOf(state)}
@@ -50,6 +50,23 @@ export function bindChrome(){
   const online=()=>{const node=el('connection-label');if(node)node.textContent=navigator.onLine?'On this device':'Offline · saved locally'};window.addEventListener('online',online);window.addEventListener('offline',online);online()
   window.matchMedia?.('(prefers-color-scheme: light)')?.addEventListener?.('change',()=>{if(state.settings.theme==='system')applyTheme()})
   document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&mobileOpen)setMobileNav(false);if(e.key==='Tab'&&mobileOpen){const nodes=[...el('mobile-nav').querySelectorAll('button:not([disabled])')],first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}})
+  // Some environments (and some assistive tech) dispatch key events on
+  // `<button>` without synthesising the native click. Make Enter/Space behave
+  // like a real press for every plain button in the app, once, delegated.
+  if (!activationBound) {
+    const activate = (event) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      const button = event.target instanceof Element ? event.target.closest('button') : null
+      if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return
+      if (event.repeat) return
+      event.preventDefault()
+      if (event.key === ' ' && typeof button.click !== 'function') return
+      button.click()
+    }
+    document.addEventListener('keydown', activate)
+    activationBound = true
+  }
   applyTheme()
 }
 export function openShortcuts(){
@@ -75,5 +92,5 @@ export function openCommandPalette(){
 }
 export function openNotifications(){
   el('notification-dot')?.classList.add('hidden')
-  openModal({title:'A gentle nudge',body:`<p class="section-sub" style="margin-bottom:20px">Only the reminders you asked for. Nothing to catch up on, nothing to feel behind about.</p>${recentReminders.length?recentReminders.map((r)=>`<article class="notification-item">${icon(r.kind==='routine'?'routines':r.kind==='overdue'?'recover':'bell')}<div><strong>${escapeHtml(r.title)}</strong><p>${escapeHtml(r.body)}</p><small>${new Date(r.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</small></div></article>`).join(''):`<div class="empty-state">${icon('bell')}<p>A quiet moment.</p><p>New reminders will appear here while your workspace is open.</p></div>`}<div class="form-footer"><button class="btn-ghost" data-reminder-settings>${icon('settings')}Reminder preferences</button><button class="btn-primary" data-modal-close>All clear</button></div>`,onMount:(box)=>box.querySelector('[data-reminder-settings]').addEventListener('click',()=>{closeModal();window.CC.switchView('settings');setTimeout(()=>document.getElementById('settings-reminders')?.scrollIntoView({behavior:'smooth'}),80)})})
+  openModal({title:'A gentle nudge',body:`<p class="section-sub" style="margin-bottom:20px">Only the reminders you asked for. Nothing to catch up on, nothing to feel behind about.</p>${recentReminders.length?recentReminders.map((r)=>`<article class="notification-item">${icon(r.kind==='routine'?'routines':r.kind==='overdue'?'recover':'bell')}<div><strong>${escapeHtml(r.title)}</strong><p>${escapeHtml(r.body)}</p><small>${new Date(r.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</small></div></article>`).join(''):`<div class="empty-state">${icon('bell')}<p>A quiet moment.</p><p>New reminders will appear here while your workspace is open.</p></div>`}<div class="form-footer"><button class="btn-ghost" data-reminder-settings>${icon('settings')}Reminder preferences</button><button class="btn-primary" data-modal-close>All clear</button></div>`,onMount:(box)=>box.querySelector('[data-reminder-settings]').addEventListener('click',()=>{closeModal();window.CC.switchView('settings');setTimeout(()=>scrollToNode(document.getElementById('settings-reminders'),{behavior:'smooth'}),80)})})
 }

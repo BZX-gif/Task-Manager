@@ -39,6 +39,12 @@ function unlinkRecords(state, kind, id) {
     if (kind === 'project' && t.projectId === id) t.projectId = null
   }
   if (kind === 'goal') for (const p of state.projects) if (p.goalId === id) { p.goalId = null; p.milestoneId = null }
+  // HYB plans carry the same links; a dangling id silently resets the link the
+  // moment the plan is edited, so drop it together with the deleted record.
+  for (const plan of state.hyb?.plans || []) {
+    if (kind === 'goal' && plan.goalId === id) { plan.goalId = null; plan.milestoneId = null }
+    if (kind === 'project' && plan.projectId === id) plan.projectId = null
+  }
 }
 
 // Remove dangling links from dated blocks too; immutable focus history keeps its snapshot.

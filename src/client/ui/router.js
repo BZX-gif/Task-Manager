@@ -21,7 +21,7 @@ import { icon } from './icons.js'
 
 export const VIEWS = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings']
 const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,calendar:renderCalendar,schedule:renderSchedule,hyb:renderHyb,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,assistant:renderAssistant,settings:renderSettings}
-let currentView='dashboard',refreshTimer=null;const enterTimers={}
+let currentView='dashboard';const enterTimers={}
 export function getCurrentView(){return currentView}
 export function switchView(view){
   if(!VIEWS.includes(view))return
@@ -39,5 +39,33 @@ export function renderCurrentView(){
   const renderer=RENDERERS[currentView];if(!renderer)return
   try{renderer()}catch(error){console.error(`[router] ${currentView} failed to render`,error);const section=el(`view-${currentView}`);if(section)section.innerHTML=`<div class="card empty-state">${icon('info')}<p>This view couldn’t be opened.</p><p>Your saved data is safe. Try another section, or export a backup from Settings.</p><button class="btn-ghost" data-retry-view>Try again</button></div>`;section?.querySelector('[data-retry-view]')?.addEventListener('click',()=>renderCurrentView())}
 }
-export function refreshCurrentView(delay=0){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{refreshTimer=null;renderCurrentView()},delay)}
+let timer = null
+let lastPaint = 0
+const FRAME = 16
+
+/**
+ * Paint the active view at most once per frame while always landing on the
+ * final state.
+ *
+ * Commits are frequent and often bursty: a keyboard reschedule is several
+ * commits, a drag commits on drop, ticking a checkbox re-renders Top 3 *and*
+ * the day. Rendering synchronously for each one forced repeated layout of the
+ * whole section. Updates now coalesce into a single trailing paint.
+ *
+ * `after` (ms) defers the pending paint — used after a dialog closes so the
+ * exit animation keeps its own frames.
+ */
+export function refreshCurrentView(after = 0) {
+  if (timer != null) {
+    // a deferred paint outranks an already-pending immediate one
+    if (after <= 0) return
+    clearTimeout(timer)
+  }
+  const wait = after > 0 ? after : Math.max(0, FRAME - (Date.now() - lastPaint))
+  timer = setTimeout(() => {
+    timer = null
+    lastPaint = Date.now()
+    renderCurrentView()
+  }, wait)
+}
 export function initRouter(){qsa(document,'[data-view]').forEach((button)=>button.addEventListener('click',()=>switchView(button.dataset.view)));on('store:change',()=>refreshCurrentView())}

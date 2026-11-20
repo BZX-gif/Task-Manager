@@ -143,3 +143,18 @@ export function weekdayShort(index) {
 export function nowMinutes(date = new Date()) {
   return date.getHours() * 60 + date.getMinutes()
 }
+
+/**
+ * Duration split into a big number and a quieter unit for metric strips:
+ * "45m", "1h", "2h 5m" — never "0h 45m" or "1h 0m".
+ * @param {number} minutes
+ * @returns {string} safe HTML (`<small>` carries the unit)
+ */
+export function durationHtml(minutes) {
+  const total = Math.max(0, Math.round(minutes || 0))
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  if (h && m) return `${h}<small>h ${m}m</small>`
+  if (h) return `${h}<small>h</small>`
+  return `${m}<small>m</small>`
+}

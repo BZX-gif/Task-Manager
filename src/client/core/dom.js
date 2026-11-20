@@ -341,3 +341,19 @@ export async function copyText(text) {
 export function hint(text, label = '') {
   return `<span class="help-dot" title="${escapeAttr(text)}" aria-label="${escapeAttr(text)}">${label || '?'}</span>`
 }
+
+/**
+ * Scroll an element into view when the platform supports it. Some embedded
+ * webviews and headless environments do not implement `scrollIntoView`, and an
+ * exception here would abort whatever handler asked for the scroll — so the
+ * call is optional and never throws.
+ */
+export function scrollToNode(node, options) {
+  if (!node || typeof node.scrollIntoView !== 'function') return false
+  try {
+    node.scrollIntoView(options || { behavior: 'smooth', block: 'start' })
+    return true
+  } catch {
+    return false
+  }
+}

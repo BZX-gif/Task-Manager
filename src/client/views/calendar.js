@@ -11,7 +11,7 @@
    ------------------------------------------------------------------------- */
 
 import { commit, currentDayKey, state } from '../core/store.js'
-import { escapeHtml, qs, qsa, toast } from '../core/dom.js'
+import { escapeHtml, qs, qsa, scrollToNode, toast } from '../core/dom.js'
 import { addDays, formatDuration, formatKeyLabel, isValidKey, weekdayOf, weekdayShort } from '../lib/dates.js'
 import {
   CAL_LAYERS,
@@ -472,7 +472,7 @@ function bindCalendar(section, matrix, today) {
       selected = button.dataset.calOpenDay
       anchor = selected
       renderCalendar()
-      qs(document.getElementById('view-calendar'), '.cal-day-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      scrollToNode(qs(document.getElementById('view-calendar'), '.cal-day-card'), { behavior: 'smooth', block: 'nearest' })
     }),
   )
 

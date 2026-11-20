@@ -20,6 +20,7 @@ import { openRoutineModal } from './views/routines.js'
 import { openRescheduleModal, toggleScheduleItem } from './views/schedule.js'
 import { openFocusRoom, paintFocusRoom, exitFocusFullscreen, isFocusFullscreen } from './views/focus-room.js'
 import { toggleMission, applyTheme } from './core/actions.js'
+import { openProtectedModal, openCategoryModal } from './views/settings.js'
 import { handleTitlesUnlocked } from './ui/titles.js'
 import { icon } from './ui/icons.js'
 import { closeBriefing, initBriefing, isBriefingOpen, openBriefing, refreshCommandStrip, briefingInfo, saveBriefingIntention, speakBriefing } from './ui/briefing.js'
@@ -27,7 +28,7 @@ import { closeHybDeck, initHyb, isHybDeckOpen, openHybDeck, openHybPlanModal, re
 import { hybSummary } from './core/hyb.js'
 import { setCalendarDate } from './views/calendar.js'
 
-const APP_VERSION='4.4'
+const APP_VERSION='4.5'
 function refreshAll(){refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshHybTriggers();refreshCurrentView()}
 function streakInfo(){const result=streak();return{...result,recent:result.recent.map((day)=>({...day,status:dayStatus(state,day.dateKey).status}))}}
 function disciplineInfo(){return disciplineStreak()}
@@ -55,6 +56,8 @@ window.CC = {
   openProjectModal,
   openProjectDetail,
   openRoutineModal,
+  openProtectedModal,
+  openCategoryModal,
   openRescheduleModal,
   openFocusRoom,
   openScoreInfo,
@@ -107,6 +110,10 @@ function boot(){
   on('focus:tick',()=>{refreshFocusChip();paintFocusRoom()})
   on('store:change',()=>{refreshStreakWidget();refreshFocusChip();refreshCommandStrip();refreshHybTriggers();applyTheme()})
   on('titles:unlocked',(detail)=>handleTitlesUnlocked(detail))
+  // A failed async action (a dialog promise, a download, a storage write) must
+  // never leave the interface silent or wedged. Report it once, calmly, and
+  // keep the workspace usable; the data on screen is unaffected.
+  window.addEventListener('unhandledrejection',(event)=>{if(event?.preventDefault)event.preventDefault();console.warn('[app] an action could not complete',event?.reason?.message||event?.reason);toast('Something could not complete just now. Your saved data is unchanged.','error',{timeout:7000})})
   const persist=()=>{syncScoreHistory(currentDayKey());flush()};window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else{updateClockAndGreeting();refreshCommandStrip();refreshCurrentView();checkReminders()}});window.addEventListener('pagehide',persist)
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&isFocusFullscreen())exitFocusFullscreen()})
   refreshAll();switchView('dashboard');reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing()

@@ -473,6 +473,43 @@ test('the focus mission: presets, phases, milestones, final minute, keyboard and
   }
 })
 
+test('keyboard users can activate every plain button, once per press', async () => {
+  const { window, errors, $ } = await boot()
+  try {
+    window.CC.switchView('settings')
+    await settle(120)
+    const accents = [...window.document.querySelectorAll('[data-accent-choice]')]
+    assert.equal(accents.length, 6)
+    for (const button of accents) {
+      assert.equal(button.getAttribute('role'), 'radio')
+      assert.ok(['0', '-1'].includes(button.getAttribute('tabindex')), 'roving tabindex keeps one stop per group')
+    }
+    const blue = accents.find((b) => b.dataset.accentChoice === 'blue')
+    blue.focus()
+    blue.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await settle(120)
+    assert.equal(window.document.documentElement.dataset.accent, 'blue', 'Enter applies the accent')
+    assert.equal(window.CC.getState().settings.accent, 'blue')
+
+    const light = [...window.document.querySelectorAll('[data-theme-choice]')].find((b) => b.dataset.themeChoice === 'light')
+    light.focus()
+    light.dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }))
+    await settle(120)
+    assert.equal(window.document.documentElement.dataset.theme, 'light', 'Space applies the theme')
+
+    // the delegated activator must fire exactly one click per key press
+    const probe = window.document.createElement('button')
+    let clicks = 0
+    probe.addEventListener('click', () => { clicks += 1 })
+    window.document.body.appendChild(probe)
+    probe.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    assert.equal(clicks, 1)
+    assert.deepEqual(errors, [])
+  } finally {
+    window.close()
+  }
+})
+
 after(() => {
   /* nothing global to clean up: each test closes its own DOM */
 })

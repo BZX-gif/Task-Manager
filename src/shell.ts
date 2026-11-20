@@ -1,5 +1,5 @@
 /** The local-first application shell. All application data stays in the browser. */
-export const APP_VERSION = '4.4'
+export const APP_VERSION = '4.5'
 
 export const NAV_GROUPS = [
   { label: 'YOUR DAY', items: [ ['dashboard', 'Overview', 'overview'], ['day', 'My Day', 'sun'], ['calendar', 'Calendar', 'calendar'], ['schedule', 'Schedule', 'clock'], ['hyb', 'HYB Studio', 'bolt'], ['tasks', 'Missions', 'missions'], ['forecast', 'Forecast', 'forecast'] ] },
