@@ -24,6 +24,11 @@ import {
 } from '../lib/briefing.js'
 import { icon, ring, timeLabel } from './common.js'
 
+/* The briefing is a good idea shown at a bad moment: on a first-ever visit it
+ * used to cover the workspace 1.2s in, before the person had seen anything, so
+ * the first impression of the product was a modal. The timing is unchanged for
+ * a workspace that has a day to brief on; an empty workspace is simply not
+ * interrupted — a tour belongs to onboarding, not to the daily greeting. */
 const AUTO_DELAY_MS = 1200
 let autoTimer = null
 let lastFocus = null
@@ -453,6 +458,9 @@ export function initBriefing() {
   if (!state || !shouldShowBriefing(state, currentDayKey())) return
   const params = new URLSearchParams(location.search)
   if (params.get('action')) return
+  // A workspace with no history yet should show itself, not a modal about itself.
+  const isFirstVisit = !state?.briefing?.lastShownDay && !state?.tasks?.length && !state?.sessions?.length
+  if (isFirstVisit) return
   autoTimer = setTimeout(() => {
     autoTimer = null
     if (!state || document.visibilityState === 'hidden') return

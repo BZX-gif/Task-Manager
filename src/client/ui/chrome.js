@@ -25,7 +25,15 @@ export function updateClockAndGreeting(){
   const avatar=document.querySelector('.brand-avatar'),initial=userName().charAt(0).toLocaleUpperCase()||'P'
   if(avatar&&avatar.textContent!==initial){avatar.textContent=initial;avatar.setAttribute('title',userName()||'Personal workspace')}
   const workspace=document.querySelector('.workspace-avatar');if(workspace)workspace.textContent=initial
-  const date=document.querySelector('.date-day');if(date)date.textContent=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
+  // The date block carries two spans (full + compact) and the layout decides
+  // which one shows. Writing textContent here replaced both — and this runs
+  // once a second — so the markup was destroyed on the first tick and the
+  // compact form could never render. Each span is updated in place instead.
+  const dateFull=document.querySelector('.date-day .date-full'),dateShort=document.querySelector('.date-day .date-short'),dateBare=document.querySelector('.date-day')
+  const fullLabel=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
+  if(dateFull)dateFull.textContent=fullLabel
+  if(dateShort)dateShort.textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})
+  if(dateBare&&!dateFull&&!dateShort)dateBare.textContent=fullLabel
   const dayBar=document.getElementById('day-progress'),dayFill=document.getElementById('day-progress-fill')
   if(dayBar&&dayFill){const toMin=(t)=>{const p=String(t||'').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)};const ws=state.settings.workingHours||{};const start=toMin(ws.start||'08:00');let end=toMin(ws.end||'20:00');if(end<=start)end=start+60;const pct=Math.max(0,Math.min(100,Math.round((now.getHours()*60+now.getMinutes()-start)/(end-start)*100)));dayFill.style.width=pct+'%';dayBar.setAttribute('role','img');dayBar.setAttribute('aria-label',pct+'% of your available hours used')}
 }
