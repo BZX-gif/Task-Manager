@@ -108,7 +108,7 @@ export function renderCalendar() {
         <button class="icon-btn" data-cal-step="-1" aria-label="Previous month">${icon('left')}</button>
         <div class="cal-nav-label">
           <strong>${escapeHtml(mode === 'agenda' ? `Agenda from ${formatKeyLabel(anchor)}` : matrix.title)}</strong>
-          <small>${escapeHtml(mode === 'month' ? `${stats.committedDays} of ${stats.days} days have something on them` : mode === 'week' ? 'Seven days, side by side' : 'The next 30 days')}</small>
+          <small>${escapeHtml(mode === 'month' ? `${stats.pledgedDays} of ${stats.days} day${stats.days === 1 ? '' : 's'} with a commitment` : mode === 'week' ? 'Seven days, side by side' : 'The next 30 days')}</small>
         </div>
         <button class="icon-btn" data-cal-step="1" aria-label="Next month">${icon('chevron')}</button>
         <button class="btn btn-secondary btn-small" data-cal-today>Today</button>
@@ -173,8 +173,17 @@ function monthHtml(matrix, overview, today) {
 
 function cellHtml(cell, summary, today, weekIndex) {
   const entries = summary?.entries || []
-  const chips = entries.filter((entry) => !entry.dotOnly).slice(0, MAX_CELL_EVENTS)
-  const extra = entries.filter((entry) => !entry.dotOnly).length - chips.length
+  /* Commitments first (missions, HYB plans, deadlines, journal); the recurring
+   * study routine collapses to one quiet line so a month of template days no
+   * longer looks like a month of appointments. */
+  const routine = summary?.routine || []
+  const visible = entries.filter((entry) => !entry.dotOnly)
+  const commitments = visible.filter((entry) => entry.kind !== 'template' && entry.kind !== 'rest')
+  // routine is summarised below, never given a chip slot — a month cell has
+  // room for what the day is *for*, not for the habit that fills it
+  const ordered = commitments
+  const chips = ordered.slice(0, MAX_CELL_EVENTS)
+  const extra = ordered.length - chips.length
   const dots = entries.filter((entry) => entry.dotOnly)
   const isSelected = cell.key === selected
   const load = Math.min(100, summary?.loadPct || 0)
@@ -191,15 +200,16 @@ function cellHtml(cell, summary, today, weekIndex) {
         ${chips
           .map(
             (entry) => `
-          <button type="button" class="cal-chip cal-chip--${entry.source} ${entry.source === 'hyb' ? `lane-${entry.kind}` : ''} ${entry.done ? 'is-done' : ''} ${entry.tone === 'overdue' ? 'is-overdue' : ''}"
+          <button type="button" class="cal-chip cal-chip--${entry.source} kind-${entry.kind || 'block'} ${entry.source === 'hyb' ? `lane-${entry.kind}` : ''} ${entry.done ? 'is-done' : ''} ${entry.tone === 'overdue' ? 'is-overdue' : ''}"
             data-cal-entry="${escapeHtml(entry.id)}" data-cal-day="${cell.key}" tabindex="-1"
             title="${escapeHtml(entryChipTitle(entry))}">
-            ${entry.time ? `<span class="cal-chip-time">${timeLabel(entry.time)}</span>` : `<span class="cal-chip-dot" aria-hidden="true"></span>`}
+            ${entry.kind === 'template' ? `<span class="cal-chip-mark" aria-hidden="true"></span>` : entry.time ? `<span class="cal-chip-time">${timeLabel(entry.time)}</span>` : `<span class="cal-chip-dot" aria-hidden="true"></span>`}
             <span class="cal-chip-title">${escapeHtml(entry.title)}</span>
           </button>`,
           )
           .join('')}
         ${extra > 0 ? `<button type="button" class="cal-more" data-cal-open-day="${cell.key}" tabindex="-1">+${extra} more</button>` : ''}
+        ${routine.length ? `<span class="cal-routine-note" aria-hidden="true"><i></i>Routine${summary?.routineMinutes ? ` · ${formatDuration(summary.routineMinutes)}` : ` · ${routine.length}`}</span>` : ''}
       </span>
       <span class="cal-cell-dots" aria-hidden="true">
         ${dots.slice(0, 6).map((entry) => `<i class="cal-dot cal-dot--${entry.source} ${entry.tone === 'protected' ? 'is-protected' : ''} ${entry.done ? 'is-done' : ''}" title="${escapeHtml(entryChipTitle(entry))}"></i>`).join('')}
@@ -214,7 +224,9 @@ function cellLabel(cell, summary) {
   if (cell.isToday) parts.push('today')
   if (!summary?.visibleCount) parts.push('nothing planned')
   else {
-    parts.push(`${summary.visibleCount} item${summary.visibleCount === 1 ? '' : 's'}`)
+    const committed = summary.commitments?.length || 0
+    if (committed) parts.push(`${committed} commitment${committed === 1 ? '' : 's'}`)
+    if (summary.hasRoutine) parts.push(`${summary.routine.length} routine block${summary.routine.length === 1 ? '' : 's'}`)
     if (summary.minutes) parts.push(formatDuration(summary.minutes))
     if (summary.doneCount) parts.push(`${summary.doneCount} finished`)
   }
@@ -225,7 +237,7 @@ function entryChipTitle(entry) {
   const bits = [entry.title]
   if (entry.time) bits.push(timeLabel(entry.time, true))
   if (entry.minutes) bits.push(formatDuration(entry.minutes))
-  bits.push(entry.done ? 'finished' : entry.source === 'hyb' ? `HYB · ${kindOf(entry.kind).label} · ${energyOf(entry.energy).label} energy` : entry.source)
+  bits.push(entry.done ? 'finished' : entry.kind === 'template' ? 'Routine · part of your study template' : entry.source === 'hyb' ? `HYB · ${kindOf(entry.kind).label} · ${energyOf(entry.energy).label} energy` : entry.source)
   return bits.join(' · ')
 }
 

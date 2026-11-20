@@ -15,6 +15,7 @@ const SHELL_ASSETS = [
   '/',
   '/static/style.css',
   '/static/studio.css',
+  '/static/system.css',
   '/static/tailwind.css',
   '/static/js/app.js',
   '/static/favicon.svg',

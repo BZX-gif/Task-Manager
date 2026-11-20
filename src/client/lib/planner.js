@@ -95,7 +95,11 @@ export function scheduleFor(state, date) {
   // rewrite history. Fresh workspaces simply have empty templates.
   const snapshot = state.dayPlans?.[missionId]?.[date]
   const templates = Array.isArray(snapshot) && date < dateKey() ? snapshot : timetableFor(state, missionId)
-  const blocks = templates.filter((b) => !b.days?.length || b.days.includes(weekdayOf(date))).map((b) => ({ ...b, sourceId: b.id, kind: b.protected ? 'protected' : 'mission', status: done.includes(b.id) ? 'completed' : 'planned', protected: b.protected === true, flexible: b.flexible !== false && !b.protected }))
+  // A block that comes from a recurring study template is not a dated
+  // commitment — it is the shape a day *could* take. It gets its own kind so
+  // the calendar can say "this is your routine" instead of implying four
+  // hundred identical appointments.
+  const blocks = templates.filter((b) => !b.days?.length || b.days.includes(weekdayOf(date))).map((b) => ({ ...b, sourceId: b.id, kind: b.protected ? 'protected' : 'template', status: done.includes(b.id) ? 'completed' : 'planned', protected: b.protected === true, flexible: b.flexible !== false && !b.protected }))
   const tasks = (state.tasks || []).filter((t) => t.date === date && t.time && !t.inbox && t.status !== 'cancelled').map((t) => ({ id: `task:${t.id}`, sourceId: t.id, taskId: t.id, title: t.title, time: t.time, duration: t.estimateMinutes || 30, cat: t.cat, priority: t.priority, goalId: t.goalId, projectId: t.projectId, milestoneId: t.milestoneId, kind: 'mission', status: t.done ? 'completed' : 'planned', protected: !!t.protected, flexible: t.flexible !== false && !t.protected }))
   return [...blocks, ...tasks].sort((a,b) => minutesOfDay(a.time)-minutesOfDay(b.time))
 }

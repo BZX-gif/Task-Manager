@@ -72,6 +72,8 @@ interface Window {
     saveIntention(value: string): string
     speakBriefing(briefing?: any, options?: { notify?: boolean }): boolean
     refreshQuoteInline(): void
+    openOnboarding(): void
+    completeOnboarding(): void
   }
   webkitAudioContext?: typeof AudioContext
 }

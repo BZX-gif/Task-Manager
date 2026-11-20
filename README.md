@@ -104,4 +104,6 @@ Without a key or network, the assistant reports the failure honestly and the bui
 
 ## Verification
 
+The visual system lives in `public/static/system.css` (loaded last, so its tokens win). See `docs/command-5-visual-system.md` for the scale, the depth planes and the defects the redesign fixed.
+
 `npm run verify` runs the project lint, Worker/client typechecks, clean production build and the full Node test suite. 4.5 added contrast floors (`tests/unit/theme-contrast.test.js`) and keyboard/focus contracts to that suite; see `docs/smoothing-4.5.md` for the defect list. The transformation also received headless Chromium interaction/viewport/offline QA; see `docs/command-center-final-report.md` for the recorded results and remaining operational limits.

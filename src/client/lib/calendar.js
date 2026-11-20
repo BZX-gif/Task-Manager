@@ -157,7 +157,7 @@ export function dayEntries(state, dayKey, { layers = null, todayKey = dateKey(),
         minutes: rest ? 0 : Math.max(0, Number(block.duration) || 0),
         cat: block.cat || null,
         priority: block.priority || 'medium',
-        kind: block.protected || block.kind === 'protected' ? 'protected' : rest ? 'rest' : 'block',
+        kind: block.protected || block.kind === 'protected' ? 'protected' : rest ? 'rest' : block.kind === 'template' ? 'template' : 'block',
         done: itemDone(state, block, key),
         tone: block.protected || block.kind === 'protected' ? 'protected' : rest ? 'rest' : 'normal',
         refId: block.taskId || block.sourceId || block.id,
@@ -290,9 +290,21 @@ export function daySummary(state, dayKey, { layers = null, todayKey = dateKey(),
   const loadPct = limit ? Math.round((totalMinutes / limit) * 100) : 0
   const conflicts = entries.filter((entry) => entry.time).length ? timedOverlaps(entries) : 0
   const lanes = [...new Set(entries.filter((entry) => entry.source === 'hyb').map((entry) => entry.kind))]
+  /* A study template repeats every day. Drawn at full weight it turns a month
+   * grid into 30 identical days, which tells the reader nothing. So the
+   * summary separates what the day *is committed to* from the routine that
+   * merely fills it — the calendar shows the first, and offers the second.
+   */
+  const routine = counted.filter((entry) => entry.kind === 'template' || entry.kind === 'rest')
+  const commitments = counted.filter((entry) => entry.kind !== 'template' && entry.kind !== 'rest')
   return {
     date: key,
     entries,
+    routine,
+    commitments,
+    routineMinutes: routine.reduce((sum, entry) => sum + (entry.done ? 0 : entry.minutes), 0),
+    hasRoutine: routine.length > 0,
+    hasCommitments: commitments.length > 0,
     count: entries.length,
     visibleCount: counted.length,
     minutes: totalMinutes,
@@ -348,7 +360,14 @@ export function monthStats(state, matrix, overview) {
   const inMonth = matrix.weeks.flat().filter((cell) => cell.inMonth)
   const summaries = inMonth.map((cell) => overview.get(cell.key)).filter(Boolean)
   const minutes = summaries.reduce((sum, day) => sum + day.minutes, 0)
+  // "committed" means the person put something there — a template that runs
+  // every day is background, not a commitment, and must not inflate the count
+  // "days with something on them" counts everything visible, including a
+  // recurring template — that is what the month grid actually draws.
   const committedDays = summaries.filter((day) => day.visibleCount).length
+  // "pledged" is the honest headline: days where the person committed to
+  // something beyond the routine. A month of template days pledges nothing.
+  const pledgedDays = summaries.filter((day) => (day.commitments?.length || 0) > 0).length
   const heavyDays = summaries.filter((day) => ['full', 'over', 'conflict'].includes(day.load)).length
   const journalDays = summaries.filter((day) => day.hasJournal).length
   const hybDays = summaries.filter((day) => day.hasHyb).length
@@ -362,6 +381,7 @@ export function monthStats(state, matrix, overview) {
     minutes,
     hours: Math.round((minutes / 60) * 10) / 10,
     committedDays,
+    pledgedDays,
     quietDays: inMonth.length - committedDays,
     heavyDays,
     journalDays,
