@@ -41,7 +41,7 @@ export function renderJournal() {
       `<button class="btn-ghost" data-journal-review>${icon('review')}Weekly review</button>`,
     )}
     <div class="metric-strip journal-metrics">
-      ${metric('review', 'Entries', `${stats.count}<small> / 30d</small>`, `${stats.consistency}% of the last thirty days`)}
+      ${metric('review', 'Entries', `${stats.count}<small>/30d</small>`, `${stats.consistency}% of the last thirty days`)}
       ${metric('bolt', 'Current streak', `${stats.streak}<small>d</small>`, stats.streak ? 'Consecutive days written' : 'Write one entry to begin')}
       ${metric('leaf', 'Average mood', stats.mood ? escapeHtml(stats.mood.label) : '—', stats.count ? journalSummaryLine(stats) : 'Mood shows once you have a few entries')}
       ${metric('check', 'Wins recorded', `${stats.winsCount}`, stats.lastWin ? escapeHtml(stats.lastWin.slice(0, 48)) : 'One win per entry is enough')}

@@ -21,7 +21,7 @@ import {
   completeHybDay,
 } from '../core/hyb.js'
 import { openHybDeck, openHybPlanModal } from '../ui/hyb.js'
-import { addDays, formatDuration, formatKeyLabel, isValidKey, startOfWeek, weekdayOf, weekdayShort } from '../lib/dates.js'
+import { addDays, formatDuration, formatKeyLabel, isValidKey, startOfWeek, weekdayOf, weekdayShort, durationHtml } from '../lib/dates.js'
 import { HYB_KINDS, HYB_ENERGY, energyOf, kindOf, parseHybInput, repeatOf } from '../lib/hyb.js'
 import { bindCommon, icon, metric, pageHeading, timeLabel } from '../ui/common.js'
 
@@ -63,7 +63,7 @@ export function renderHyb() {
 
     <div class="metric-strip hyb-metrics">
       ${metric('bolt', 'Today', `${stats.today.doneCount}<small>/${stats.today.count}</small>`, stats.today.count ? 'HYB plans finished' : 'Nothing planned today')}
-      ${metric('focus', 'Planned today', `${Math.floor(stats.today.minutes / 60)}<small>h ${stats.today.minutes % 60}m</small>`, `${stats.today.open} still open`)}
+      ${metric('focus', 'Planned today', durationHtml(stats.today.minutes), `${stats.today.open} still open`)}
       ${metric('calendar', 'Next 14 days', `${stats.windowPlanned}`, `${formatDuration(stats.minutesPlanned)} of HYB time`)}
       ${metric('flag', 'Momentum', `${stats.streak.current}<small> day${stats.streak.current === 1 ? '' : 's'}</small>`, `best run ${stats.streak.best} · ${stats.completion}% finished in the window`)}
     </div>

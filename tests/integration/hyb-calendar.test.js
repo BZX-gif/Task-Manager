@@ -677,3 +677,32 @@ test('a repeating plan is finished day by day and never all at once', async () =
     window.close()
   }
 })
+
+test('the HYB deck keeps keyboard focus inside it while it is open', async () => {
+  const { window, $, errors } = await boot()
+  try {
+    window.CC.openHybDeck()
+    await settle(80)
+    const root = window.document.getElementById('hyb-root')
+    const focusable = [...root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+      .filter((node) => !node.closest('.hidden, [hidden]'))
+    assert.ok(focusable.length > 2, 'the deck has real controls')
+    const first = focusable[0]
+    const last = focusable.at(-1)
+
+    last.focus()
+    last.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    assert.equal(window.document.activeElement, first, 'Tab from the last control wraps to the first')
+
+    first.focus()
+    first.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }))
+    assert.equal(window.document.activeElement, last, 'Shift+Tab from the first wraps to the last')
+
+    window.CC.closeHybDeck()
+    await settle(50)
+    assert.ok($('#hyb-root').classList.contains('hidden'))
+    assert.equal(errors.length, 0, `errors: ${errors.join(' | ')}`)
+  } finally {
+    window.close()
+  }
+})

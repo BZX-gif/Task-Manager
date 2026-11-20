@@ -124,6 +124,25 @@ test('goal/project progress follows real linked work without double counting', (
   assert.equal(state.schedule.days[TODAY][0].goalId, null)
 })
 
+test('deleting a goal or project also clears HYB plan links (no dangling ids)', () => {
+  const state = fresh()
+  state.goals.push({ id: 'g', title: 'Goal', category: 'Personal', status: 'active', progressMode: 'auto', milestones: [], targetDate: null })
+  state.projects.push({ id: 'p', title: 'Project', goalId: 'g', milestoneId: null, status: 'active', progressMode: 'auto', milestones: [], deadline: null })
+  state.hyb.plans.push(
+    { id: 'h1', title: 'Linked plan', goalId: 'g', projectId: 'p', milestoneId: null },
+    { id: 'h2', title: 'Goal only', goalId: 'g', projectId: null, milestoneId: null },
+    { id: 'h3', title: 'Unrelated', goalId: null, projectId: null, milestoneId: null },
+  )
+  unlinkDeleted(state, 'project', 'p')
+  assert.equal(state.hyb.plans[0].projectId, null, 'the project link is cleared on the plan')
+  assert.equal(state.hyb.plans[0].goalId, 'g', 'the goal link is untouched')
+  unlinkDeleted(state, 'goal', 'g')
+  for (const plan of state.hyb.plans) {
+    assert.equal(plan.goalId, null)
+    assert.equal(plan.projectId, null)
+  }
+})
+
 test('routines track check-ins and consistency without punishing missed days', () => {
   const state = fresh()
   const routine = { id: 'r', title: 'Morning', type: 'Custom', time: '08:00', days: [1, 2, 3, 4, 5], activities: [{ id: 'a', title: 'Water', duration: 5 }, { id: 'b', title: 'Stretch', duration: 10 }], archived: false }

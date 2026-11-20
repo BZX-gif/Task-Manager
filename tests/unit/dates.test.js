@@ -4,6 +4,7 @@ import {
   addDays,
   dateKey,
   diffDays,
+  durationHtml,
   formatClock,
   formatDuration,
   isValidKey,
@@ -63,6 +64,16 @@ test('time helpers convert both ways', () => {
   assert.equal(formatDuration(0), '0m')
   assert.equal(formatClock(65), '01:05')
   assert.equal(formatClock(3725), '1:02:05')
+})
+
+test('durationHtml never prints a zero hour unit', () => {
+  // metrics across Overview, Forecast, HYB and Analytics share one formatter
+  assert.equal(durationHtml(45), '45<small>m</small>')
+  assert.equal(durationHtml(0), '0<small>m</small>')
+  assert.equal(durationHtml(60), '1<small>h</small>')
+  assert.equal(durationHtml(125), '2<small>h 5m</small>')
+  assert.doesNotMatch(durationHtml(45), /0h/)
+  assert.doesNotMatch(durationHtml(60), /0m/)
 })
 
 test('monthKey groups by month', () => {

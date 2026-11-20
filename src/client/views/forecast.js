@@ -7,7 +7,7 @@
 
 import { state, currentDayKey } from '../core/store.js'
 import { escapeHtml, qsa } from '../core/dom.js'
-import { addDays, formatDuration } from '../lib/dates.js'
+import { addDays, durationHtml, formatDuration } from '../lib/dates.js'
 import { buildForecast, forecastAdvice, busyShare, LOAD_LABELS } from '../lib/forecast.js'
 import { drawChart, chartColors } from '../core/charts.js'
 import { icon, pageHeading, metric, empty, bindCommon } from '../ui/common.js'
@@ -38,8 +38,8 @@ export function renderForecast() {
       <div><strong>${escapeHtml(advice.title)}</strong><p>${escapeHtml(advice.body)}</p></div>
     </div>
     <div class="metric-strip forecast-metrics">
-      ${metric('calendar', 'Committed time', `${Math.round(forecast.totalPlanned / 60)}<small>h ${forecast.totalPlanned % 60}m</small>`, `across ${horizon} days · ${forecast.totalBlocks} blocks`)}
-      ${metric('focus', 'Daily average', `${Math.floor(forecast.averagePlanned / 60)}<small>h ${forecast.averagePlanned % 60}m</small>`, `${forecast.averageLoadPct}% of a ${forecast.capacityLabel} focused day`)}
+      ${metric('calendar', 'Committed time', durationHtml(forecast.totalPlanned), `across ${horizon} days · ${forecast.totalBlocks} blocks`)}
+      ${metric('focus', 'Daily average', durationHtml(forecast.averagePlanned), `${forecast.averageLoadPct}% of a ${forecast.capacityLabel} focused day`)}
       ${metric('bolt', 'Days needing a decision', `${forecast.heavyDays.length}`, forecast.heavyDays.length ? 'Over 92% committed or double-booked' : 'Nothing is overcommitted')}
       ${metric('missions', 'Carried over', `${forecast.carriedCount}`, forecast.carriedCount ? `${formatDuration(forecast.overdueMinutes)} of unresolved work` : 'Nothing is following you in')}
     </div>
@@ -99,7 +99,7 @@ export function renderForecast() {
               .slice(0, 6)
               .map(
                 (task) => `<button class="forecast-carried-row" data-forecast-task="${escapeHtml(task.id)}">
-                  <span class="priority-dot" style="background:${task.priority === 'high' ? 'var(--danger)' : task.priority === 'low' ? 'var(--muted)' : 'var(--warning)'}"></span>
+                  <span class="priority-dot priority-${escapeHtml(task.priority || 'medium')}"></span>
                   <span><strong>${escapeHtml(task.title)}</strong><small>${escapeHtml(task.date)} · ${formatDuration(task.estimateMinutes || 30)}</small></span>
                   ${icon('arrow')}
                 </button>`,
