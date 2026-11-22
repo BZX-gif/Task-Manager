@@ -19,7 +19,7 @@ import { openProjectModal, openProjectDetail } from './views/projects.js'
 import { openRoutineModal } from './views/routines.js'
 import { openRescheduleModal, toggleScheduleItem } from './views/schedule.js'
 import { openFocusRoom, paintFocusRoom, exitFocusFullscreen, isFocusFullscreen } from './views/focus-room.js'
-import { toggleMission, applyTheme } from './core/actions.js'
+import { toggleMission, postponeMission, skipMission, applyTheme } from './core/actions.js'
 import { openProtectedModal, openCategoryModal } from './views/settings.js'
 import { handleTitlesUnlocked } from './ui/titles.js'
 import { icon } from './ui/icons.js'
@@ -90,6 +90,8 @@ window.CC = {
   speakBriefing,
   closeModal,
   toggleMission,
+  postponeMission,
+  abandonMission: skipMission,
   movePriority,
   toggleScheduleItem,
   removeFromTop3(taskId){commit((s)=>removeFromTop3(s,currentDayKey(),taskId));return true},

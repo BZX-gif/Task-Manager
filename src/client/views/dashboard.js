@@ -1,5 +1,5 @@
 import { state, currentDayKey, todayStats, statsFor } from '../core/store.js'
-import { escapeHtml, qs, qsa } from '../core/dom.js'
+import { confirmDialog, escapeHtml, qs, qsa } from '../core/dom.js'
 import { addDays, formatDuration, minutesOfDay, weekdayShort, durationHtml } from '../lib/dates.js'
 import { scheduleFor, blockState, itemDone } from '../lib/planner.js'
 import { goalChain, goalProgress, taskProgress } from '../lib/relationships.js'
@@ -13,21 +13,131 @@ import { greetingLine, intentionFor, salutationOf } from '../lib/briefing.js'
 import { hybDay, toggleHybPlanDay } from '../core/hyb.js'
 import { energyOf, kindOf } from '../lib/hyb.js'
 
+const PRIORITY_LABEL = { high: 'High', medium: 'Medium', low: 'Low' }
+const PRIORITY_RANK = { high: 0, medium: 1, low: 2 }
+let recoveryOpen = false
+
+function overdueLabel(dateKey, todayKey) {
+  if (!dateKey) return 'Earlier'
+  const from = new Date(`${dateKey}T12:00:00`)
+  const to = new Date(`${todayKey}T12:00:00`)
+  const days = Math.max(0, Math.round((to.getTime() - from.getTime()) / 864e5))
+  if (days <= 0) return 'Earlier'
+  return days === 1 ? '1 day overdue' : `${days} days overdue`
+}
+
+function commandReason(source, relation) {
+  const why =
+    source === 'active' ? 'Scheduled right now — this is your window.' :
+    source === 'top3' ? 'One of your three priorities for today.' :
+    source === 'priority' ? 'The highest-priority mission left today.' :
+    source === 'next' ? 'Next on your schedule.' :
+    'An open mission, ready when you are.'
+  return relation ? `${why} Toward ${relation}.` : why
+}
+
+function commandFacts(command, active, nowMinutes) {
+  const start = command.time ? minutesOfDay(command.time) : null
+  const duration = command.duration || 30
+  let window = '—'
+  if (start != null) {
+    if (active) window = `${formatDuration(Math.max(0, start + duration - nowMinutes))} left`
+    else if (start > nowMinutes) window = `in ${formatDuration(start - nowMinutes)}`
+    else window = 'Missed'
+  }
+  const priority = command.priority
+  return [
+    { label: 'Scheduled', value: command.time ? timeLabel(command.time, true) : 'Not scheduled' },
+    { label: 'Length', value: formatDuration(duration) },
+    { label: 'Priority', value: priority ? (PRIORITY_LABEL[priority] || priority) : '—', tone: priority || '' },
+    { label: active ? 'Remaining' : 'Window', value: window },
+  ]
+}
+
+function scoreCopy(stats, hasData) {
+  if (!hasData) return ['A fresh canvas.', 'Your day is still yours to shape. One meaningful step is enough to begin.']
+  if (stats.score <= 0) return ['A quiet start.', 'Zero is a starting line, not a verdict. One meaningful step is enough to begin.']
+  if (stats.score >= 80) return ['Finding your rhythm.', 'Built on the commitments you made to yourself.']
+  if (stats.score >= 40) return ['Progress, in motion.', 'Small steps are still steps. Keep the thread alive.']
+  return ['One step at a time.', 'A number is a snapshot, not a verdict. Your next win starts here.']
+}
+
+function recoveryRow(task, todayKey) {
+  return `<div class="recovery-row">
+    <div class="recovery-row-main">
+      <strong>${escapeHtml(task.title)}</strong>
+      <p>${icon('calendar')}${overdueLabel(task.date, todayKey)} · ${formatDuration(task.estimateMinutes)}</p>
+    </div>
+    <div class="recovery-row-actions">
+      <button class="icon-btn" type="button" data-recovery-resume="${escapeHtml(task.id)}" title="Resume ${escapeHtml(task.title)}" aria-label="Resume ${escapeHtml(task.title)}">${icon('play')}</button>
+      <button class="icon-btn" type="button" data-recovery-reschedule="${escapeHtml(task.id)}" title="Reschedule ${escapeHtml(task.title)}" aria-label="Reschedule ${escapeHtml(task.title)}">${icon('calendar')}</button>
+      <button class="icon-btn" type="button" data-recovery-postpone="${escapeHtml(task.id)}" title="Postpone ${escapeHtml(task.title)} to tomorrow" aria-label="Postpone ${escapeHtml(task.title)} to tomorrow">${icon('arrow')}</button>
+      <button class="icon-btn danger-hover" type="button" data-recovery-abandon="${escapeHtml(task.id)}" title="Abandon ${escapeHtml(task.title)}" aria-label="Abandon ${escapeHtml(task.title)}">${icon('trash')}</button>
+    </div>
+  </div>`
+}
+
+/**
+ * Recovery is an assistant, not an alarm. The summary always states the count
+ * and the "no catch-up required" promise; the detail view is opt-in and every
+ * action is explicit — nothing is completed, moved or abandoned for the user.
+ */
+function recoveryCard(overdue, todayKey) {
+  const rank = (t) => PRIORITY_RANK[t.priority] ?? 1
+  const shown = [...overdue]
+    .sort((a, b) => (rank(a) - rank(b)) || String(a.date || '').localeCompare(String(b.date || '')))
+    .slice(0, 5)
+  const open = recoveryOpen
+  return `<section class="recovery-card" data-recovery aria-label="Mission recovery">
+    <div class="recovery-main">
+      <span class="recovery-icon" aria-hidden="true">${icon('recover')}</span>
+      <div class="recovery-copy">
+        <p class="recovery-title"><strong>${overdue.length} earlier mission${overdue.length === 1 ? ' is' : 's are'} still open.</strong></p>
+        <p class="recovery-sub">No catch-up required. Review them, resume one, or reschedule what still matters — nothing changes until you decide.</p>
+      </div>
+      <div class="recovery-actions">
+        <button class="btn btn-primary btn-small" type="button" data-common="recover">Review &amp; recover</button>
+        <button class="text-button" type="button" data-recovery-toggle aria-expanded="${open}" aria-controls="recovery-detail"><span data-recovery-toggle-label>${open ? 'Hide details' : 'Details'}</span>${icon('chevron', open ? 'flip-up' : '')}</button>
+      </div>
+    </div>
+    <div class="recovery-detail${open ? ' is-open' : ''}" id="recovery-detail" data-recovery-detail aria-hidden="${!open}">
+      <div class="recovery-detail-inner">
+        <div class="recovery-list">${shown.map((task) => recoveryRow(task, todayKey)).join('')}</div>
+        <p class="recovery-foot">${icon('shield')}Showing ${shown.length} of ${overdue.length}. Nothing is completed, moved or abandoned automatically.</p>
+      </div>
+    </div>
+  </section>`
+}
+
 export function renderDashboard() {
   const section = document.getElementById('view-dashboard')
   if (!section) return
   const today = currentDayKey(), now = new Date(), stats = todayStats(now)
   const blocks = scheduleFor(state,today)
+  const nowMinutes = now.getHours()*60+now.getMinutes()
   const active = blocks.find((b) => blockState(state,b,today,now,today) === 'active')
-  const next = blocks.find((b) => minutesOfDay(b.time) > now.getHours()*60+now.getMinutes() && !itemDone(state,b,today))
+  const next = blocks.find((b) => minutesOfDay(b.time) > nowMinutes && !itemDone(state,b,today))
   const openTasks = state.tasks.filter((t) => t.date === today && !t.done && t.status !== 'cancelled' && !t.inbox)
-  const priority = openTasks.find((t) => (state.top3[today] || []).includes(t.id)) || openTasks[0]
-  const current = active || (priority?.time ? blocks.find((b)=>b.taskId===priority.id) : null) || next || priority
+  const top3Ids = state.top3[today] || []
+  const priority = openTasks.find((t) => top3Ids.includes(t.id)) || openTasks[0]
+  let current = null, source = null
+  if (active) { current = active; source = 'active' }
+  else if (priority?.time) { current = blocks.find((b)=>b.taskId===priority.id) || null; source = top3Ids.includes(priority.id) ? 'top3' : 'priority' }
+  else if (next) { current = next; source = 'next' }
+  else if (priority) { current = priority; source = top3Ids.includes(priority.id) ? 'top3' : 'task' }
   const linkedTask = current?.taskId ? state.tasks.find((t)=>t.id===current.taskId) : current && !current.time && current.estimateMinutes ? current : null
-  const command = current ? { title: current.title, id: linkedTask?.id || current.taskId || current.id, blockId: current.taskId ? `task:${current.taskId}` : current.id, task: !!linkedTask, time: current.time, duration: current.duration || current.estimateMinutes, cat: current.cat, priority: current.priority, goalId: current.goalId, projectId: current.projectId } : null
+  const command = current ? { title: linkedTask?.title || current.title, id: linkedTask?.id || current.taskId || current.id, blockId: current.taskId ? `task:${current.taskId}` : current.id, task: !!linkedTask, time: current.time, duration: current.duration || current.estimateMinutes, cat: current.cat, priority: current.priority, goalId: current.goalId || linkedTask?.goalId, projectId: current.projectId || linkedTask?.projectId, source } : null
+  const linkedGoal = command?.goalId ? state.goals.find((g)=>g.id===command.goalId) : null
+  const linkedProject = command?.projectId ? state.projects.find((p)=>p.id===command.projectId) : null
+  const relation = linkedGoal?.title || linkedProject?.title || null
+  const facts = command ? commandFacts(command, active, nowMinutes) : []
+  const factsHtml = facts.map((f)=>`<div class="command-fact${f.tone ? ` priority-${f.tone}` : ''}"><span class="command-fact-label">${f.label}</span><strong class="command-fact-value">${f.tone ? '<span class="priority-dot" aria-hidden="true"></span>' : ''}${escapeHtml(f.value)}</strong></div>`).join('')
   const top3 = top3Stats(state,today)
   const overdue = overdueTasks(state,today)
-  const upcoming = blocks.filter((b) => b.id !== command?.blockId && !itemDone(state,b,today) && minutesOfDay(b.time)+(b.duration||30) > now.getHours()*60+now.getMinutes()).slice(0,4)
+  // the detail view is a convenience, not a remembered preference — once every
+  // mission is resolved the card disappears and the next one starts closed.
+  if (!overdue.length) recoveryOpen = false
+  const upcoming = blocks.filter((b) => b.id !== command?.blockId && !itemDone(state,b,today) && minutesOfDay(b.time)+(b.duration||30) > nowMinutes).slice(0,4)
   const week = Array.from({length:7},(_,i) => statsFor(addDays(today,i-6),{now}))
   const focusTarget = state.settings.focus.targetMinutes || 180
   const hasData = stats.hasAnyActivity
@@ -36,16 +146,21 @@ export function renderDashboard() {
   const salute = salutationOf(state)
   const intention = intentionFor(state, today)
   const briefingDate = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
+  const scoreTitle = scoreCopy(stats, hasData)[0]
+  const scoreBody = scoreCopy(stats, hasData)[1]
+  const commandLabel = active ? 'IN THE MOMENT' : command ? 'YOUR NEXT MOVE' : 'TODAY’S COMMAND'
+  const commandTitle = command ? escapeHtml(command.title) : 'Make room for<br>what matters.'
+  const commandReasonText = command ? escapeHtml(commandReason(source, relation)) : 'A clear plan starts with one small step. What would make today feel meaningful?'
   section.innerHTML = `
-    <div class="overview-greeting"><div class="greeting-copy"><p class="eyebrow">COMMAND BRIEFING · ${briefingDate.toUpperCase()}</p><h1 id="overview-greeting">${escapeHtml(greetingLine(state, now))}</h1><p>${command ? `At your command, ${escapeHtml(salute)}. One clear move is waiting below.` : `At your command, ${escapeHtml(salute)}. Let’s give the day a shape.`}</p><button class="greeting-intention ${intention ? '' : 'is-empty'}" data-common="briefing">${icon('flag')}<span>${intention ? escapeHtml(intention) : 'Set today’s intention'}</span>${icon('chevron')}</button></div><div class="date-block"><p class="date-day"><span class="date-full">${briefingDate}</span><span class="date-short">${now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span></p><p class="date-clock" id="overview-clock"></p><div class="day-progress" id="day-progress"><i id="day-progress-fill"></i></div><button class="btn btn-secondary btn-small greeting-brief" data-common="briefing">${icon('bell')}Full briefing</button></div></div>
-    ${overdue.length ? `<div class="recovery-banner">${icon('recover')}<span>A fresh start is always possible. ${overdue.length} earlier mission${overdue.length===1?' is':'s are'} still open.</span><button class="text-button" data-common="recover">Recover my day ${icon('arrow')}</button></div>` : ''}
+    <div class="overview-greeting"><div class="greeting-copy"><p class="eyebrow"><span class="eyebrow-tick" aria-hidden="true"></span>Command briefing</p><h1 id="overview-greeting">${escapeHtml(greetingLine(state, now))}</h1><p class="greeting-lead">${command ? `At your command, ${escapeHtml(salute)}. One clear move is waiting below.` : `At your command, ${escapeHtml(salute)}. Let’s give the day a shape.`}</p><div class="intention-commit"><p class="intention-label">${icon('flag')}Today’s intention</p><button class="greeting-intention ${intention ? 'is-set' : 'is-empty'}" data-common="briefing" aria-label="${intention ? `Today’s intention: ${escapeHtml(intention)}. Open the briefing to edit` : 'Set today’s intention'}">${icon(intention ? 'check' : 'flag')}<span>${intention ? escapeHtml(intention) : 'Set today’s intention'}</span>${icon('chevron')}</button></div></div><div class="date-block"><p class="date-day"><span class="date-full">${briefingDate}</span><span class="date-short">${now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span></p><p class="date-clock" id="overview-clock"></p><div class="day-progress" id="day-progress"><i id="day-progress-fill"></i></div><button class="btn btn-secondary btn-small greeting-brief" data-common="briefing">${icon('bell')}Full briefing</button></div></div>
+    ${overdue.length ? recoveryCard(overdue, today) : ''}
     <div class="overview-top">
-      <article class="card command-card"><div class="orbital-art" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p class="eyebrow"><span class="status-dot"></span>${active ? 'IN THE MOMENT' : command ? 'YOUR NEXT MOVE' : 'TODAY’S COMMAND'}</p>
-      <h2>${command ? escapeHtml(command.title) : 'Make room for<br>what matters.'}</h2>
-      <p class="command-description">${command ? escapeHtml(command.task ? (goalChain(state,linkedTask).goal?.title || goalChain(state,linkedTask).project?.title || 'One mission. Your full attention.') : 'A little structure. A clear next step.') : 'A clear plan starts with one small step.<br>What would make today feel meaningful?'}</p>
-      ${command ? `<div class="command-meta">${command.time ? `<span>${icon('clock')}${timeLabel(command.time,true)}</span>` : ''}<span>${icon('focus')}${formatDuration(command.duration || 30)}</span>${command.priority ? `<span class="chip chip-accent">${escapeHtml(command.priority)} priority</span>` : ''}${active ? `<span id="command-remaining">${formatDuration(Math.max(0,minutesOfDay(command.time)+command.duration-now.getHours()*60-now.getMinutes()))} remaining</span>` : ''}</div>` : ''}
+      <article class="card command-card"><div class="orbital-art" aria-hidden="true"><span></span><span></span><span></span><span></span></div><div class="command-head"><p class="eyebrow"><span class="status-dot"></span>${commandLabel}</p>
+      <h2>${commandTitle}</h2>
+      <p class="command-reason">${commandReasonText}</p></div>
+      ${command ? `<div class="command-facts">${factsHtml}</div>` : ''}
       <div class="command-actions">${command ? `<button class="btn-primary" data-command-start="${escapeHtml(command.id)}" data-is-task="${!!command.task}">${icon('play')}${state.focus.active ? 'Resume focus' : active ? 'Start focus' : 'Begin mission'}</button>${command.task ? `<button class="btn-ghost" data-command-complete="${escapeHtml(command.id)}">${icon('check')}Complete</button><button class="text-button" data-command-delay="${escapeHtml(command.id)}">Reschedule ${icon('arrow')}</button>` : `<button class="btn-ghost" data-command-block="${escapeHtml(command.id)}">${icon('check')}Complete block</button>`}` : `<button class="btn-primary" data-common="plan">${icon('sun')}Plan my day</button><button class="btn-ghost" data-common="new-task">${icon('plus')}Add a mission</button>`}</div></article>
-      <article class="card score-card"><div class="card-header"><h3>Daily execution score</h3><button class="text-button" data-score-info aria-label="How your score is calculated">${icon('info')}</button></div><div class="score-main">${ring(stats.score,'of 100',!hasData)}<div class="score-copy"><strong>${!hasData ? 'A fresh canvas.' : stats.score >= 80 ? 'Finding your rhythm.' : stats.score >= 40 ? 'Progress, in motion.' : 'One step at a time.'}</strong><p>${!hasData ? 'Your real progress<br>will appear here.' : 'Built on the commitments<br>you made to yourself.'}</p></div></div><div class="score-components">${scorePart('Missions',stats.tasksPlanned ? stats.tasksDone/stats.tasksPlanned : null,`${stats.tasksDone}/${stats.tasksPlanned}`)}${scorePart('Priorities',top3.total ? top3.done/top3.total : null,`${top3.done}/${top3.total}`)}${scorePart('Focus',stats.focusedMinutes/focusTarget,`${stats.focusedMinutes}m`)}${scorePart('Adherence',adherence == null ? null : adherence/100,adherence == null ? '—' : `${adherence}%`)}</div><p class="score-footnote">${icon('shield')}Honest numbers. Never a judgment.</p></article>
+      <article class="card score-card"><div class="card-header"><h3>Daily execution score</h3><button class="text-button" data-score-info aria-label="How your score is calculated">${icon('info')}</button></div><div class="score-main">${ring(stats.score,'of 100',!hasData)}<div class="score-copy"><strong>${scoreTitle}</strong><p>${scoreBody}</p></div></div><div class="score-components">${scorePart('Missions',stats.tasksPlanned ? stats.tasksDone/stats.tasksPlanned : null,`${stats.tasksDone}/${stats.tasksPlanned}`)}${scorePart('Priorities',top3.total ? top3.done/top3.total : null,`${top3.done}/${top3.total}`)}${scorePart('Focus',stats.focusedMinutes/focusTarget,`${stats.focusedMinutes}m`)}${scorePart('Adherence',adherence == null ? null : adherence/100,adherence == null ? '—' : `${adherence}%`)}</div><p class="score-footnote">${icon('shield')}Honest numbers. Never a judgment.</p></article>
     </div>
     <div class="overview-middle"><article class="card priority-card"><div class="card-header"><div><h3>Today’s priorities <span class="count-badge">${top3.total}/3</span></h3><p class="meta" style="margin-top:5px">The few things that make a difference.</p></div><button class="text-button" data-common="day">My Day ${icon('upRight')}</button></div>
       ${top3.total ? top3.items.map(({task},i) => priorityRow(task,i)).join('') : empty('target','Less, but better.','Choose up to three missions that define a good day.',`<button class="text-button" data-common="new-task">${icon('plus')}Add your first priority</button>`)}
@@ -66,11 +181,40 @@ export function renderDashboard() {
   qs(section, '[data-command-delay]')?.addEventListener('click',(e)=>window.CC.openRescheduleModal(e.currentTarget.dataset.commandDelay))
   qs(section, '[data-command-block]')?.addEventListener('click',(e)=>window.CC.toggleScheduleItem(e.currentTarget.dataset.commandBlock,today))
   qs(section, '[data-score-info]')?.addEventListener('click',()=>window.CC.openScoreInfo())
+  const recoveryToggle = qs(section, '[data-recovery-toggle]')
+  recoveryToggle?.addEventListener('click',()=>{
+    recoveryOpen = !recoveryOpen
+    const detail = qs(section, '[data-recovery-detail]')
+    if (!detail) return
+    detail.classList.toggle('is-open', recoveryOpen)
+    detail.setAttribute('aria-hidden', String(!recoveryOpen))
+    recoveryToggle.setAttribute('aria-expanded', String(recoveryOpen))
+    const label = qs(recoveryToggle, '[data-recovery-toggle-label]')
+    if (label) label.textContent = recoveryOpen ? 'Hide details' : 'Details'
+    const chevron = qs(recoveryToggle, '.icon')
+    chevron?.classList.toggle('flip-up', recoveryOpen)
+  })
+  qsa(section, '[data-recovery-resume]').forEach((b)=>b.addEventListener('click',()=>window.CC.openFocusMode(b.dataset.recoveryResume)))
+  qsa(section, '[data-recovery-reschedule]').forEach((b)=>b.addEventListener('click',()=>window.CC.openRescheduleModal(b.dataset.recoveryReschedule)))
+  qsa(section, '[data-recovery-postpone]').forEach((b)=>b.addEventListener('click',()=>window.CC.postponeMission(b.dataset.recoveryPostpone)))
+  qsa(section, '[data-recovery-abandon]').forEach((b)=>b.addEventListener('click',async()=>{
+    const id = b.dataset.recoveryAbandon
+    const task = state.tasks.find((t)=>t.id===id)
+    if (!task) return
+    const ok = await confirmDialog({
+      title: 'Abandon this mission?',
+      message: `“${task.title}” will be marked abandoned. It stays in your history and can be reopened from Missions.`,
+      confirmText: 'Abandon mission',
+      cancelText: 'Keep it',
+      danger: true,
+    })
+    if (ok) window.CC.abandonMission(id)
+  }))
   const colors = chartColors()
   drawChart('overviewWeekChart',{type:'bar',data:{labels:week.map((d)=>weekdayShort(new Date(d.dateKey+'T12:00:00').getDay())),datasets:[{label:'Execution score',data:week.map((d)=>d.hasAnyActivity?d.score:0),backgroundColor:(ctx)=>{const hot=week[ctx.dataIndex]?.dateKey===today;return vGrad(ctx.chart,hot?colors.accent:colors.seriesHover,hot?alpha(colors.accent,.42):colors.series)},hoverBackgroundColor:(ctx)=>week[ctx.dataIndex]?.dateKey===today?colors.accent:colors.seriesHover,borderRadius:5,maxBarThickness:27}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:colors.tooltipBg,titleColor:colors.text,bodyColor:colors.muted,borderColor:colors.tooltipBorder,borderWidth:1,padding:12,cornerRadius:10,callbacks:{label:(c)=>week[c.dataIndex].hasAnyActivity?`Score: ${c.raw}/100`:'No activity recorded'}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:colors.muted,font:{size:10}}},y:{min:0,max:100,border:{display:false},grid:{color:colors.border},ticks:{stepSize:50,color:colors.muted,font:{size:9}}}}}})
   updateClockAndGreeting()
 }
-function scorePart(label,ratio,detail) { return `<div class="score-component"><label>${label}<span>${detail}</span></label><div class="progress-track"><div class="progress-fill" style="width:${ratio==null?0:Math.min(100,Math.round(ratio*100))}%"></div></div></div>` }
+function scorePart(label,ratio,detail) { return `<div class="score-component${ratio==null?' is-empty':''}"><label>${label}<span>${detail}</span></label><div class="progress-track"><div class="progress-fill" style="width:${ratio==null?0:Math.min(100,Math.round(ratio*100))}%"></div></div></div>` }
 export function priorityRow(task,index,{reorder=true}={}) { const chain=goalChain(state,task); return `<div class="priority-row ${task.done?'is-done':''}"><span class="priority-index">0${index+1}</span><button class="task-check ${task.done?'checked':''}" data-priority-toggle="${escapeHtml(task.id)}" aria-label="${task.done?'Reopen':'Complete'} ${escapeHtml(task.title)}" aria-pressed="${task.done}">${icon('check')}</button><div class="priority-info"><strong>${escapeHtml(task.title)}</strong><p>${task.priority==='high'?'<span class="accent">High priority</span>':'Medium priority'}<span>·</span>${escapeHtml(chain.goal?.title || chain.project?.title || formatDuration(task.estimateMinutes))}</p>${task.subtasks?.length?`<div class="subtask-progress"><div class="progress-track"><div class="progress-fill" style="width:${taskProgress(task)}%"></div></div>${taskProgress(task)}%</div>`:''}</div><div class="row-actions">${reorder?`<button class="icon-btn optional-action" data-priority-up="${escapeHtml(task.id)}" aria-label="Move priority up" ${index===0?'disabled':''}>${icon('down','rotate-180')}</button><button class="icon-btn optional-action" data-priority-down="${escapeHtml(task.id)}" aria-label="Move priority down" ${index>=(state.top3[currentDayKey()]?.length||0)-1?'disabled':''}>${icon('down')}</button>`:''}<button class="icon-btn" data-priority-edit="${escapeHtml(task.id)}" aria-label="Edit ${escapeHtml(task.title)}">${icon('edit')}</button><button class="icon-btn" data-priority-delay="${escapeHtml(task.id)}" aria-label="Reschedule ${escapeHtml(task.title)}">${icon('calendar')}</button></div></div>` }
 
 /**

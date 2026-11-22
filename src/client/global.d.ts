@@ -34,6 +34,10 @@ interface Window {
     openScoreInfo(): void
     openCommandPalette(): void
     toggleMission(id: string): boolean
+    /** Recovery: move an open mission to a later day, keeping its history. */
+    postponeMission(id: string, date?: string): void
+    /** Recovery: mark an open mission abandoned (status cancelled, history kept). */
+    abandonMission(id: string): void
     movePriority(id: string, direction: number): boolean
     toggleScheduleItem(id: string, date?: string): void
     removeFromTop3(id: string): boolean
