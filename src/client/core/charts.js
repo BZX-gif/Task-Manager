@@ -16,6 +16,7 @@ Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 
 Chart.defaults.animation = { ...Chart.defaults.animation, duration: 320 }
 
 const registry = new Map()
+const signatures = new Map()
 
 /**
  * Create (or replace) a chart on a canvas id. Returns the chart or null.
@@ -28,14 +29,21 @@ export function drawChart(canvasId, config) {
   if (!canvas || typeof canvas.getContext !== 'function') return null
   const existing = registry.get(canvasId)
   if (existing) {
-    // A poisoned chart must never take a render down with it.
-    try { existing.destroy() } catch { /* keep rendering */ }
+    // Skip rebuilds when nothing changed (the per-minute repaint hits this),
+    // and never let a poisoned chart take a render down.
+    try {
+      const signature = JSON.stringify([config.type, config.data, config.options])
+      if (signatures.get(canvasId) === signature) return existing
+      existing.destroy()
+    } catch { /* keep rendering */ }
     registry.delete(canvasId)
+    signatures.delete(canvasId)
   }
   try {
     if (typeof canvas.getContext('2d')?.createLinearGradient !== 'function') return null
     const chart = new Chart(/** @type {any} */ (canvas), config)
     registry.set(canvasId, chart)
+    signatures.set(canvasId, JSON.stringify([config.type, config.data, config.options]))
     return chart
   } catch (error) {
     console.warn('[charts] could not render', canvasId, error?.message || error)
@@ -48,6 +56,7 @@ export function destroyAllCharts() {
     try { chart.destroy() } catch { /* keep the view switch alive */ }
   }
   registry.clear()
+  signatures.clear()
 }
 
 export { Chart }
