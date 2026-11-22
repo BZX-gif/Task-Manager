@@ -66,8 +66,8 @@ function encodePng(width, height, rgba) {
 const hexToRgb = (hex) => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
 const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
 
-const BG = hexToRgb('#101010')
-const MARK = hexToRgb('#f0783e')
+const BG = hexToRgb('#0B0E15')
+const MARK = hexToRgb('#FF8A4C')
 
 function insideRoundedRect(x, y, size, radius, inset = 0) {
   const min = inset
