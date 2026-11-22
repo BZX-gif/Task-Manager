@@ -8,7 +8,12 @@ import { Chart, registerables } from 'chart.js'
 Chart.register(...registerables)
 Chart.defaults.color = '#939CB0'
 Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', Roboto, sans-serif"
-Chart.defaults.animation = { duration: 320 }
+// Merge — never replace. Chart.js reads Object.keys(defaults.animation) to
+// decide which animation fields (incl. `type: 'color'`) reach every tween;
+// replacing this object with { duration } silently drops `type`, every colour
+// tween then resolves `interpolators[typeof from]` → undefined, and each
+// frame throws "this._fn is not a function" until the chart is destroyed.
+Chart.defaults.animation = { ...Chart.defaults.animation, duration: 320 }
 
 const registry = new Map()
 
@@ -22,7 +27,11 @@ export function drawChart(canvasId, config) {
   const canvas = /** @type {any} */ (document.getElementById(canvasId))
   if (!canvas || typeof canvas.getContext !== 'function') return null
   const existing = registry.get(canvasId)
-  if (existing) existing.destroy()
+  if (existing) {
+    // A poisoned chart must never take a render down with it.
+    try { existing.destroy() } catch { /* keep rendering */ }
+    registry.delete(canvasId)
+  }
   try {
     if (typeof canvas.getContext('2d')?.createLinearGradient !== 'function') return null
     const chart = new Chart(/** @type {any} */ (canvas), config)
@@ -35,7 +44,9 @@ export function drawChart(canvasId, config) {
 }
 
 export function destroyAllCharts() {
-  for (const [, chart] of registry) chart.destroy()
+  for (const [, chart] of registry) {
+    try { chart.destroy() } catch { /* keep the view switch alive */ }
+  }
   registry.clear()
 }
 

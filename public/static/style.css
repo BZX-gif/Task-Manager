@@ -2016,24 +2016,8 @@ body.mobile-nav-open,body.onboarding-open{overflow:hidden}
   background:
     radial-gradient(720px 520px at 18% 26%,rgba(var(--accent-rgb),.055),transparent 65%),
     radial-gradient(920px 700px at 86% 78%,rgba(110,140,255,.045),transparent 62%);
-  animation:auroraDrift 52s ease-in-out infinite alternate;
+  /* static on purpose: a moving full-screen layer costs battery and frames */
 }
-@keyframes auroraDrift{
-  from{transform:translate3d(-1.5%,-1%,0) scale(1)}
-  to{transform:translate3d(2%,1.5%,0) scale(1.05)}
-}
-body::before{animation:atmosphereBreathe 40s ease-in-out infinite alternate}
-@keyframes atmosphereBreathe{
-  from{background-position:0% 0%,0% 0%}
-  to{background-position:3% 4%,-2% -3%}
-}
-.brand-mark{animation:brandBreathe 7s ease-in-out infinite}
-@keyframes brandBreathe{
-  0%,100%{box-shadow:0 2px 10px rgba(var(--accent-rgb),.35),inset 0 1px 0 rgba(255,255,255,.35)}
-  50%{box-shadow:0 4px 18px rgba(var(--accent-rgb),.5),inset 0 1px 0 rgba(255,255,255,.45)}
-}
-.status-dot{animation:dotBreathe 3.2s ease-in-out infinite}
-@keyframes dotBreathe{0%,100%{opacity:1}50%{opacity:.45}}
 
 /* ------------------------------------------------- choreographed entrances */
 .view-enter>*{animation:riseIn .55s var(--ease-out) both}
@@ -2079,10 +2063,6 @@ body::before{animation:atmosphereBreathe 40s ease-in-out infinite alternate}
   transition:opacity .45s var(--ease);
 }
 @media (hover:hover){.command-card:hover::before{opacity:1}}
-.orbital-art{animation:orbitalSpin 90s linear infinite}
-.orbital-art span:nth-child(3){animation:ringPulse 7s ease-in-out infinite}
-@keyframes orbitalSpin{to{transform:rotate(360deg)}}
-@keyframes ringPulse{0%,100%{opacity:.28}50%{opacity:.55}}
 
 /* --------------------------------------------------------- control answers */
 .btn-primary{position:relative;overflow:hidden}
@@ -2113,11 +2093,8 @@ body::before{animation:atmosphereBreathe 40s ease-in-out infinite alternate}
 }
 .progress-fill{
   background-color:var(--accent);
-  background-image:linear-gradient(100deg,rgba(255,255,255,0) 32%,rgba(255,255,255,.3) 50%,rgba(255,255,255,0) 68%),linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0) 45%);
-  background-size:230% 100%,100% 100%;
-  animation:shimmerSweep 3.4s linear infinite;
+  background-image:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0) 45%);
 }
-@keyframes shimmerSweep{from{background-position:180% 0,0 0}to{background-position:-80% 0,0 0}}
 .toast{position:relative;overflow:hidden;padding-left:20px}
 .toast::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent),rgba(var(--accent-rgb),.35))}
 .toast-success::before{background:linear-gradient(180deg,var(--success),rgba(127,201,168,.35))}
@@ -2133,11 +2110,7 @@ body::before{animation:atmosphereBreathe 40s ease-in-out infinite alternate}
 .command-strip-task:hover::after{opacity:1}
 
 /* ----------------------------------------------------- celebratory moments */
-.empty-state>.icon{animation:tileFloat 6s ease-in-out infinite}
-@keyframes tileFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .focus-room-clock strong{text-shadow:0 0 28px rgba(var(--accent-rgb),.18)}
-.focus-panel:not(.is-paused) .focus-clock{animation:clockBreathe 5.5s ease-in-out infinite}
-@keyframes clockBreathe{0%,100%{text-shadow:0 0 32px rgba(var(--accent-rgb),.16)}50%{text-shadow:0 0 52px rgba(var(--accent-rgb),.3)}}
 .fz-reward{animation:rewardIn .65s var(--ease-out) both .35s;color:var(--accent)}
 @keyframes rewardIn{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:none}}
 .fz-milestone-chip.is-visible{animation:rewardIn .5s var(--ease-out) both}
@@ -2175,19 +2148,8 @@ body::before{animation:atmosphereBreathe 40s ease-in-out infinite alternate}
   100%{opacity:0;transform:translate(-50%,-50%) scale(4.6)}
 }
 
-/* briefing: the day's opening should breathe */
-.briefing-aurora{position:relative;overflow:hidden}
-.briefing-aurora::before{
-  content:'';position:absolute;inset:-30%;pointer-events:none;
-  background:radial-gradient(560px 280px at 82% -10%,rgba(var(--accent-rgb),.16),transparent 62%);
-  animation:auroraDrift 38s ease-in-out infinite alternate
-}
-.briefing-stat{animation:riseIn .55s var(--ease-out) both}
-.briefing-stat:nth-child(1){animation-delay:.12s}
-.briefing-stat:nth-child(2){animation-delay:.22s}
-.briefing-stat:nth-child(3){animation-delay:.32s}
-.briefing-salute{background:linear-gradient(120deg,var(--text),var(--text) 55%,rgba(var(--accent-rgb),.85));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
-@supports not (background-clip: text){.briefing-salute{-webkit-text-fill-color:var(--text);color:var(--text)}}
+/* briefing: restored — the calm, immediate brief. No glow, no delays,
+   no gradient text. The greeting is solid the instant it paints. */
 
 /* touch: sweeps and lifts give way to pressed states only */
 @media (pointer:coarse){
