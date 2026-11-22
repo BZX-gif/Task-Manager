@@ -12,6 +12,7 @@ export function projectOptions(selected = '', goalId = '') { return `<option val
 export function taskOptions(selected = '', includeNone = true) { return `${includeNone ? '<option value="">Choose a mission</option>' : ''}${state.tasks.filter((t) => !t.done && t.status !== 'cancelled').slice(0,200).map((t) => `<option value="${escapeHtml(t.id)}" ${selected === t.id ? 'selected' : ''}>${escapeHtml(t.title)}</option>`).join('')}` }
 export function timeLabel(time, suffix = false) { if (!time) return ''; const [h,m] = time.split(':').map(Number); return state.settings.timeFormat === '24h' ? `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` : `${h%12||12}:${String(m).padStart(2,'0')}${suffix ? (h>=12 ? ' pm' : ' am') : ''}` }
 export function bindCommon(root) {
+  root.querySelectorAll('.domain-tab[data-view]').forEach((button) => button.addEventListener('click', () => window.CC.switchView(button.dataset.view)))
   root.querySelectorAll('[data-common]').forEach((button) => button.addEventListener('click', () => {
     const action = button.dataset.common
     const cc = window.CC
@@ -31,3 +32,21 @@ export function bindCommon(root) {
   }))
 }
 export function weekdayButtons(selected = [], attr = 'data-rday') { return ['S','M','T','W','T','F','S'].map((d,i) => `<button type="button" class="day-toggle ${selected.includes(i) ? 'day-active' : ''}" ${attr}="${i}" aria-label="${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][i]}" aria-pressed="${selected.includes(i)}">${d}</button>`).join('') }
+
+/**
+ * Domain tab strip — secondary surfaces live inside their product domain
+ * (COMMAND 2.0 navigation). `current` is the view id; `tabs` is a list of
+ * [viewId, label] pairs. Every tab routes through the normal switchView.
+ */
+export function domainTabs(current, tabs) {
+  return `<div class="domain-tabs" role="tablist" aria-label="Domain sections">${tabs
+    .map(([id, label]) => `<button type="button" class="domain-tab ${id === current ? 'active' : ''}" data-view="${id}" role="tab" aria-selected="${id === current}">${escapeHtml(label)}</button>`)
+    .join('')}</div>`
+}
+
+/** The canonical COMMAND 2.0 domain groupings, shared by every view header. */
+export const DOMAIN_TABS = {
+  myDay: [['day', 'Execution'], ['hyb', 'Lightweight plans'], ['routines', 'Routines']],
+  time: [['calendar', 'Calendar'], ['schedule', 'Schedule']],
+  analytics: [['progress', 'Performance'], ['forecast', 'Forecast'], ['review', 'Weekly review']],
+}

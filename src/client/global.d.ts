@@ -56,6 +56,8 @@ interface Window {
     todayKey(date?: Date): string
     getState(): any
     askAI(text: string): void
+    /** PAPER — the built-in intelligence workspace. */
+    askPaper(text: string): void
     handleChatKey(event: KeyboardEvent): void
     toggleMobileNav(): void
     closeMobileNav(): void

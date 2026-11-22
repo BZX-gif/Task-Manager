@@ -17,7 +17,8 @@ import { diffDays } from '../dates.js'
  * The full executive briefing.
  * @returns {{ greeting: string, situation: string, nextMove: any, objectives: any[],
  *            deadlines: any[], overdue: any[], time: any, alerts: any[],
- *            recommendations: any[], goalHealth: any[], progress: any, findings: any[] }}
+ *            recommendations: any[], goalHealth: any[], progress: any, findings: any[],
+ *            intention: any }}
  */
 export function executiveBriefing(state, ctx) {
   const base = buildBriefing(state, { todayKey: ctx.todayKey, now: ctx.now })

@@ -24,6 +24,11 @@ export function normalizePaper(raw) {
         role: entry.role === 'user' ? 'user' : 'paper',
         intent: typeof entry.intent === 'string' ? entry.intent.slice(0, 40) : null,
         text: String(entry.text).slice(0, 4000),
+        source: entry.source === 'external' ? 'external' : 'local',
+        error: entry.error === true,
+        findings: Array.isArray(entry.findings) ? entry.findings.filter((f) => f && typeof f.text === 'string').slice(0, 8) : [],
+        sections: Array.isArray(entry.sections) ? entry.sections.filter((s) => s && typeof s.title === 'string').slice(0, 6) : [],
+        actions: Array.isArray(entry.actions) ? entry.actions.filter((a) => a && typeof a.kind === 'string').slice(0, 3) : [],
         ts: Number.isFinite(entry.ts) ? entry.ts : Date.now(),
       })),
     notes: source.notes && typeof source.notes === 'object' && !Array.isArray(source.notes) ? { ...source.notes } : {},
@@ -39,13 +44,18 @@ export function emptyPaper() {
  * Record one interaction. Returns the entry so callers can render it without
  * re-reading state. Mutates only the given state (call inside a commit).
  */
-export function recordInteraction(state, { role, text, intent = null, id = null, ts = Date.now() }) {
+export function recordInteraction(state, { role, text, intent = null, id = null, source = 'local', error = false, findings = [], sections = [], actions = [], ts = Date.now() }) {
   if (!state.paper) state.paper = emptyPaper()
   const entry = {
     id: id || `${ts}-${Math.random().toString(36).slice(2, 8)}`,
     role: role === 'user' ? 'user' : 'paper',
     intent: intent ? String(intent).slice(0, 40) : null,
     text: String(text).slice(0, 4000),
+    source: source === 'external' ? 'external' : 'local',
+    error: error === true,
+    findings: Array.isArray(findings) ? findings.slice(0, 8) : [],
+    sections: Array.isArray(sections) ? sections.slice(0, 6) : [],
+    actions: Array.isArray(actions) ? actions.slice(0, 3) : [],
     ts,
   }
   state.paper.history = [...(state.paper.history || []), entry].slice(-MAX_HISTORY)

@@ -10,7 +10,7 @@ import { renderRoutines } from '../views/routines.js'
 import { renderFocusRoom } from '../views/focus-room.js'
 import { renderProgress } from '../views/progress.js'
 import { renderReview } from '../views/review.js'
-import { renderAssistant } from '../views/assistant.js'
+import { renderPaper } from '../views/paper.js'
 import { renderSettings } from '../views/settings.js'
 import { renderForecast } from '../views/forecast.js'
 import { renderJournal } from '../views/journal.js'
@@ -19,11 +19,14 @@ import { renderHyb } from '../views/hyb.js'
 import { setMobileNav, updateBreadcrumb } from './chrome.js'
 import { icon } from './icons.js'
 
-export const VIEWS = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings']
-const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,calendar:renderCalendar,schedule:renderSchedule,hyb:renderHyb,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,assistant:renderAssistant,settings:renderSettings}
+export const VIEWS = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','paper','settings']
+const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,calendar:renderCalendar,schedule:renderSchedule,hyb:renderHyb,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,paper:renderPaper,settings:renderSettings}
+/** Legacy route names kept alive so old links and habits never 404. */
+const VIEW_ALIASES = { assistant: 'paper', overview: 'dashboard', tasks: 'tasks' }
 let currentView='dashboard';const enterTimers={};let booted=false
 export function getCurrentView(){return currentView}
 export function switchView(view){
+  if (VIEW_ALIASES[view]) view = VIEW_ALIASES[view]
   if(!VIEWS.includes(view))return
   if(view!==currentView)destroyAllCharts()
   currentView=view

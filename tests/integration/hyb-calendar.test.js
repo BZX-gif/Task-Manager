@@ -98,7 +98,9 @@ test('the shell ships a HYB button, a calendar view and a HYB studio view', asyn
     assert.ok($('#hyb-btn'), 'the topbar HYB button exists')
     assert.ok($('#hyb-fab'), 'the floating HYB button exists for touch screens')
     assert.ok($('.nav-item[data-view="calendar"]'), 'the calendar is in the navigation')
-    assert.ok($('.nav-item[data-view="hyb"]'), 'HYB Studio is in the navigation')
+    window.CC.switchView('day')
+    assert.ok($('.domain-tab[data-view="hyb"]'), 'HYB lives inside the My Day domain')
+    window.CC.switchView('dashboard')
     assert.ok($('#view-calendar'), 'the calendar view section exists')
     assert.ok($('#view-hyb'), 'the HYB studio view section exists')
     assert.equal($$('[data-hyb-trigger]').length >= 3, true, 'topbar, drawer and FAB all trigger the deck')
@@ -395,10 +397,10 @@ test('HYB Studio groups plans, filters by lane and searches them', async () => {
   }
   const { window, $, $$, click, type, state, errors } = await boot({ seed })
   try {
-    click('.nav-item[data-view="hyb"]')
+    window.CC.switchView('hyb')
     await settle(80)
     assert.equal($('#view-hyb').classList.contains('hidden'), false)
-    assert.match($('#breadcrumb-current').textContent, /HYB Studio/)
+    assert.match($('#breadcrumb-current').textContent, /Lightweight plans|HYB/)
     assert.equal($$('.hyb-card').length, 2, 'today shows the two plans that are on today')
     assert.match($('.hyb-metrics').textContent, /Today/, 'the metric strip is there')
 

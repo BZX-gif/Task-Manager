@@ -119,13 +119,14 @@ const clean = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9\s?']/
  * Score every intent against the utterance and return the best confident
  * match. Ties are broken by signal count then catalog order.
  * @param {string} text
- * @returns {{ intent: string, confidence: 'high'|'low'|'none', matched: string[], slots: any, suggestion?: any }}
+ * @returns {{ intent: string, confidence: 'high'|'low'|'none', matched: string[], slots: any, suggestion?: any, catalog?: any }}
  */
 export function parseIntent(text) {
   const utterance = clean(text)
   if (!utterance) return { intent: 'none', confidence: 'none', matched: [], slots: {} }
 
   const slots = parseSlots(utterance)
+  /** @type {any} */
   let best = null
   let bestScore = 0
   let bestMatched = []

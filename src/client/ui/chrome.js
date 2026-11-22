@@ -9,7 +9,7 @@ import { icon } from './icons.js'
 import { on } from '../core/bus.js'
 import { VIEWS } from './router.js'
 
-const VIEW_LABELS = {dashboard:'Overview',day:'My Day',calendar:'Calendar',schedule:'Schedule',hyb:'HYB Studio',tasks:'Missions',goals:'Goals',projects:'Projects',routines:'Routines',focus:'Focus Room',progress:'Analytics',review:'Weekly Review',journal:'Journal',forecast:'Forecast',assistant:'Planning assistant',settings:'Settings'}
+const VIEW_LABELS = {dashboard:'Command Center',day:'My Day',calendar:'Calendar & Schedule',schedule:'Schedule',hyb:'HYB · lightweight plans',tasks:'Missions',goals:'Goals',projects:'Projects',routines:'Routines',focus:'Focus',progress:'Analytics',review:'Weekly Review',journal:'Journal',forecast:'Forecast',paper:'PAPER',settings:'Settings & Data'}
 let clockTimer=null, quoteTimer=null, mobileOpen=false, notificationsBound=false, activationBound=false
 const recentReminders=[]
 export function userName(){return state.settings.userName?.trim()||''}

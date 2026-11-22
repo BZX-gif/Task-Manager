@@ -7,7 +7,7 @@ import { initRouter, refreshCurrentView, switchView, getCurrentView } from './ui
 import { bindChrome, footerVersion, refreshFocusChip, refreshStreakWidget, renderQuoteInline, setMobileNav, startChromeTimers, toggleMobileNav, openCommandPalette, openShortcuts, updateClockAndGreeting } from './ui/chrome.js'
 import { dayStatus } from './ui/status.js'
 import { completeFocus, hasRunningSession, initFocus, openFocusMode, pauseFocus, resumeFocus, stopFocus } from './ui/focus.js'
-import { handleChatKey, sendMessage, runLocalCommand } from './views/assistant.js'
+import { handleChatKey, runLocalCommand, askPaperView } from './views/paper.js'
 import { openQuickCapture, isQuickCaptureOpen, closeQuickCapture } from './ui/quickcapture.js'
 import { checkReminders, startReminderRunner } from './ui/reminders-runner.js'
 import { initPwa } from './ui/pwa.js'
@@ -29,7 +29,7 @@ import { hybSummary } from './core/hyb.js'
 import { setCalendarDate } from './views/calendar.js'
 import { closeOnboarding, isOnboardingOpen, needsOnboarding, openOnboarding } from './ui/onboarding.js'
 
-const APP_VERSION='4.9'
+const APP_VERSION='5.0'
 
 /**
  * The onboarding flow is shown once. Completion is written through the store
@@ -107,7 +107,8 @@ window.CC = {
   titles,
   todayKey:currentDayKey,
   getState:()=>state,
-  askAI:(text)=>{switchView('assistant');const input=/** @type {any} */(document.getElementById('chat-input'));if(input)input.value=text;sendMessage(text)},
+  askAI:(text)=>askPaperView(text),
+  askPaper:askPaperView,
   handleChatKey,
   runLocalCommand,
   toggleMobileNav,
@@ -115,7 +116,7 @@ window.CC = {
   checkReminders:()=>checkReminders(),
   refreshQuoteInline:renderQuoteInline,
 }
-function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isOnboardingOpen()){closeOnboarding();return}if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isHybDeckOpen()){closeHybDeck();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||isHybDeckOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='h'){event.preventDefault();toggleHybDeck()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='c'){event.preventDefault();openCalendar()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','schedule','tasks','goals','projects','routines','focus','progress'];switchView(views[Number(event.key)-1])}})}
+function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isOnboardingOpen()){closeOnboarding();return}if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isHybDeckOpen()){closeHybDeck();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||isHybDeckOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='h'){event.preventDefault();toggleHybDeck()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='c'){event.preventDefault();openCalendar()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='p'){event.preventDefault();switchView('paper')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','tasks','goals','projects','calendar','focus','journal','progress'];switchView(views[Number(event.key)-1])}})}
 let lastDay=currentDayKey(),reminderInterval=null,minuteInterval=null,recurrenceInterval=null
 function boot(){
   initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();startChromeTimers();bindChrome();initRouter();initFocus();initHyb();initPwa();bindKeyboard()
@@ -132,7 +133,7 @@ function boot(){
   const persist=()=>{syncScoreHistory(currentDayKey());flush()};window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else{updateClockAndGreeting();refreshCommandStrip();refreshCurrentView();checkReminders()}});window.addEventListener('pagehide',persist)
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&isFocusFullscreen())exitFocusFullscreen()})
   refreshAll();switchView('dashboard');reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing();if(needsOnboarding())setTimeout(()=>{if(!isModalOpen()&&!isOnboardingOpen())openOnboarding()},450)
-  minuteInterval=setInterval(()=>{if(document.visibilityState!=='visible')return;const day=currentDayKey();if(day!==lastDay){lastDay=day;ensureRecurringOccurrences(day);syncScoreHistory(day);commit(()=>{},{immediate:true});refreshCommandStrip();return}refreshCommandStrip();if(!isModalOpen()&&!isBriefingOpen()&&!['settings','assistant','focus'].includes(getCurrentView())&&!document.querySelector('.calendar-event.is-dragging'))refreshCurrentView()},60000)
+  minuteInterval=setInterval(()=>{if(document.visibilityState!=='visible')return;const day=currentDayKey();if(day!==lastDay){lastDay=day;ensureRecurringOccurrences(day);syncScoreHistory(day);commit(()=>{},{immediate:true});refreshCommandStrip();return}refreshCommandStrip();if(!isModalOpen()&&!isBriefingOpen()&&!['settings','paper','focus'].includes(getCurrentView())&&!document.querySelector('.calendar-event.is-dragging'))refreshCurrentView()},60000)
   recurrenceInterval=setInterval(()=>{const created=ensureRecurringOccurrences();if(created.length)commit(()=>{},{immediate:true})},3600000)
   const action=new URLSearchParams(location.search).get('action');if(action==='capture')openQuickCapture();if(action==='focus')openFocusRoom()
 }

@@ -153,7 +153,7 @@ test('the overview keeps its metrics and actions usable across refreshes', async
 test('overview shortcuts and mobile dock navigate to the right workspace', () => {
   click('.up-next-card [data-common="schedule"]')
   assert.equal($('#view-schedule').classList.contains('hidden'), false)
-  assert.equal($('.nav-item[data-view="schedule"]').getAttribute('aria-current'), 'page')
+  assert.equal($('#breadcrumb-current').textContent, 'Schedule', 'the breadcrumb names the workspace')
   click('#mobile-dock [data-view="tasks"]')
   assert.equal($('#view-tasks').classList.contains('hidden'), false)
   assert.equal($('#mobile-dock [data-view="tasks"]').getAttribute('aria-current'), 'page')
@@ -217,15 +217,15 @@ test('task search offers a clear empty state without breaking inbox actions', as
   window.CC.switchView('dashboard')
 })
 
-test('assistant drafts survive a refresh without stealing focus', async () => {
-  window.CC.switchView('assistant')
-  const input = $('#chat-input')
+test('PAPER drafts survive a refresh without stealing focus', async () => {
+  window.CC.switchView('paper')
+  const input = $('#paper-input')
   input.value = 'A thought I am still writing'
-  $('#chat-send-btn').focus()
+  $('#paper-form button[type=submit]').focus()
   window.CC.refreshCurrentView()
   await settle()
-  assert.equal($('#chat-input').value, 'A thought I am still writing')
-  assert.notEqual(window.document.activeElement, $('#chat-input'))
+  assert.equal($('#paper-input').value, 'A thought I am still writing')
+  assert.notEqual(window.document.activeElement, $('#paper-input'))
   window.CC.switchView('dashboard')
 })
 
@@ -443,7 +443,7 @@ test('recover my day proposes a plan without touching the timetable', async () =
   window.CC.closeModal()
 })
 
-test('assistant sends the compact context and shows friendly errors', async () => {
+test('PAPER answers locally and consults the external model only on request', async () => {
   let captured = null
   window.fetch = async (url, options) => {
     captured = { url, body: JSON.parse(options.body) }
@@ -452,19 +452,27 @@ test('assistant sends the compact context and shows friendly errors', async () =
       headers: { 'content-type': 'application/json' },
     })
   }
-  window.CC.switchView('assistant')
+  window.CC.switchView('paper')
   await settle()
-  assert.match($('#view-assistant').textContent, /key stays server-side/)
-  assert.equal($$('#view-assistant [data-command]').length, 7, 'all AI commands available')
+  assert.match($('#view-paper').textContent, /Local · no external model/)
+  assert.equal($$('#view-paper [data-paper-ask]').length, 8, 'the supported request catalog is offered')
 
+  // Local intelligence answers without any network call.
+  window.CC.askAI('What should I focus on today?')
+  await settle(120)
+  assert.equal(captured, null, 'no request leaves the device for a local question')
+  assert.ok(state().paper.history.some((m) => m.role === 'paper' && m.source === 'local'), 'PAPER answered from the workspace')
+
+  // The external model is an explicit opt-in with a compact context.
+  $('#paper-external').checked = true
   window.CC.askAI('Plan my day')
   await settle(120)
-  assert.ok(captured, 'the request was made')
+  assert.ok(captured, 'the request was made once the external model was chosen')
   assert.equal(captured.url, '/api/ai')
   assert.ok(captured.body.context.length < 2600, 'context is small')
   assert.ok(!/geminiApiKey/.test(JSON.stringify(captured.body)), 'no browser API key sent')
-  assert.match($('#view-assistant').textContent, /having trouble right now/, 'friendly error shown')
-  assert.ok(state().chatHistory.some((m) => m.error), 'error recorded in the transcript')
+  assert.match($('#view-paper').textContent, /having trouble right now/, 'friendly error shown')
+  assert.ok(state().paper.history.some((m) => m.error), 'error recorded in the transcript')
 })
 
 test('settings: export → import round-trip and validation', async () => {

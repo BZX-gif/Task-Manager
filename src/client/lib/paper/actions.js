@@ -22,7 +22,7 @@ export const CONFIRMATION_REQUIRED = new Set(['create_mission', 'reschedule_miss
 
 /**
  * Build a descriptor for creating a mission.
- * @param {{ title: string, date?: string|null, minutes?: number, priority?: string, goalId?: string|null, projectId?: string|null, cat?: string|null }} params
+ * @param {{ title?: string, date?: string|null, startLabel?: string|null, minutes?: number, priority?: string, goalId?: string|null, projectId?: string|null, cat?: string|null }} [params]
  */
 export function prepareCreateMission(params = {}) {
   const title = String(params.title || '').trim().slice(0, 200)
@@ -82,7 +82,7 @@ export function prepareSetIntention({ text, dayKey }) {
  * @param {any} state draft state (inside a commit, or a fixture in tests)
  * @param {any} descriptor
  * @param {{ uid?: () => string, now?: number }} [ctx]
- * @returns {{ ok: boolean, summary: string, findings: any[], error?: string }}
+ * @returns {{ ok: boolean, summary: string, findings: any[], error?: string, taskId?: string, projectId?: string }}
  */
 export function executeAction(state, descriptor, ctx = {}) {
   const id = ctx.uid || uid
