@@ -29,7 +29,7 @@ import { hybSummary } from './core/hyb.js'
 import { setCalendarDate } from './views/calendar.js'
 import { closeOnboarding, isOnboardingOpen, needsOnboarding, openOnboarding } from './ui/onboarding.js'
 
-const APP_VERSION='4.7'
+const APP_VERSION='4.8'
 
 /**
  * The onboarding flow is shown once. Completion is written through the store
