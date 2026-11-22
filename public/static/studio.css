@@ -20,7 +20,7 @@
 
 /* The focus stage, presented as a ceremony: enormous tabular time, a thin
    instrument energy bar and nothing else competing for attention. */
-.focus-overlay{background:var(--bg)!important;color:var(--text);backdrop-filter:none!important}
+.focus-overlay{background:radial-gradient(1100px 640px at 50% 118%,rgba(var(--accent-rgb),.1),transparent 58%),var(--bg)!important;color:var(--text);backdrop-filter:none!important}
 .focus-panel{max-width:660px!important}
 .focus-clock{font-family:var(--font-display);font-weight:350!important;letter-spacing:-4px!important;font-size:clamp(76px,12vw,116px)!important}
 .focus-eyebrow{font-weight:500!important;letter-spacing:2px!important;font-size:10px!important}
@@ -39,5 +39,4 @@
 .focus-room-fullscreen .focus-room-main .segmented,.focus-room-fullscreen .focus-room-main>.eyebrow,.focus-room-fullscreen .focus-room-presets{display:none}
 .focus-room-fullscreen .focus-room-ring{width:330px;height:330px}
 .focus-room-fullscreen .focus-room-clock strong{font-size:74px}
-.fz-orb,.fz-burst{display:none}
 .fz-count-tick{animation:countTick .35s var(--ease)}

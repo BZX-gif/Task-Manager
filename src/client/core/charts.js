@@ -41,6 +41,25 @@ export function destroyAllCharts() {
 
 export { Chart }
 
+/** Rebuild a colour at a new alpha. Handles hex and rgba() token values. */
+export function alpha(color, value) {
+  const hex = String(color || '')
+  if (hex.startsWith('#')) {
+    const n = hex.length === 4 ? hex.slice(1).split('').map((c) => c + c).join('') : hex.slice(1)
+    return `#${n.slice(0, 6)}${Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0')}`
+  }
+  return hex.replace(/rgba\((\d+),\s*(\d+),\s*(\d+),[^)]*\)/, `rgba($1,$2,$3,${value})`)
+}
+
+/** A soft vertical fill so charts read as light, not slabs. */
+export function vGrad(chart, top, bottom) {
+  const h = chart?.height || 1
+  const g = chart.ctx.createLinearGradient(0, 0, 0, h)
+  g.addColorStop(0, top)
+  g.addColorStop(1, bottom)
+  return g
+}
+
 /** Read semantic tokens at draw time, so light/dark and accent changes agree. */
 export function chartColors() {
   const style = typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement) : null
