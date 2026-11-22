@@ -9,7 +9,7 @@ import { state, currentDayKey } from '../core/store.js'
 import { escapeHtml, qsa } from '../core/dom.js'
 import { addDays, durationHtml, formatDuration } from '../lib/dates.js'
 import { buildForecast, forecastAdvice, busyShare, LOAD_LABELS } from '../lib/forecast.js'
-import { drawChart, chartColors } from '../core/charts.js'
+import { drawChart, chartColors, alpha, vGrad } from '../core/charts.js'
 import { icon, pageHeading, metric, empty, bindCommon } from '../ui/common.js'
 
 let horizon = 14
@@ -141,7 +141,7 @@ function drawForecastChart(forecast) {
         {
           label: 'Committed minutes',
           data: forecast.days.map((row) => row.plannedMinutes),
-          backgroundColor: forecast.days.map((row) => statusColor(row.status)),
+          backgroundColor: (ctx) => { const col = statusColor(forecast.days[ctx.dataIndex]?.status); return vGrad(ctx.chart, col, alpha(col, .5)) },
           hoverBackgroundColor: colors.accent,
           borderRadius: 5,
           maxBarThickness: 26,

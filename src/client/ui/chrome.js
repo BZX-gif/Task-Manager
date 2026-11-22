@@ -75,6 +75,25 @@ export function bindChrome(){
     document.addEventListener('keydown', activate)
     activationBound = true
   }
+  // A soft light follows the pointer across the hero and entity cards. It is
+  // pure presentation (two custom properties), fine-pointer only, rAF-cheap.
+  if (typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover)').matches) {
+    let spotFrame = 0
+    let spotEvent = null
+    document.addEventListener('mousemove', (event) => {
+      spotEvent = event
+      if (spotFrame) return
+      spotFrame = requestAnimationFrame(() => {
+        spotFrame = 0
+        const target = spotEvent?.target instanceof Element ? spotEvent.target.closest('.command-card,.entity-card,.command-strip-task') : null
+        if (!target) return
+        const rect = target.getBoundingClientRect()
+        if (!rect.width || !rect.height) return
+        target.style.setProperty('--mx', `${(((spotEvent.clientX - rect.left) / rect.width) * 100).toFixed(1)}%`)
+        target.style.setProperty('--my', `${(((spotEvent.clientY - rect.top) / rect.height) * 100).toFixed(1)}%`)
+      })
+    }, { passive: true })
+  }
   applyTheme()
 }
 export function openShortcuts(){
