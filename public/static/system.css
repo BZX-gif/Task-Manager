@@ -304,3 +304,17 @@ textarea:focus-visible,
   }
   .view-section{ animation: none; }
 }
+
+/* ------------------------------------------------------ 10 · dashboard scale */
+/* The greeting keeps its display role with a tighter, more intentional scale;
+   the command title and fact values inherit the same fluid ramp. */
+.overview-greeting h1{
+  font-size:clamp(30px,2.55vw + 22px,46px);
+  line-height:1.07;
+  margin:2px 0 9px;
+  max-width:19ch;
+}
+.command-card h2{ font-size:clamp(23px,2.05vw,31px); }
+@media(max-width:767px){
+  .overview-greeting h1{ font-size:clamp(27px,7.4vw,32px); }
+}
