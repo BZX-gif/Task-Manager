@@ -6,11 +6,11 @@
 export const STATE_VERSION = 8
 
 export const DEFAULT_CATEGORIES = [
-  { id: 'personal', name: 'Personal', color: '#a99af1' },
-  { id: 'work', name: 'Work', color: '#7ba7ea' },
-  { id: 'learning', name: 'Learning', color: '#79bca5' },
-  { id: 'wellbeing', name: 'Wellbeing', color: '#d3b17c' },
-  { id: 'life', name: 'Life admin', color: '#9aabbf' },
+  { id: 'personal', name: 'Personal', color: '#B7A7F7' },
+  { id: 'work', name: 'Work', color: '#97BAF0' },
+  { id: 'learning', name: 'Learning', color: '#9CCCB5' },
+  { id: 'wellbeing', name: 'Wellbeing', color: '#E0C08E' },
+  { id: 'life', name: 'Life admin', color: '#AFB7C9' },
 ]
 
 export const LEGACY_CATEGORIES = [
@@ -213,4 +213,4 @@ export const MOTIVATIONAL_QUOTES = [
 ]
 
 export const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
-export const PRIORITY_COLORS = { high: '#f0783e', medium: '#d7b582', low: '#837e78' }
+export const PRIORITY_COLORS = { high: '#FF8A4C', medium: '#E2BC85', low: '#939CB0' }

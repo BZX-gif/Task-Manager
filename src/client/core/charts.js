@@ -6,8 +6,8 @@
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
-Chart.defaults.color = '#837e78'
-Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif"
+Chart.defaults.color = '#939CB0'
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', Roboto, sans-serif"
 Chart.defaults.animation = { duration: 320 }
 
 const registry = new Map()
@@ -46,16 +46,18 @@ export function chartColors() {
   const style = typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement) : null
   const read = (name, fallback) => style?.getPropertyValue(name).trim() || fallback
   return {
-    accent: read('--accent', '#f0783e'),
+    accent: read('--accent', '#FF8A4C'),
+    text: read('--text', '#EEF1F7'),
     series: read('--chart-series', 'rgba(255,255,255,.16)'),
     seriesStrong: read('--chart-series-strong', 'rgba(255,255,255,.72)'),
     seriesHover: read('--chart-series-hover', 'rgba(255,255,255,.36)'),
-    muted: read('--muted', '#837e78'),
+    muted: read('--muted', '#939CB0'),
     border: read('--border', 'rgba(255,255,255,.09)'),
-    success: read('--success', '#8ac6ad'),
-    warning: read('--warning', '#d7b582'),
-    surface: read('--surface', '#151515'),
-    tooltipBg: read('--chart-tooltip-bg', 'rgba(12,12,12,.94)'),
+    success: read('--success', '#7FC9A8'),
+    warning: read('--warning', '#E2BC85'),
+    danger: read('--danger', '#EFA0A0'),
+    surface: read('--surface', '#12161F'),
+    tooltipBg: read('--chart-tooltip-bg', 'rgba(18,22,31,.96)'),
     tooltipBorder: read('--chart-tooltip-border', 'rgba(255,255,255,.14)'),
   }
 }
