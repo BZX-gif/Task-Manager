@@ -1100,7 +1100,6 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
 .fz-taskline{margin:0;font-size:13px;color:var(--muted)}
 .fz-quote{margin:0;font-size:13.5px;font-style:italic;color:var(--muted)}
 .fz-reward{margin-top:1.2rem;display:flex;flex-direction:column;align-items:center;gap:.6rem}
-.fz-link{}
 #focus-mini{background:transparent;border:0;border-radius:0;padding:12px 8px}
 .focus-room{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:20px;align-items:start}
 .focus-room-main{
@@ -1300,7 +1299,6 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
 .is-default{border-color:var(--accent-border)}
 .danger-zone{border-color:rgba(239,160,160,.3)}
 .danger-hover:hover{color:var(--danger)}
-.optional-action{}
 .mini{font-size:10px}
 .number{letter-spacing:-.02em}
 
@@ -2207,3 +2205,52 @@ body::before{animation:atmosphereBreathe 40s ease-in-out infinite alternate}
   }
   .fz-burst::before,.fz-burst::after{animation:none;opacity:.35;transform:translate(-50%,-50%) scale(1)}
 }
+
+/* -------------------------------------------------- 22 · repairs (QA sweep) */
+/* Accent picker: each swatch previews the exact hue its accent applies,
+   in the active theme. (The base rule reads var(--swatch); it was never fed.) */
+.accent-swatch.accent-ember{--swatch:#FF8A4C}
+.accent-swatch.accent-iris{--swatch:#B7A7F7}
+.accent-swatch.accent-blue{--swatch:#97BAF0}
+.accent-swatch.accent-sage{--swatch:#9CCCB5}
+.accent-swatch.accent-amber{--swatch:#E0C08E}
+.accent-swatch.accent-rose{--swatch:#E1ACC0}
+:root[data-theme=light] .accent-swatch.accent-ember{--swatch:#B8481B}
+:root[data-theme=light] .accent-swatch.accent-iris{--swatch:#6F59B8}
+:root[data-theme=light] .accent-swatch.accent-blue{--swatch:#3E6CA9}
+:root[data-theme=light] .accent-swatch.accent-sage{--swatch:#3D7A60}
+:root[data-theme=light] .accent-swatch.accent-amber{--swatch:#8F682D}
+:root[data-theme=light] .accent-swatch.accent-rose{--swatch:#A0596F}
+
+/* Toast glyphs: a small status badge instead of floating text */
+.toast-symbol{
+  width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+  font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px;
+  background:rgba(var(--accent-rgb),.14);color:var(--accent)
+}
+.toast-symbol.toast-success{background:rgba(127,201,168,.16);color:var(--success)}
+.toast-symbol.toast-error{background:rgba(239,160,160,.16);color:var(--danger)}
+.toast-symbol.toast-info{background:rgba(var(--accent-rgb),.14);color:var(--accent)}
+:root[data-theme=light] .toast-symbol{background:rgba(var(--accent-rgb),.1)}
+:root[data-theme=light] .toast-symbol.toast-success{background:rgba(61,122,96,.12)}
+:root[data-theme=light] .toast-symbol.toast-error{background:rgba(160,59,59,.1)}
+
+/* Calendar: the day's load finally shows. State rows restate is-today /
+   is-weekend below so selection and today keep their priority. */
+.cal-cell.has-events .cal-cell-day{color:var(--text)}
+.cal-cell.load-balanced{background:rgba(127,201,168,.05)}
+.cal-cell.load-full{background:rgba(226,188,133,.07)}
+.cal-cell.load-over{background:rgba(239,160,160,.08)}
+.cal-cell.load-conflict{background:rgba(239,160,160,.11)}
+:root[data-theme=light] .cal-cell.load-balanced{background:rgba(61,122,96,.05)}
+:root[data-theme=light] .cal-cell.load-full{background:rgba(143,104,45,.06)}
+:root[data-theme=light] .cal-cell.load-over{background:rgba(160,59,59,.07)}
+:root[data-theme=light] .cal-cell.load-conflict{background:rgba(160,59,59,.1)}
+.cal-cell.is-weekend{background:rgba(255,255,255,.012)}
+:root[data-theme=light] .cal-cell.is-weekend{background:rgba(18,21,28,.014)}
+.cal-cell.is-today{background:var(--accent-soft)}
+
+/* long-text safety where prose or titles can arrive unbroken */
+.toast>span:last-child{min-width:0;overflow-wrap:anywhere}
+.notification-item strong,.notification-item p{overflow-wrap:anywhere}
+.journal-note{overflow-wrap:anywhere}
