@@ -56,4 +56,18 @@ for (const [k, v] of Object.entries(accentsLight)) {
   check(`light accent ${k} on --bg`, contrast(v, light['--bg']))
   check(`light accent ${k} on --surface`, contrast(v, light['--surface']))
 }
+
+// lane hues (HYB study/work/… chips) must clear 4.5 on their own light tints
+const lanesDark = { work: '#97BAF0', study: '#B7A7F7', personal: '#9CCCB5', idea: '#E0C08E', event: '#E1ACC0', body: '#FF8A4C' }
+const lanesLight = { work: '#3C69A4', study: '#6C56B2', personal: '#386F58', idea: '#835F29', event: '#925165', body: '#AD4419' }
+const mixOverWhite = (hex, alpha) => {
+  const [r, g, b] = hexToRgb(hex)
+  return '#' + [r, g, b].map((v) => Math.round(v * alpha + 255 * (1 - alpha)).toString(16).padStart(2, '0')).join('')
+}
+for (const [k, v] of Object.entries(lanesLight)) {
+  for (const alpha of [0.1, 0.13, 0.14]) check(`light lane ${k} on ${Math.round(alpha * 100)}% tint`, contrast(v, mixOverWhite(v, alpha)))
+}
+for (const [k, v] of Object.entries(lanesDark)) {
+  check(`dark lane ${k} on --surface`, contrast(v, dark['--surface']))
+}
 console.log(fail ? `\n${fail} failures` : '\nall clear')

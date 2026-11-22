@@ -129,8 +129,8 @@ function drawForecastChart(forecast) {
   const labels = forecast.days.map((row) => (row.isToday ? 'Today' : `${row.weekday} ${row.dayOfMonth}`))
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
   const statusColor = (status) => {
-    if (status === 'conflict') return colors.danger || '#d98a8a'
-    if (status === 'over') return colors.warning || '#d7b582'
+    if (status === 'conflict') return colors.danger || '#EFA0A0'
+    if (status === 'over') return colors.warning || '#E2BC85'
     return colors.seriesStrong
   }
   drawChart('forecastChart', {
@@ -169,7 +169,7 @@ function drawForecastChart(forecast) {
         legend: { display: false },
         tooltip: {
           backgroundColor: colors.tooltipBg,
-          titleColor: '#fff',
+          titleColor: colors.text,
           bodyColor: colors.muted,
           borderColor: colors.tooltipBorder,
           borderWidth: 1,
