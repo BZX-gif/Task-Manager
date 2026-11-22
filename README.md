@@ -2,7 +2,9 @@
 
 A local-first personal productivity workspace: **what matters today, where your time goes, and how the week is really going**.
 
-Command is an original, Apple-inspired interface — graphite dark mode by default, a porcelain light theme, system typography, local SVG icons, restrained motion, and a dedicated mobile dock/drawer. It is a working product, not a landing page: missions, goals, projects, routines, scheduling, focus, analytics, review, reminders, backup/restore and optional AI are all wired to real browser-local data.
+Command is an original interface with a warm, editorial identity — warm near-black dark mode by default, a warm paper light theme, serif display type with monospace numerals, local SVG icons, restrained motion, and a dedicated mobile dock/drawer. It is a working product, not a landing page: missions, goals, projects, routines, scheduling, focus, analytics, review, reminders, backup/restore and the built-in PAPER intelligence engine are all wired to real browser-local data.
+
+**PAPER** is the chief of staff inside Command. It reasons over your actual workspace — missions, schedule, goals, focus, history — with deterministic, inspectable rules; every statement it makes is labelled as fact, calculation, inference, recommendation or missing information. It prepares changes and never applies them without your confirmation. No account, no server and no external model are required.
 
 ## Quick start
 
@@ -25,7 +27,7 @@ No account, database, paid client dependency or API key is required for the core
 - **Journal** — one honest entry a day: what happened, one win, the next step, mood and energy. Thirty-day mood/streak metrics, a gentle summary line and a timeline of recent entries. Local only.
 - **Natural-language capture** — quick capture reads “Pay the bill tomorrow at 6pm for 15m !high #work” and shows each detected field as a chip before saving; repetition becomes a real series.
 - **Briefing** — opening the app greets you as **“Sir”** (editable), names the one mission that needs you now, and shows the honest shape of the day: score, Top 3, focus minutes, overdue work, the next blocks, tomorrow’s first move and one written intention. An always-visible command strip keeps that next move in sight on every screen; `B` opens the full briefing at any time.
-- **Overview / My Day** — time-aware greeting, live clock, today’s command, transparent daily score, Top 3 priorities, upcoming timeline, real weekly chart and quick actions.
+- **Overview / My Day** — time-aware greeting, live clock, today’s command, transparent daily score, Top 3 priorities, upcoming timeline, real weekly chart and quick actions. Secondary surfaces (HYB, Routines, Forecast, Weekly Review) live as domain tabs under the primary page of their domain.
 - **Schedule** — day/week/list calendars, dated time blocks, protected windows, conflict warnings, pointer drag, keyboard rescheduling (`Alt + ↑/↓`), task extension that moves only flexible blocks, and legacy study-plan templates.
 - **Plan My Day / Recover My Day** — deterministic proposals from real available time. Existing commitments and protected windows stay put; excess work is explicitly deferred. Every row is editable and nothing applies until you accept.
 - **Missions** — daily/weekly/long-term/quick horizons, seven statuses, subtasks, deadlines, recurrence, search/filter, quick capture, inbox, reschedule/skip history and goal/project/milestone links.
@@ -33,7 +35,8 @@ No account, database, paid client dependency or API key is required for the core
 - **Focus Room** — Pomodoro, custom durations, stopwatch, short/long breaks, mission/goal attribution, fullscreen/minimal overlay, daily target and real history. Timer math is timestamp-based and survives pause, tab switches, refresh and reopen.
 - **Routines** — ordered activities, weekday schedules, check-ins, consistency history and non-punitive momentum. Missed days are not debts.
 - **Analytics / Weekly Review** — completion, focus time, planned vs completed, categories, productive days, adherence and consistency from recorded data only; private reflections and next-week planning.
-- **Assistant** — optional Cloudflare Worker AI plus useful offline planning tools. AI can suggest; it cannot modify missions or accept a schedule.
+- **PAPER · your chief of staff** — a real intelligence engine, fully local: an executive daily briefing, priorities ranked against your goals and deadlines, honest alerts, time-aware recommendations with their reasons, and prepared actions that execute only after you confirm. The workspace answers questions from your data and says plainly when there is not enough data to judge. An optional external model (server-side key) can be consulted explicitly; the app works completely without it.
+- **Command Center** — the opening page: today's command, the day's real shape and a PAPER strip with live alerts, recommendations and goal health, so you can see what the engine sees without asking.
 - **Settings** — profile, theme/accent, week start, time format, working hours, focus/break preferences, reminders, categories, protected time, export/import/reset and safety copies.
 - **PWA** — installable shell, offline navigation/assets, local data, responsible notification permissions and in-app reminder fallback.
 
@@ -50,7 +53,7 @@ The briefing is the first thing you see and the fastest way back into the day. I
 | Startup briefing | Greets you by your salutation, then names the current mission. Opens once a day by default; configurable to every load or only on request. |
 | Command strip | A one-line “At your command, Sir.” under the top bar that always names the next mission, its reason and its time. Updates on every change. |
 | Next-move order | Running time block → unfinished Top 3 → most overdue → highest-priority mission today → next scheduled block → newest inbox capture → an honest clear day. |
-| Intention | One short sentence per day, saved locally, shown in the greeting, the briefing and the assistant’s context. |
+| Intention | One short sentence per day, saved locally, shown in the greeting, the briefing and PAPER’s context. |
 | Spoken briefing | Optional browser-voice reading of the same summary. No audio leaves the device; unsupported browsers simply show the text. |
 | Recovery | When earlier work is still open, the briefing offers *Recover my day* without blame. |
 
@@ -65,30 +68,32 @@ Nothing in the briefing is invented and nothing is written except your intention
 | Build | esbuild client bundle, compiled Tailwind, Vite Worker build |
 | Charts | locally bundled Chart.js |
 | Storage | browser `localStorage`, key `kcc_state_v1`, schema **v8** |
-| Typography/icons | system font stack + inline local SVG |
+| Typography/icons | warm editorial system: serif display, system UI text, monospace numerals + inline local SVG |
 
 ```text
 src/client/lib/      pure planning, briefing, score, focus, recurrence, relationships, routines, backup…
+src/client/lib/paper/  the PAPER engine: context, priorities, scheduling, reasoning,
+                       history, recommendations, intent, prepared actions, memory (pure, offline)
 src/client/core/     store, actions, DOM/dialogs, charts, event bus
 src/client/ui/       shell chrome, router, focus overlay, capture, reminders, PWA
-src/client/views/    Overview, My Day, Calendar, HYB Studio, Schedule, Missions, Goals,
-                     Projects, Routines, Focus Room, Analytics, Weekly Review,
-                     Assistant, Settings
+src/client/views/    Command Center, My Day, Calendar, HYB Studio, Schedule, Missions,
+                     Goals, Projects, Routines, Focus Room, Analytics, Weekly Review,
+                     Journal, Forecast, PAPER workspace, Settings
 public/sw.js         versioned offline shell
 tests/unit/          pure-domain tests
 tests/integration/   real Worker routes + real client bundle in jsdom + AI contract
 ```
 
-## AI configuration (optional)
+## PAPER and the optional external model
 
-The browser only calls `/api/ai`. The Worker adds the credential server-side and returns a sanitized response.
+PAPER itself needs no configuration: it is deterministic, runs on this device and answers from your workspace with labelled evidence. Only if you choose "consult the external model" in the PAPER workspace does the browser call `/api/ai`; the Worker adds the credential server-side and returns a sanitized response. The client never receives or stores an API key.
 
 ```bash
 npx wrangler secret put GEMINI_API_KEY     # production
 # local-only alternative: .dev.vars (git-ignored)
 ```
 
-Without a key or network, the assistant reports the failure honestly and the built-in planner/recovery/next-action/review tools keep working.
+Without a key or network, PAPER reports the failure honestly and every local capability — briefings, priorities, alerts, recommendations, planner, recovery — keeps working.
 
 ## Data safety
 
@@ -100,10 +105,10 @@ Without a key or network, the assistant reports the failure honestly and the bui
 
 ## Keyboard
 
-`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `H` HYB deck · `C` calendar · `F` Focus Room · `N` capture · `J` Journal · `O` Forecast · `1–9` main views · `Esc` close/minimise · schedule `Alt + ↑/↓` reschedule · calendar grid arrows / `PageUp` `PageDown` month / `Enter` open day / `Space` or `+` add plan · assistant `Enter` send / `Shift + Enter` newline.
+`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `H` HYB deck · `C` calendar · `F` Focus Room · `N` capture · `P` PAPER · `J` Journal · `O` Forecast · `1–9` main views · `Esc` close/minimise · schedule `Alt + ↑/↓` reschedule · calendar grid arrows / `PageUp` `PageDown` month / `Enter` open day / `Space` or `+` add plan · assistant `Enter` send / `Shift + Enter` newline. The old `assistant` route remains as an alias of the PAPER workspace.
 
 ## Verification
 
 The visual system lives in `public/static/system.css` (loaded last, so its tokens win). See `docs/command-5-visual-system.md` for the scale, the depth planes and the defects the redesign fixed.
 
-`npm run verify` runs the project lint, Worker/client typechecks, clean production build and the full Node test suite. 4.5 added contrast floors (`tests/unit/theme-contrast.test.js`) and keyboard/focus contracts to that suite; see `docs/smoothing-4.5.md` for the defect list. The transformation also received headless Chromium interaction/viewport/offline QA; see `docs/command-center-final-report.md` for the recorded results and remaining operational limits.
+`npm run verify` runs the project lint, Worker/client typechecks, clean production build and the full Node test suite. 4.5 added contrast floors (`tests/unit/theme-contrast.test.js`) and keyboard/focus contracts to that suite; see `docs/smoothing-4.5.md` for the defect list. The transformation also received headless Chromium interaction/viewport/offline QA; see `docs/command-center-final-report.md` for the recorded results and remaining operational limits. `docs/command-2.0-audit.md` records the architecture audit, the PAPER finding contract and the phase roadmap that drove the COMMAND 2.0 rebuild.

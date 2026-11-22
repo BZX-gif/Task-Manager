@@ -76,7 +76,7 @@ async function boot(seed) {
   return { dom, window, errors, $: (s) => window.document.querySelector(s) }
 }
 
-const VIEWS = ['dashboard', 'day', 'calendar', 'hyb', 'schedule', 'tasks', 'goals', 'projects', 'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'assistant', 'settings']
+const VIEWS = ['dashboard', 'day', 'calendar', 'hyb', 'schedule', 'tasks', 'goals', 'projects', 'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings']
 let failures = 0
 
 async function walk(label, seed) {
@@ -94,6 +94,10 @@ async function walk(label, seed) {
       if (!ok || bad) failures++
       console.log(`  view ${view.padEnd(10)} ${String(len).padStart(7)} chars ${ok ? 'ok' : 'EMPTY!'}${bad}`)
     }
+    // the old assistant route stays alive as an alias of the PAPER workspace
+    window.CC.switchView('assistant')
+    await settle(40)
+    if ($('#view-paper')?.classList.contains('hidden')) { failures++; console.log('  assistant alias -> paper: BROKEN') } else console.log('  assistant alias -> paper: ok')
     // dialogs
     window.CC.openTaskModal(); await settle(30)
     console.log('  task modal:', $('.modal-box') ? 'ok' : 'MISSING'); if (!$('.modal-box')) failures++
