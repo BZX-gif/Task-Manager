@@ -221,7 +221,6 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
   display:flex;flex-direction:column;
   background:linear-gradient(180deg,rgba(255,255,255,.03),transparent 22%),var(--glass-navigation-bg);
   border-right:1px solid var(--glass-navigation-border);
-  backdrop-filter:blur(var(--glass-blur)) saturate(1.3);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.3);
   padding:22px 14px 16px;transition:width var(--motion-normal) var(--ease),transform var(--motion-normal) var(--ease);
 }
 .brand-lockup{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px;margin-bottom:22px}
@@ -282,10 +281,9 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
 .topbar{
   position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:16px;
   height:62px;padding:0 clamp(18px,2.4vw,32px);
-  background:rgba(9,11,16,.72);border-bottom:1px solid var(--border);
-  backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+  background:rgba(9,11,16,.94);border-bottom:1px solid var(--border);
 }
-:root[data-theme=light] .topbar{background:rgba(244,245,248,.78)}
+:root[data-theme=light] .topbar{background:rgba(244,245,248,.94)}
 .topbar-left{display:flex;align-items:center;gap:10px;min-width:0}
 .mobile-menu-toggle{display:none}
 .breadcrumb-workspace{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -359,7 +357,6 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
 .mobile-nav{
   position:fixed;inset:0 0 0 auto;z-index:120;width:min(340px,88vw);
   background:var(--glass-floating-bg);border-left:1px solid var(--glass-floating-border);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   padding:25px 20px calc(30px + env(safe-area-inset-bottom));overflow-y:auto;
   box-shadow:-30px 0 100px rgba(3,5,9,.5);animation:modalIn .25s var(--ease)
 }
@@ -373,7 +370,6 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
   display:none;position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;
   align-items:stretch;justify-content:space-around;gap:2px;
   background:var(--glass-floating-bg);border:1px solid var(--glass-floating-border);border-radius:18px;
-  backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);
   box-shadow:var(--glass-shadow-float);padding:6px
 }
 .dock-item{
@@ -797,7 +793,7 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
   position:fixed;right:0;top:0;bottom:0;z-index:111;width:min(480px,94vw);
   display:flex;flex-direction:column;
   background:var(--glass-floating-bg);border-left:1px solid var(--glass-floating-border);
-  backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   box-shadow:var(--glass-shadow-float);animation:slideIn var(--motion-slow) var(--ease-out)
 }
 @keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
@@ -1436,7 +1432,7 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
 
 /* ------------------------------------------------------------ 18 · overlays */
 .modal-overlay{
-  position:fixed;inset:0;z-index:100;background:rgba(4,6,10,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  position:fixed;inset:0;z-index:100;background:rgba(4,6,10,.6);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
   display:flex;align-items:center;justify-content:center;padding:28px;animation:fadeIn .18s ease;overflow-y:auto
 }
 .modal-box{
@@ -1511,7 +1507,7 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
 /* ------------------------------------------------------- briefing overlay */
 .briefing-overlay{
   position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;padding:24px;
-  background:rgba(4,6,10,.66);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:fadeIn .2s ease;overflow-y:auto
+  background:rgba(4,6,10,.66);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);animation:fadeIn .2s ease;overflow-y:auto
 }
 .briefing-panel{
   width:min(880px,100%);max-height:calc(100dvh - 48px);overflow-y:auto;border-radius:24px;
@@ -1564,7 +1560,7 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
 /* --------------------------------------------------------- onboarding */
 .onboarding-overlay{
   position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:24px;
-  background:rgba(4,6,10,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:fadeIn .25s ease
+  background:rgba(4,6,10,.72);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);animation:fadeIn .25s ease
 }
 .onboarding-panel{
   width:min(620px,100%);max-height:calc(100dvh - 48px);overflow-y:auto;border-radius:22px;
@@ -1878,7 +1874,7 @@ kbd,.kbd{display:inline-flex;align-items:center;justify-content:center;min-width
 /* ------------------------------------------------------------ onboarding */
 .onboarding-overlay{
   position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:24px;
-  background:rgba(4,6,10,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:fadeIn .25s ease
+  background:rgba(4,6,10,.72);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);animation:fadeIn .25s ease
 }
 .onboarding{
   width:min(620px,100%);max-height:calc(100dvh - 48px);overflow-y:auto;border-radius:22px;
@@ -2020,13 +2016,13 @@ body.mobile-nav-open,body.onboarding-open{overflow:hidden}
 }
 
 /* ------------------------------------------------- choreographed entrances */
-.view-enter>*{animation:riseIn .55s var(--ease-out) both}
-.view-enter>*:nth-child(1){animation-delay:.02s}
-.view-enter>*:nth-child(2){animation-delay:.09s}
-.view-enter>*:nth-child(3){animation-delay:.16s}
-.view-enter>*:nth-child(4){animation-delay:.23s}
-.view-enter>*:nth-child(5){animation-delay:.3s}
-.view-enter>*:nth-child(6){animation-delay:.37s}
+.view-enter>*{animation:riseIn .42s var(--ease-out) both}
+.view-enter>*:nth-child(1){animation-delay:.01s}
+.view-enter>*:nth-child(2){animation-delay:.06s}
+.view-enter>*:nth-child(3){animation-delay:.11s}
+.view-enter>*:nth-child(4){animation-delay:.16s}
+.view-enter>*:nth-child(5){animation-delay:.21s}
+.view-enter>*:nth-child(6){animation-delay:.26s}
 .view-enter>*:nth-child(7){animation-delay:.44s}
 .view-enter>*:nth-child(8){animation-delay:.5s}
 @keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
@@ -2216,3 +2212,73 @@ body.mobile-nav-open,body.onboarding-open{overflow:hidden}
 .toast>span:last-child{min-width:0;overflow-wrap:anywhere}
 .notification-item strong,.notification-item p{overflow-wrap:anywhere}
 .journal-note{overflow-wrap:anywhere}
+
+/* ------------------------------------------------- 23 · the briefing, grand stage */
+/* The brief should command the screen: a near-full stage, an editorial
+   greeting at hero scale, and a glance panel that finally uses its width
+   (the old 3-column grid held 2 children and wasted a third of the aside). */
+.briefing-overlay{padding:clamp(12px,2.4vw,26px)}
+.briefing-panel{
+  width:min(1360px,100%);max-height:calc(100dvh - clamp(24px,4.8vw,52px));
+  border-radius:26px
+}
+.briefing-aurora{
+  padding:clamp(30px,4vw,58px) clamp(24px,4.2vw,64px) clamp(22px,2.8vw,38px);
+  background:
+    radial-gradient(820px 380px at 86% -32%,rgba(var(--accent-rgb),.17),transparent 62%),
+    radial-gradient(560px 300px at 6% 118%,rgba(110,140,255,.08),transparent 60%);
+}
+.briefing-salute{
+  font-size:clamp(29px,4.6vw,56px);line-height:1.03;letter-spacing:-.032em;font-weight:650
+}
+.briefing-lead{font-size:clamp(13px,1.1vw,15.5px);margin-top:15px;max-width:74ch;line-height:1.8}
+.briefing-head{gap:clamp(16px,2vw,28px)}
+.briefing-clock{font-size:clamp(15px,1.35vw,20px)}
+.briefing-grid{
+  grid-template-columns:1.45fr 1fr;
+  gap:clamp(20px,2.6vw,40px);
+  padding:clamp(22px,3vw,42px) clamp(24px,4.2vw,64px)
+}
+.briefing-lower{
+  display:grid;grid-template-columns:1.45fr 1fr;
+  gap:clamp(20px,2.6vw,40px);
+  padding:0 clamp(24px,4.2vw,64px) clamp(26px,3.4vw,46px)
+}
+.briefing-focus{gap:12px}
+.briefing-focus h2{
+  font-family:var(--font-display);font-size:clamp(21px,2.3vw,31px);
+  font-weight:650;letter-spacing:-.022em;line-height:1.16;color:var(--text)
+}
+.briefing-reason{font-size:clamp(12.5px,1vw,14px);color:var(--text-secondary);max-width:62ch}
+.briefing-section-head{font-size:10.5px;margin-bottom:15px}
+.briefing-section-head h3{font-size:inherit}
+
+/* the glance panel: score on top, stat grid beneath — no empty column */
+.briefing-stats{display:flex;flex-direction:column;gap:16px;margin-top:0}
+.briefing-score{
+  display:flex;align-items:center;gap:16px;
+  border:1px solid var(--border);border-radius:16px;
+  background:var(--glass-interactive-bg);padding:18px 20px
+}
+.briefing-score>div{min-width:0}
+.briefing-score strong{display:block;font-family:var(--font-display);font-size:clamp(15px,1.3vw,18px);font-weight:650;letter-spacing:-.012em;color:var(--text)}
+.briefing-score p{font-size:12px;color:var(--muted);line-height:1.65;margin-top:3px}
+.briefing-stat-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.briefing-stat{border:1px solid var(--border);border-radius:13px;background:var(--glass-interactive-bg);padding:13px 15px}
+.briefing-stat>span{display:block;font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.briefing-stat>strong{display:block;font-family:var(--font-display);font-size:clamp(18px,1.7vw,23px);font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--text);margin-top:3px}
+.briefing-stat>small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+
+/* agenda + intention at reading size */
+.briefing-agenda-row{padding:12px 0;gap:13px}
+.briefing-agenda-row strong{font-size:13px;font-weight:600;color:var(--text)}
+.briefing-agenda-row small{font-size:11px}
+.briefing-agenda-time{width:64px;font-size:11px}
+.briefing-intention{border-radius:16px;padding:19px 21px}
+.briefing-intention .input-field{font-size:13.5px}
+.briefing-empty{padding:36px 24px;font-size:12.5px}
+.briefing-tomorrow strong{font-size:12.5px}
+
+@media (max-width: 900px) {
+  .briefing-grid,.briefing-lower{grid-template-columns:1fr}
+}

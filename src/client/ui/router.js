@@ -21,7 +21,7 @@ import { icon } from './icons.js'
 
 export const VIEWS = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','assistant','settings']
 const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,calendar:renderCalendar,schedule:renderSchedule,hyb:renderHyb,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,assistant:renderAssistant,settings:renderSettings}
-let currentView='dashboard';const enterTimers={}
+let currentView='dashboard';const enterTimers={};let booted=false
 export function getCurrentView(){return currentView}
 export function switchView(view){
   if(!VIEWS.includes(view))return
@@ -31,7 +31,7 @@ export function switchView(view){
   qsa(document,'.nav-item').forEach((button)=>{const active=button.dataset.view===view;button.classList.toggle('active-nav',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
   qsa(document,'.dock-item[data-view]').forEach((button)=>{const active=button.dataset.view===view;button.classList.toggle('is-active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
   setMobileNav(false);updateBreadcrumb(view);renderCurrentView()
-  const section=el(`view-${view}`);if(section){section.style.animation='none';void section.offsetWidth;section.style.animation='';section.classList.add('view-enter');if(enterTimers[section.id])clearTimeout(enterTimers[section.id]);enterTimers[section.id]=setTimeout(()=>section.classList.remove('view-enter'),1200)}
+  const section=el(`view-${view}`);if(section&&booted){section.style.animation='none';void section.offsetWidth;section.style.animation='';section.classList.add('view-enter');if(enterTimers[section.id])clearTimeout(enterTimers[section.id]);enterTimers[section.id]=setTimeout(()=>section.classList.remove('view-enter'),1200)}booted=true
   try{window.scrollTo({top:0,behavior:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})}catch{/* jsdom */}
   emit('view:changed',{view})
 }

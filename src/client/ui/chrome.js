@@ -80,11 +80,16 @@ export function bindChrome(){
   if (typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover)').matches) {
     let spotFrame = 0
     let spotEvent = null
+    let spotLast = 0
     document.addEventListener('mousemove', (event) => {
       spotEvent = event
       if (spotFrame) return
       spotFrame = requestAnimationFrame(() => {
         spotFrame = 0
+        // ~20fps is indistinguishable for a glow and half the repaint cost.
+        const now = performance.now()
+        if (now - spotLast < 50) return
+        spotLast = now
         const target = spotEvent?.target instanceof Element ? spotEvent.target.closest('.command-card,.entity-card,.command-strip-task') : null
         if (!target) return
         const rect = target.getBoundingClientRect()
