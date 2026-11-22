@@ -479,7 +479,7 @@ test('settings: export → import round-trip and validation', async () => {
   window.CC.switchView('settings')
   await settle()
   const settings = $('#view-settings').textContent
-  assert.match(settings, /Assistant/)
+  assert.match(settings, /PAPER · your chief of staff/)
   assert.match(settings, /Protected time/)
   assert.match(settings, /Reminders/)
   assert.match(settings, /Export/)

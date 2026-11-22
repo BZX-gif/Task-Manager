@@ -1,20 +1,29 @@
 /* -------------------------------------------------------------------------
-   ONBOARDING — the first five minutes.
+   ONBOARDING — the first five minutes, progressively.
 
-   The product had an `onboarding.seen` flag that nothing ever read, so a new
-   workspace opened on four empty cards. Empty states are honest but they do
-   not explain a system; a new person needs to know what this is, in what
-   order to use it, and what it will do for them.
+   COMMAND 2.0 asks only what it needs to become useful, and nothing it asks
+   is mandatory:
 
-   The flow is deliberately short: a welcome that names the promise, then one
-   question that proves the whole thing works (type a real plan, watch it be
-   understood), then three concrete next steps. Nothing here writes data the
-   person did not type — and everything can be skipped in one tap.
+     welcome   what this is, honestly
+     identity  who the briefing speaks to (optional)
+     setup     working hours and planning shape (optional)
+     firstplan prove the whole system in one line (the promise)
+     paper     how the intelligence engine uses workspace information
+     done      the three shortcuts worth knowing
+
+   Every step can be skipped; the workspace starts empty and clean. Nothing
+   here writes data the person did not type.
    ------------------------------------------------------------------------- */
-import { state } from '../core/store.js'
+import { state, commit } from '../core/store.js'
 import { parseQuickCapture } from '../lib/quickparse.js'
 import { formatDuration } from '../lib/dates.js'
 import { timeLabel } from './common.js'
+import { el, escapeHtml } from '../core/dom.js'
+import { icon } from './icons.js'
+
+const STEPS = ['welcome', 'identity', 'setup', 'firstplan', 'paper', 'done']
+let step = 0
+let lastFocus = null
 
 /* The parser returns machine values (`2026-11-21`, `18:00`) and the preview
  * showed them raw, which made the product look like a database. The chip
@@ -32,21 +41,15 @@ function friendlyDate(value) {
   if (diff > 1 && diff < 7) return day.toLocaleDateString('en-GB', { weekday: 'long' })
   return day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
-import { el, escapeHtml } from '../core/dom.js'
-import { icon } from './icons.js'
-
-const STEPS = ['welcome', 'firstplan', 'done']
-let step = 0
-let lastFocus = null
 
 /** The product's honest one-liner — no feature list, no adjectives. */
 const PROMISE = {
-  title: 'A quieter place to run your day.',
-  body: 'Think of it as one desk instead of six apps: your missions, the hours they need, the goals they serve, and the focus to actually finish them.',
+  title: 'A quieter place to run your life.',
+  body: 'COMMAND is one desk instead of six apps: your missions, the hours they need, the goals they serve — and PAPER, a built-in chief of staff that reads your actual workspace and tells you what matters, with its reasons shown.',
   points: [
     ['missions', 'Capture the work', 'One inbox for everything you owe yourself or someone else.'],
-    ['calendar', 'Give it hours', 'Drag a mission into the day and it becomes a block you can keep.'],
-    ['focus', 'Finish it', 'A focus room that protects one thing at a time, and records it.'],
+    ['calendar', 'Give it hours', 'Plans, deadlines and focus time in one schedule you control.'],
+    ['sparkles', 'Let PAPER think', 'Briefings, priorities and honest alerts — from your data, on your device.'],
   ],
 }
 
@@ -70,7 +73,7 @@ function overlayHtml() {
 
 function welcomeStep() {
   return `<div class="onboarding-step is-active">
-    <p class="eyebrow">Welcome to Command</p>
+    <p class="eyebrow">Welcome to COMMAND</p>
     <h2 id="onboarding-title">${escapeHtml(PROMISE.title)}</h2>
     <p class="onboarding-lede">${escapeHtml(PROMISE.body)}</p>
     <ul class="onboarding-points">
@@ -82,17 +85,69 @@ function welcomeStep() {
     </ul>
     <p class="onboarding-privacy">${icon('shield')}Everything stays in this browser. No account, no server, no analytics.</p>
     <div class="onboarding-actions">
-      <button class="btn-primary" data-onboarding-next>Show me ${icon('arrow')}</button>
+      <button class="btn-primary" data-onboarding-next>Set up my workspace ${icon('arrow')}</button>
       <button class="text-button" data-onboarding-skip>I'll explore on my own</button>
+    </div>
+  </div>`
+}
+
+function identityStep() {
+  const name = state?.settings?.userName || ''
+  const salute = state?.settings?.salutation || 'Sir'
+  return `<div class="onboarding-step is-active">
+    <p class="eyebrow">Optional · step 2 of 6</p>
+    <h2 id="onboarding-title">Who is this workspace for?</h2>
+    <p class="onboarding-lede">The briefing addresses you by name. PAPER uses it in exactly one place — how it speaks to you — and nowhere else.</p>
+    <label class="onboarding-field">
+      <span class="field-label">Your name</span>
+      <input class="input-field" data-onboarding-name maxlength="60" placeholder="Optional" value="${escapeHtml(name)}">
+    </label>
+    <label class="onboarding-field">
+      <span class="field-label">How should the briefing address you?</span>
+      <input class="input-field" data-onboarding-salutation maxlength="40" placeholder="Sir" value="${escapeHtml(salute)}">
+    </label>
+    <div class="onboarding-actions">
+      <button class="btn-primary" data-onboarding-next>Continue ${icon('arrow')}</button>
+      <button class="text-button" data-onboarding-skip>Skip for now</button>
+    </div>
+  </div>`
+}
+
+function setupStep() {
+  const hours = state?.settings?.workingHours || { start: '09:00', end: '18:00' }
+  return `<div class="onboarding-step is-active">
+    <p class="eyebrow">Optional · step 3 of 6</p>
+    <h2 id="onboarding-title">Shape your working day.</h2>
+    <p class="onboarding-lede">PAPER's time intelligence plans against these hours — never against a fantasy of unlimited time. You can change them any time in Settings.</p>
+    <div class="onboarding-grid">
+      <label class="onboarding-field">
+        <span class="field-label">Working hours start</span>
+        <input class="input-field" type="time" data-onboarding-hours-start value="${escapeHtml(hours.start)}">
+      </label>
+      <label class="onboarding-field">
+        <span class="field-label">Working hours end</span>
+        <input class="input-field" type="time" data-onboarding-hours-end value="${escapeHtml(hours.end)}">
+      </label>
+      <label class="onboarding-field">
+        <span class="field-label">Week starts on</span>
+        <select class="input-field" data-onboarding-week-start>
+          <option value="1" ${state?.settings?.weekStart === 0 ? '' : 'selected'}>Monday</option>
+          <option value="0" ${state?.settings?.weekStart === 0 ? 'selected' : ''}>Sunday</option>
+        </select>
+      </label>
+    </div>
+    <div class="onboarding-actions">
+      <button class="btn-primary" data-onboarding-next>Continue ${icon('arrow')}</button>
+      <button class="text-button" data-onboarding-skip>Skip for now</button>
     </div>
   </div>`
 }
 
 function planStep() {
   return `<div class="onboarding-step is-active">
-    <p class="eyebrow">Step two of three</p>
+    <p class="eyebrow">Step 4 of 6</p>
     <h2 id="onboarding-title">Type a plan the way you'd say it.</h2>
-    <p class="onboarding-lede">No forms. Write it naturally and Command picks out the day, the time, the length and the kind of work.</p>
+    <p class="onboarding-lede">No forms. Write it naturally and COMMAND picks out the day, the time, the length and the kind of work.</p>
     <label class="onboarding-field">
       <span class="sr-only">Try a plan</span>
       <textarea class="input-field" rows="2" data-onboarding-input placeholder="e.g. Revision tomorrow 6pm 90m @study"></textarea>
@@ -105,8 +160,26 @@ function planStep() {
       </button>`).join('')}
     </div>
     <div class="onboarding-actions">
-      <button class="btn-primary" data-onboarding-finish>Start using Command ${icon('arrow')}</button>
+      <button class="btn-primary" data-onboarding-next>Continue ${icon('arrow')}</button>
       <button class="text-button" data-onboarding-skip>Maybe later</button>
+    </div>
+  </div>`
+}
+
+function paperStep() {
+  return `<div class="onboarding-step is-active">
+    <p class="eyebrow">Step 5 of 6 · PAPER</p>
+    <h2 id="onboarding-title">Meet PAPER, your chief of staff.</h2>
+    <p class="onboarding-lede">PAPER is built into COMMAND. It reads only what your workspace records — missions, schedule, goals, focus, history — and reasons over it with deterministic rules you can inspect.</p>
+    <ul class="onboarding-points">
+      <li><span class="onboarding-point-icon">${icon('check')}</span><span class="onboarding-point-copy"><strong>Every statement is labelled</strong><span>Fact, calculation, inference, recommendation — or missing information.</span></span><span class="onboarding-point-index">01</span></li>
+      <li><span class="onboarding-point-icon">${icon('shield')}</span><span class="onboarding-point-copy"><strong>Nothing leaves this device</strong><span>No external model is required. Your data stays yours.</span></span><span class="onboarding-point-index">02</span></li>
+      <li><span class="onboarding-point-icon">${icon('edit')}</span><span class="onboarding-point-copy"><strong>You stay in control</strong><span>PAPER prepares changes; nothing happens until you confirm.</span></span><span class="onboarding-point-index">03</span></li>
+    </ul>
+    <p class="onboarding-privacy">${icon('info')}As your workspace fills in, PAPER's briefings and recommendations get sharper. It will say so when there is not enough data to judge.</p>
+    <div class="onboarding-actions">
+      <button class="btn-primary" data-onboarding-next>Continue ${icon('arrow')}</button>
+      <button class="text-button" data-onboarding-skip>Skip for now</button>
     </div>
   </div>`
 }
@@ -118,7 +191,7 @@ function doneStep() {
     <ul class="onboarding-shortcuts">
       <li><kbd>⌘K</kbd><span><strong>Search anything</strong><span>Missions, plans, actions — one field.</span></span></li>
       <li><kbd>N</kbd><span><strong>Capture a thought</strong><span>It lands in the inbox; sort it later.</span></span></li>
-      <li><kbd>F</kbd><span><strong>Protect your attention</strong><span>The Focus Room hides everything but one thing.</span></span></li>
+      <li><kbd>P</kbd><span><strong>Ask PAPER</strong><span>Briefings, priorities and honest answers from your data.</span></span></li>
     </ul>
     <p class="onboarding-privacy">${icon('info')}Press <kbd>?</kbd> whenever you want the full list of shortcuts.</p>
     <div class="onboarding-actions">
@@ -127,7 +200,7 @@ function doneStep() {
   </div>`
 }
 
-const RENDERERS = { welcome: welcomeStep, firstplan: planStep, done: doneStep }
+const RENDERERS = { welcome: welcomeStep, identity: identityStep, setup: setupStep, firstplan: planStep, paper: paperStep, done: doneStep }
 
 function paint() {
   const host = document.querySelector('[data-onboarding-body]')
@@ -135,7 +208,7 @@ function paint() {
   host.innerHTML = RENDERERS[STEPS[step]] ? RENDERERS[STEPS[step]]() : ''
   host.querySelector('.onboarding-step')?.classList.add('is-entering')
   // focus the first meaningful control so the keyboard flow starts inside
-  const focusTarget = host.querySelector('textarea, .btn-primary')
+  const focusTarget = host.querySelector('textarea, input, .btn-primary')
   if (focusTarget instanceof HTMLElement) requestAnimationFrame(() => focusTarget.focus({ preventScroll: true }))
 }
 
@@ -159,9 +232,28 @@ function renderPreview(value) {
   if (parsed?.title) chips.push(['check', parsed.title])
   host.dataset.state = chips.length ? 'ready' : 'waiting'
   host.innerHTML = chips.length
-    ? `<p class="onboarding-preview-label">${icon('sparkle')}Here's what Command heard</p>
+    ? `<p class="onboarding-preview-label">${icon('sparkle')}Here's what COMMAND heard</p>
        <div class="onboarding-chips">${chips.map(([symbol, label]) => `<span class="onboarding-chip">${icon(symbol)}${escapeHtml(String(label))}</span>`).join('')}</div>`
     : `<p class="onboarding-preview-label is-quiet">${icon('info')}Keep writing — day, time and length are picked up as you type.</p>`
+}
+
+/** Persist only what the person actually typed — never invented defaults. */
+function saveStepInputs() {
+  const name = /** @type {any} */ (document.querySelector('[data-onboarding-name]'))
+  const salute = /** @type {any} */ (document.querySelector('[data-onboarding-salutation]'))
+  const hoursStart = /** @type {any} */ (document.querySelector('[data-onboarding-hours-start]'))
+  const hoursEnd = /** @type {any} */ (document.querySelector('[data-onboarding-hours-end]'))
+  const weekStart = /** @type {any} */ (document.querySelector('[data-onboarding-week-start]'))
+  if (name || salute || hoursStart) {
+    commit((s) => {
+      if (name && name.value.trim()) s.settings.userName = name.value.trim().slice(0, 60)
+      if (salute && salute.value.trim()) s.settings.salutation = salute.value.trim().slice(0, 40)
+      if (hoursStart && hoursEnd && hoursStart.value && hoursEnd.value && hoursStart.value !== hoursEnd.value) {
+        s.settings.workingHours = { start: hoursStart.value, end: hoursEnd.value }
+      }
+      if (weekStart) s.settings.weekStart = weekStart.value === '0' ? 0 : 1
+    }, { silent: true })
+  }
 }
 
 function finish() {
@@ -199,10 +291,15 @@ export function openOnboarding() {
     const target = event.target instanceof Element ? event.target : null
     if (!target) return
     if (target === layer) { closeOnboarding(); return }
-    if (target.closest('[data-onboarding-skip]')) { finish(); return }
-    if (target.closest('[data-onboarding-next]')) { step = 1; paint(); bindStep(); return }
-    if (target.closest('[data-onboarding-finish]')) { step = 2; paint(); bindStep(); return }
-    if (target.closest('[data-onboarding-close]')) { finish(); return }
+    if (target.closest('[data-onboarding-skip]')) { saveStepInputs(); finish(); return }
+    if (target.closest('[data-onboarding-next]')) {
+      saveStepInputs()
+      step = Math.min(step + 1, STEPS.length - 1)
+      paint()
+      bindStep()
+      return
+    }
+    if (target.closest('[data-onboarding-finish]') || target.closest('[data-onboarding-close]')) { saveStepInputs(); finish(); return }
     const example = target.closest('[data-onboarding-example]')
     if (example instanceof HTMLElement) {
       const box = document.querySelector('[data-onboarding-input]')
@@ -219,7 +316,7 @@ export function openOnboarding() {
     if (!(event instanceof KeyboardEvent)) return
     if (event.key === 'Escape') { event.stopPropagation(); closeOnboarding(); return }
     if (event.key !== 'Tab') return
-    const focusables = Array.from(layer.querySelectorAll('button, textarea, input, [tabindex]:not([tabindex="-1"])'))
+    const focusables = Array.from(layer.querySelectorAll('button, textarea, input, select, [tabindex]:not([tabindex="-1"])'))
       .filter((node) => node instanceof HTMLElement && !node.closest('.hidden,[hidden]') && !(node instanceof HTMLButtonElement && node.disabled))
     if (!focusables.length) return
     const first = focusables[0]
@@ -245,6 +342,6 @@ function bindStep() {
 export function needsOnboarding() {
   if (!state) return false
   if (state.onboarding?.seen) return false
-  const hasWork = Number(state.tasks?.length || 0) + Number(state.hybPlans?.length || 0) + Number(state.sessions?.length || 0) > 0
+  const hasWork = Number(state.tasks?.length || 0) + Number(state.hyb?.plans?.length || 0) + Number(state.focus?.sessions?.length || 0) + Number(state.goals?.length || 0) > 0
   return !hasWork
 }
