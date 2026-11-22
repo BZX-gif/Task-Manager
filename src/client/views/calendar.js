@@ -29,7 +29,7 @@ import { energyOf, kindOf, repeatOf } from '../lib/hyb.js'
 import { hybDay, scheduleHybPlan, toggleHybPlanDay } from '../core/hyb.js'
 import { setScheduleDate } from './schedule.js'
 import { openHybPlanModal } from '../ui/hyb.js'
-import { bindCommon, icon, pageHeading, timeLabel } from '../ui/common.js'
+import { bindCommon, icon, pageHeading, timeLabel, domainTabs, DOMAIN_TABS } from '../ui/common.js'
 import { on } from '../core/bus.js'
 
 const MAX_CELL_EVENTS = 3
@@ -102,6 +102,7 @@ export function renderCalendar() {
       'Everything you have committed to, planned or written down — in one grid. Tap a day to see it, tap the plus to add a HYB plan.',
       `<button class="btn-ghost" data-common="schedule">${icon('clock')}Day schedule</button><button class="btn-primary" data-cal-new-plan="${selected}">${icon('bolt')}Add HYB plan</button>`,
     )}
+    ${domainTabs('calendar', DOMAIN_TABS.time)}
 
     <div class="cal-toolbar">
       <div class="cal-nav">

@@ -23,7 +23,7 @@ import {
 import { openHybDeck, openHybPlanModal } from '../ui/hyb.js'
 import { addDays, formatDuration, formatKeyLabel, isValidKey, startOfWeek, weekdayOf, weekdayShort, durationHtml } from '../lib/dates.js'
 import { HYB_KINDS, HYB_ENERGY, energyOf, kindOf, parseHybInput, repeatOf } from '../lib/hyb.js'
-import { bindCommon, icon, metric, pageHeading, timeLabel } from '../ui/common.js'
+import { bindCommon, icon, metric, pageHeading, timeLabel, domainTabs, DOMAIN_TABS } from '../ui/common.js'
 
 const SCOPES = [
   ['today', 'Today'],
@@ -60,6 +60,7 @@ export function renderHyb() {
       'Study, work, body, people, events and ideas — six lanes, one place. A plan is lighter than a mission and heavier than a note.',
       `<button class="btn-ghost" data-common="calendar">${icon('calendar')}Calendar</button><button class="btn-ghost" data-hyb-open-deck>${icon('bolt')}HYB deck</button><button class="btn-primary" data-hyb-studio-new>${icon('plus')}New plan</button>`,
     )}
+    ${domainTabs('hyb', DOMAIN_TABS.myDay)}
 
     <div class="metric-strip hyb-metrics">
       ${metric('bolt', 'Today', `${stats.today.doneCount}<small>/${stats.today.count}</small>`, stats.today.count ? 'HYB plans finished' : 'Nothing planned today')}

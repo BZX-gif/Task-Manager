@@ -19,6 +19,7 @@ import { normalizeJournal } from './journal.js'
 import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
 import { normalizeHybPlan } from './hyb.js'
 import { normalizeLayers } from './calendar.js'
+import { normalizePaper } from './paper/memory.js'
 
 /** Legacy key kept for backward compatibility with existing installs. */
 export const STORAGE_KEY = 'kcc_state_v1'
@@ -229,6 +230,8 @@ export function emptyState(ctx = makeContext()) {
     settings: normalizeSettings({}),
     /** the briefing: which day it was last shown + one honest intention per day */
     briefing: { lastShownDay: null, intentions: {} },
+    /** PAPER — local intelligence memory (additive; see lib/paper/memory.js) */
+    paper: { history: [], notes: {} },
     onboarding: { seen: false },
     dailyProgress: {},
     titles: {
@@ -569,6 +572,9 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
     lastShownDay: typeof rawBriefing.lastShownDay === 'string' && isValidKey(rawBriefing.lastShownDay) ? rawBriefing.lastShownDay : null,
     intentions: Object.fromEntries(intentionKeys.slice(-120).map((key) => [key, intentions[key]])),
   }
+
+  // --- additive: PAPER intelligence memory (older payloads simply get defaults) ---
+  state.paper = normalizePaper(raw.paper)
 
   // --- v3: dailyProgress snapshots (frozen historical truth) ---
   state.dailyProgress = {}

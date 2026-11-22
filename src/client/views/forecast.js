@@ -10,7 +10,7 @@ import { escapeHtml, qsa } from '../core/dom.js'
 import { addDays, durationHtml, formatDuration } from '../lib/dates.js'
 import { buildForecast, forecastAdvice, busyShare, LOAD_LABELS } from '../lib/forecast.js'
 import { drawChart, chartColors, alpha, vGrad } from '../core/charts.js'
-import { icon, pageHeading, metric, empty, bindCommon } from '../ui/common.js'
+import { icon, pageHeading, metric, empty, bindCommon, domainTabs, DOMAIN_TABS } from '../ui/common.js'
 
 let horizon = 14
 
@@ -30,6 +30,7 @@ export function renderForecast() {
       'Everything already promised — timetable, missions, and the work you have not placed yet. Rest blocks are not counted.',
       `<button class="btn-ghost" data-forecast-plan>${icon('calendar')}Plan today</button>`,
     )}
+    ${domainTabs('forecast', DOMAIN_TABS.analytics)}
     <div class="segmented forecast-horizon" aria-label="Forecast horizon">
       ${[7, 14, 30].map((days) => `<button data-forecast-horizon="${days}" class="${horizon === days ? 'seg-active' : ''}">${days} days</button>`).join('')}
     </div>
