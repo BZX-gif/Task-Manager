@@ -761,7 +761,8 @@ export function saveState(state, { storage, now = Date.now() } = {}) {
  * Storage usage estimate for the Settings screen.
  * @param {{ storage?: any }} [options]
  */
-export function storageUsage({ storage } = {}) {
+export function storageUsage(options) {
+  const { storage } = options || {}
   const store = getStorage(storage)
   if (!store) return { bytes: 0, kb: 0 }
   try {
