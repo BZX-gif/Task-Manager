@@ -521,6 +521,94 @@ test('quick capture works from the keyboard shortcut and files to the inbox', as
   assert.equal(captured.date, null)
 })
 
+/* ---------------------------------------------------------------------------
+ * Deep links.
+ *
+ * The client writes each chapter into the URL (/calendar, /goals). Those paths
+ * are not files, so two things have to hold or the site 404s the moment someone
+ * clicks Calendar:
+ *   1. the Worker answers every client route with the shell;
+ *   2. the client opens the chapter named in the URL instead of always booting
+ *      to the dashboard.
+ * Both were broken; these tests are the guard against it returning.
+ * ------------------------------------------------------------------------- */
+
+const CLIENT_ROUTES = [
+  'dashboard', 'day', 'calendar', 'schedule', 'hyb', 'tasks', 'goals', 'projects',
+  'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings',
+]
+
+test('the Worker serves the shell for every client route, so deep links never 404', async () => {
+  for (const route of CLIENT_ROUTES) {
+    const res = await worker.request(new Request(`https://command-center.test/${route}`))
+    assert.equal(res.status, 200, `/${route} must answer ${res.status === 200 ? '200' : res.status}`)
+    const html = await res.text()
+    assert.match(html, /id="app"/, `/${route} returns the application shell`)
+  }
+})
+
+test('a route is answered with a trailing slash, and legacy names still work', async () => {
+  for (const path_ of ['/calendar/', '/goals/', '/assistant', '/overview']) {
+    const res = await worker.request(new Request(`https://command-center.test${path_}`))
+    assert.equal(res.status, 200, `${path_} is answered`)
+  }
+})
+
+test('paths that are not routes still 404, and the API is untouched', async () => {
+  for (const path_ of ['/nonsense', '/deep/path/calendar', '/does-not-exist']) {
+    const res = await worker.request(new Request(`https://command-center.test${path_}`))
+    assert.equal(res.status, 404, `${path_} should be a genuine 404`)
+  }
+  const health = await worker.request(new Request('https://command-center.test/api/health'))
+  assert.equal(health.status, 200, 'the health probe still answers')
+})
+
+test('a deep link opens its own chapter, not the dashboard', async () => {
+  // Boot a second, independent client straight from /goals — this is the user's
+  // situation exactly: clicking Calendar wrote /calendar, then reloading it.
+  const shell = await (await worker.request('https://command-center.test/goals')).text()
+  const vc = new VirtualConsole()
+  const bootErrors = []
+  vc.on('jsdomError', (e) => bootErrors.push(e.message))
+  const deep = new JSDOM(shell, { url: 'https://command-center.test/goals', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: vc })
+  const w = deep.window
+  w.fetch = async () => new Response('{"text":"ok"}', { status: 200 })
+  w.matchMedia = w.matchMedia || ((q) => ({ matches: false, media: q, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} }))
+  w.scrollTo = () => {}
+  w.HTMLCanvasElement.prototype.getContext = () => null
+  w.eval(await readFile(path.join(root, 'public', 'static', 'js', 'app.js'), 'utf8'))
+  await new Promise((r) => setTimeout(r, 900))
+
+  const doc = w.document
+  const visible = [...doc.querySelectorAll('.view-section')].filter((s) => !s.classList.contains('hidden'))
+  assert.deepEqual(visible.map((s) => s.id), ['view-goals'], `the linked chapter is the one shown, got ${visible.map((s) => s.id).join(',')}`)
+  assert.ok(doc.getElementById('view-dashboard').classList.contains('hidden'), 'the dashboard is not shown')
+  assert.ok(doc.querySelector('.nav-item.active-nav'), 'the sidebar marks the open chapter')
+  assert.equal(w.location.pathname, '/goals', 'and the address is not rewritten into a deeper path')
+  assert.deepEqual(bootErrors, [], `a deep link boots cleanly: ${bootErrors.join(' | ')}`)
+  w.close()
+})
+
+test('navigating between chapters keeps one clean address, not a growing path', async () => {
+  const path_ = () => window.location.pathname
+  const go = async (view) => {
+    window.CC.switchView(view)
+    await settle()
+  }
+  await go('calendar')
+  assert.equal(path_(), '/calendar')
+  await go('goals')
+  assert.equal(path_(), '/goals', 'moving to Goals replaces the chapter, it does not append one')
+  await go('calendar')
+  assert.equal(path_(), '/calendar')
+  await go('dashboard')
+  assert.equal(path_(), '/', 'the Command Center returns to the root')
+  await go('paper')
+  assert.equal(path_(), '/paper')
+  window.CC.switchView('dashboard')
+  await settle()
+})
+
 test('no uncaught errors were logged during the whole run', () => {
   assert.deepEqual(errors, [], `expected a clean console, got: ${errors.join(' | ')}`)
 })

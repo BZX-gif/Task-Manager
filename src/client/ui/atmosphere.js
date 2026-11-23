@@ -156,16 +156,27 @@ export function applyAtmospherePreference({ initial = false } = {}) {
 export function setAtmosphereScope(view) {
   const scope = view === 'dashboard' ? 'dashboard' : 'workspace'
   ROOT()?.setAttribute('data-atmosphere-view', scope)
-  // Paths are read by the router, never by the Worker, so a deep link to a
-  // workspace screen keeps the photograph as a distant presence only.
+  // Every chapter gets an address (/calendar, /goals) so it can be linked and
+  // reloaded. The Worker answers those paths with the shell, and the router
+  // reads the last segment back on boot — see viewFromPath().
+  //
+  // Replace the *chapter segment*, never append to it: appending turned
+  // /calendar into /calendar/calendar on the next navigation.
   try {
-    const base = (typeof window !== 'undefined' && window.location?.pathname) || '/'
-    if (typeof history !== 'undefined' && history.replaceState) {
-      const target = view === 'dashboard' ? base.replace(/(?:dashboard|overview)\/?$/, '') || '/' : `${base.replace(/\/$/, '')}/${view}`
-      if (target && target !== base) history.replaceState(null, '', target)
-    }
+    if (typeof history === 'undefined' || !history.replaceState) return
+    const path = (typeof window !== 'undefined' && window.location?.pathname) || '/'
+    const segments = path.split('/').filter(Boolean)
+    const KNOWN = ['dashboard', 'day', 'calendar', 'schedule', 'hyb', 'tasks', 'goals', 'projects',
+      'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings',
+      'assistant', 'overview']
+    // drop a trailing chapter name if there is one, then add the new chapter
+    if (segments.length && KNOWN.includes(segments[segments.length - 1])) segments.pop()
+    const target = view === 'dashboard'
+      ? `/${segments.join('/')}`.replace(/\/+$/, '') || '/'
+      : `/${[...segments, view].join('/')}`
+    if (target !== path) history.replaceState(null, '', target)
   } catch {
-    /* jsdom and sandboxed frames may refuse history writes — the attribute is what matters */
+    /* sandboxed frames may refuse history writes — the attribute is what matters */
   }
 }
 
