@@ -2002,3 +2002,220 @@ select.input-field,select.select-field{
   border-color:var(--accent-paper) !important;
   color:var(--ink) !important;
 }
+
+/* ============================================ the index · collapsed and mobile
+   Collapsed, the sidebar keeps its structure and drops the words: chapter
+   labels become hairlines, the active chapter keeps its bronze mark. On a
+   phone the index becomes a full sheet rather than a squeezed column. */
+.sidebar-collapsed .sidebar .nav-label{
+  text-align:center;
+  font-size:0;
+  padding:10px 0 4px;
+}
+.sidebar-collapsed .sidebar .nav-label::before{
+  content:'';
+  display:block;
+  height:1px;width:16px;margin:0 auto;
+  background:var(--rule);
+}
+.sidebar-collapsed .sidebar .nav-item{
+  justify-content:center;
+  padding:9px 0;
+  position:relative;
+}
+.sidebar-collapsed .sidebar .nav-item span:not(.nav-key){display:none}
+.sidebar-collapsed .sidebar .nav-key{display:none}
+.sidebar-collapsed .sidebar .nav-item.active-nav{padding:9px 0}
+.sidebar-collapsed .sidebar .nav-item.active-nav::after{
+  content:'';
+  position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:2px;height:16px;background:var(--gold);border-radius:0 2px 2px 0;
+}
+.sidebar-collapsed .sidebar .workspace-label{justify-content:center;padding:10px 0}
+.sidebar-collapsed .sidebar .workspace-label div{display:none}
+.sidebar-collapsed .sidebar .brand-name{display:none}
+.sidebar-collapsed .sidebar .sidebar-focus{display:none}
+.sidebar-collapsed .sidebar .briefing-nav span{display:none}
+.sidebar-collapsed .sidebar .local-note span{display:none}
+.sidebar-collapsed .sidebar .local-note{justify-content:center}
+
+/* the mobile index is a full sheet with the same chapter structure */
+.mobile-nav{
+  background:var(--paper);
+  border-right:1px solid var(--rule);
+  box-shadow:0 30px 90px -30px rgba(3,2,1,.95);
+  padding:22px 20px 34px;
+}
+.mobile-nav-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:16px;
+  border-bottom:1px solid var(--rule);
+  margin-bottom:20px;
+}
+.mobile-nav-head strong{
+  font-family:var(--font-display);
+  font-weight:400;
+  font-size:19px;
+  letter-spacing:-.012em;
+  color:var(--ink);
+}
+.mobile-nav .nav-group{margin-bottom:20px}
+.mobile-nav .nav-label{
+  font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--bronze);font-weight:600;
+  margin:0 0 9px;
+  padding:0;
+}
+.mobile-nav .nav-item{
+  display:flex;align-items:center;gap:11px;
+  width:100%;
+  padding:10px 0;
+  background:none;border:0;
+  border-top:1px solid var(--rule-hair);
+  color:var(--ink-muted);
+  font-size:12.5px;
+  text-align:left;
+  position:relative;
+}
+.mobile-nav .nav-item:first-of-type{border-top:0}
+.mobile-nav .nav-item .icon{width:15px;height:15px;color:var(--bronze);opacity:.8;flex:none}
+.mobile-nav .nav-item.active-nav,
+.mobile-nav .nav-item.is-active{
+  color:var(--ink);
+  font-weight:500;
+}
+.mobile-nav .nav-item.active-nav::before{
+  content:'';
+  position:absolute;left:-20px;top:50%;transform:translateY(-50%);
+  width:2px;height:15px;background:var(--gold);
+}
+.mobile-nav .nav-key{
+  margin-left:auto;
+  font-size:8.5px;color:var(--ink-ghost);
+}
+
+/* the phone dock is a paper tray */
+.mobile-dock{
+  background:rgba(23,19,16,.96);
+  backdrop-filter:blur(14px);
+  border-top:1px solid var(--rule);
+}
+.mobile-dock .dock-item{
+  background:none;border:0;
+  color:var(--ink-ghost);
+  font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:9px 4px;
+  position:relative;
+  transition:color 150ms ease;
+}
+.mobile-dock .dock-item .icon{width:17px;height:17px;opacity:.75}
+.mobile-dock .dock-item.is-active{color:var(--ink)}
+.mobile-dock .dock-item.is-active .icon{opacity:1;color:var(--gold)}
+.mobile-dock .dock-item.is-active::before{
+  content:'';
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:18px;height:1.5px;background:var(--gold);
+}
+/* the floating HYB trigger is a wax seal, not a coloured FAB */
+.hyb-fab{
+  background:var(--paper-raised);
+  border:1px solid var(--bronze);
+  color:var(--bronze);
+  border-radius:50%;
+  box-shadow:0 12px 30px -12px rgba(3,2,1,.9);
+  font-family:var(--font-display);
+  letter-spacing:.06em;
+}
+@media (max-width:767px){
+  .sidebar-collapsed .sidebar .nav-label{font-size:8.5px;padding:0}
+  .page-heading h1,.paper-header h1{font-size:clamp(29px,8.4vw,38px)}
+  .paper-header .heading-actions,.page-heading .heading-actions{
+    width:100%;
+    flex-wrap:wrap;
+  }
+  .paper-header .heading-actions .btn-primary,
+  .paper-header .heading-actions .btn-ghost{flex:1;justify-content:center;min-width:0}
+  .card{padding:16px}
+  .detail-section{margin-top:22px;padding-top:22px}
+}
+
+/* ============================================================ the motion pass
+   One movement language across the whole journal: pages rise a few pixels as
+   they are opened, panels settle in, the index marks a chapter by drawing its
+   rule, and figures count up. Nothing bounces, nothing flashes, nothing slides
+   sideways. Everything is short, and everything yields to reduced-motion. */
+@keyframes paper-settle{from{opacity:0;transform:translateY(4px) scale(.995)}to{opacity:1;transform:none}}
+@keyframes paper-rule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes paper-veil{from{opacity:0}to{opacity:1}}
+
+/* a page opens like a spread */
+.view-section.view-enter{animation:paper-rise 420ms cubic-bezier(.22,.61,.36,1) both}
+.view-section.view-enter .page-heading,
+.view-section.view-enter .paper-header{animation:paper-rise 380ms cubic-bezier(.22,.61,.36,1) both}
+/* the chapter's opening rule draws itself from the margin */
+.paper-header .eyebrow::before,
+.page-heading .eyebrow::before{
+  transform-origin:left center;
+  animation:paper-rule 520ms cubic-bezier(.3,.7,.3,1) both;
+}
+/* content settles slightly after the heading, so the eye is led downward */
+.view-section.view-enter > .cal-layout,
+.view-section.view-enter > .task-list-surface,
+.view-section.view-enter > .grid,
+.view-section.view-enter > .focus-room,
+.view-section.view-enter > .cal-toolbar,
+.view-section.view-enter > .paper-workbook-figures{
+  animation:paper-settle 460ms cubic-bezier(.22,.61,.36,1) 60ms both;
+}
+/* overlays veil in, panels lift a hair */
+.briefing-overlay,.modal-backdrop,.overlay-backdrop{animation:paper-veil 200ms ease both}
+.briefing-panel,.modal-panel,.sheet-panel,.drawer-panel{
+  animation:paper-settle 280ms cubic-bezier(.22,.61,.36,1) both;
+}
+/* the index marks the open chapter by drawing the indicator */
+.sidebar .nav-item.active-nav::before{
+  animation:paper-rule 360ms cubic-bezier(.3,.7,.3,1) both;
+  transform-origin:center;
+}
+.mobile-nav .nav-item.active-nav::before{animation:paper-rule 360ms cubic-bezier(.3,.7,.3,1) both}
+/* calendar: the month turns rather than jumps */
+.cal-month,.cal-week-grid{animation:paper-settle 300ms cubic-bezier(.22,.61,.36,1) both}
+.cal-cell{transition:background 150ms ease}
+.cal-cell-dots i{transition:transform 160ms ease,opacity 160ms ease}
+.cal-cell:hover .cal-cell-dots i{opacity:.9}
+/* progress bars fill rather than appear filled */
+.progress-fill,.paper-progress-fill,.ring-value{
+  transition:width 620ms cubic-bezier(.22,.61,.36,1),stroke-dashoffset 620ms cubic-bezier(.22,.61,.36,1);
+}
+/* links and small controls lean in, never bounce */
+.text-button,.chip-action,.cal-more,.cal-week-add,.domain-tab,.section-heading a{
+  transition:color 150ms ease,opacity 150ms ease;
+}
+.chip,.cal-chip,.preset-btn{transition:color 140ms ease,border-color 140ms ease,background 140ms ease}
+/* hover on a paper card is a subtle lift, never a glow */
+.card{transition:border-color 180ms ease,box-shadow 180ms ease,background 180ms ease}
+.card:hover{border-color:var(--rule-strong)}
+/* the atmosphere crossfades gently between photographs */
+#atmosphere .atmo-layer{transition:opacity 1400ms cubic-bezier(.4,0,.2,1)}
+
+/* one place to switch it all off */
+@media (prefers-reduced-motion:reduce){
+  .view-section.view-enter,
+  .view-section.view-enter .page-heading,
+  .view-section.view-enter .paper-header,
+  .view-section.view-enter > *,
+  .briefing-overlay,.modal-backdrop,.overlay-backdrop,
+  .briefing-panel,.modal-panel,.sheet-panel,.drawer-panel,
+  .sidebar .nav-item.active-nav::before,
+  .mobile-nav .nav-item.active-nav::before,
+  .cal-month,.cal-week-grid,
+  .paper-header .eyebrow::before,
+  .page-heading .eyebrow::before,
+  .card{animation:none!important}
+  *,*::before,*::after{
+    transition-duration:.01ms!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+  }
+}

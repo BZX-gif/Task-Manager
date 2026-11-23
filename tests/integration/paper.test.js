@@ -419,3 +419,34 @@ test('no chapter still looks like the old generic product', async () => {
   }
   assert.equal(errors.length, 0, `no runtime errors: ${errors.slice(0, 2).join(' | ')}`)
 })
+
+test('motion is one quiet language, and it can be switched off', async () => {
+  const css = await readFile(path.join(root, 'public', 'static', 'paper.css'), 'utf8')
+
+  // the shared vocabulary exists and is named
+  for (const name of ['paper-rise', 'paper-settle', 'paper-rule', 'paper-veil']) {
+    assert.match(css, new RegExp(`@keyframes\\s+${name}`), `the ${name} movement is defined`)
+  }
+
+  // nothing overshoots, springs, bounces or spins: no flashy easing in use.
+  // Judge the declarations only — prose comments naturally discuss what is banned.
+  // strip every comment first, then start at a marker that exists only in code,
+  // so the block's own prose can never be mistaken for a declaration
+  const animations = css.replace(/\/\*[\s\S]*?\*\//g, '').slice(css.replace(/\/\*[\s\S]*?\*\//g, '').indexOf('@keyframes paper-settle'))
+  assert.doesNotMatch(
+    animations,
+    /bounce|elastic|spring|wobble|shake|flash|blink|rotateY|rotateX|scale\(1\.[0-9]/i,
+    'the motion is restrained — no bouncing, springing, flashing or 3D flipping',
+  )
+  // durations are short enough to read as a page turning, not an animation
+  const durations = [...animations.matchAll(/(\d+)ms/g)].map((m) => Number(m[1]))
+  assert.ok(durations.every((d) => d <= 1500), `every movement is brief (longest ${Math.max(...durations)}ms)`)
+
+  // and every movement respect the reader's setting
+  assert.match(animations, /@media \(prefers-reduced-motion:\s*reduce\)/, 'reduced motion is honoured')
+  assert.match(animations, /animation:none!important/, 'and it actually disables the movement')
+
+  // the calendar turns rather than jumping, and the atmosphere still crossfades
+  assert.match(animations, /\.cal-month[^{]*\{animation:paper-settle/, 'the calendar settles into view')
+  assert.match(animations, /#atmosphere \.atmo-layer\{transition:opacity/, 'the photographs still crossfade')
+})
