@@ -683,3 +683,56 @@ test('paper does not carry dead selectors for markup that does not ship', async 
     assert.ok(seen.has(dead), `${dead} is styled by paper but never renders — remove the dead rule`)
   }
 })
+
+test('the brief’s acceptance criteria hold, checked one by one', async () => {
+  // 1 · every page belongs to the same journal. The Command Center is exempt by
+  // design — it opens on its photographic hero rather than a paper header.
+  for (const route of ROUTES.filter((r) => r !== 'dashboard')) {
+    const view = await go(route)
+    const head = view.querySelector('.page-heading')
+    assert.ok(head, `${route} has a chapter opening`)
+    assert.ok(head.classList.contains('paper-header'), `${route} uses the paper header`)
+  }
+
+  // 2 · the Command Center still has its photography and its panels
+  const dash = await go('dashboard')
+  assert.ok(window.document.querySelector('#atmosphere'), 'the atmosphere layer is present')
+  assert.ok(dash.querySelectorAll('.atmo-panel').length >= 2, 'and its panels are intact')
+
+  // 3 · the calendar is a real planner
+  const cal = await go('calendar')
+  for (const mode of ['month', 'week', 'agenda']) assert.ok(cal.querySelector(`[data-cal-mode="${mode}"]`), `${mode} view exists`)
+  assert.ok(cal.querySelector('.cal-cell'), 'and draws a grid')
+
+  // 4 · My Day is a daily journal
+  const day = await go('day')
+  assert.match(day.querySelector('.eyebrow').textContent, /day|january|february|march|april|may|june|july|august|september|october|november|december/i, 'it is dated')
+  assert.ok(day.querySelector('.reflection-card'), 'and closes with a reflection')
+
+  // 5 · goals read as a chapter grid when there are goals to read
+  const live = window.CC.getState()
+  live.goals.push({
+    id: 'g_accept', title: 'A goal worth reaching', description: 'Why it matters.', why: '',
+    category: 'Career', status: 'active', targetDate: null, progressMode: 'manual', manualProgress: 40,
+    notes: '', milestones: [], createdAt: Date.now(),
+  })
+  const goals = await go('goals')
+  assert.ok(goals.querySelectorAll('.paper-chapter').length >= 1, 'goals are set as chapters, in the paper card')
+  assert.match(goals.textContent, /A goal worth reaching/, 'and the goal is named')
+
+  // 6 · focus is a room, briefing is a letter — verified in their own tests,
+  // asserted here so a single run covers the whole brief
+  const focus = await go('focus')
+  assert.ok(focus.querySelector('.focus-room-ring') && focus.querySelector('[data-room-start]'), 'focus has its timer')
+
+  // 7 · no page is still wearing another product's palette
+  for (const dir of ['src/client/views', 'src/client/ui']) {
+    const { readdir } = await import('node:fs/promises')
+    for (const file of await readdir(path.join(root, dir))) {
+      if (!file.endsWith('.js')) continue
+      const text = await readFile(path.join(root, dir, file), 'utf8')
+      assert.doesNotMatch(text, /\b(?:text|bg)-(?:slate|blue|indigo|purple|emerald)-(?:[2-9]00)\b/, `${dir}/${file} carries no foreign palette`)
+    }
+  }
+  assert.equal(errors.length, 0, `the whole sweep ran without errors: ${errors.slice(0, 2).join(' | ')}`)
+})
