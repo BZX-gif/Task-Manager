@@ -555,3 +555,35 @@ test('a mission opens as a workspace, not only a dialog', async () => {
   assert.ok(window.document.querySelector('#view-tasks [data-task-open]'), 'and the ledger returns')
   assert.equal(errors.length, 0, `no runtime errors: ${errors.slice(0, 2).join(' | ')}`)
 })
+
+test('paper does not flatten the Command Center’s own surfaces', async () => {
+  const css = await readFile(path.join(root, 'public', 'static', 'paper.css'), 'utf8')
+
+  // The dashboard's panels are glass over photography, with their own lit
+  // border and their own hover. Any *unscoped* rule in paper.css that sets a
+  // border, background or shadow on .card would silently overwrite them, since
+  // paper loads last. Paper may only touch .card inside the workspace scope.
+  // `glass-card` is legacy furniture of the *workspace* (the old timetable), so
+  // repainting it is intended. The real risk is a rule in paper.css — which
+  // loads last — reaching the dashboard's glass panels by a bare `.card`/`.card:hover`
+  // selector, or naming an atmo-* panel at all. Those are what this checks.
+  const unscoped = []
+  const panelNamed = []
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const [, rawSel, body] = m
+    const sel = rawSel.split('*/').pop().trim()
+    if (/data-atmosphere-view=workspace/.test(sel)) continue
+    // never restyle a dashboard panel directly
+    if (/atmo-(panel|today|progress|week|column|hero)|#view-dashboard/.test(sel)) panelNamed.push(sel)
+    // a bare `.card` / `.card:hover` that sets border or background would win
+    const bare = sel.split(',').map((x) => x.trim()).filter((x) => x === '.card' || x === '.card:hover')
+    if (!bare.length) continue
+    if (/border|background|box-shadow/.test(body)) unscoped.push(`${sel} { ${body.trim().slice(0, 50)} }`)
+  }
+  assert.deepEqual(panelNamed, [], `paper must not restyle the dashboard's panels: ${panelNamed.join(', ')}`)
+  assert.deepEqual(unscoped, [], `these bare card rules would repaint the dashboard, which paper loads after:\n  ${unscoped.join('\n  ')}`)
+
+  // and the workspace scoping that does exist must be real
+  assert.match(css, /:root\[data-atmosphere-view=workspace\] \.card:hover\{border-color:var\(--rule-strong\)\}/,
+    'paper cards warm on hover, scoped to the workspace')
+})
