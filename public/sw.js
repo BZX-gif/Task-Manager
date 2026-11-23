@@ -7,7 +7,7 @@
    • /api/* is never cached — AI responses must always be live.
    ------------------------------------------------------------------------- */
 
-const VERSION = 'v5-0-0'
+const VERSION = 'v5-0-1'
 const SHELL_CACHE = `cc-shell-${VERSION}`
 const ASSET_CACHE = `cc-assets-${VERSION}`
 
@@ -70,15 +70,25 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
+        const cache = await caches.open(SHELL_CACHE)
         try {
           const response = await fetch(request)
           if (response.ok) {
-            const cache = await caches.open(SHELL_CACHE)
+            // every chapter is the same shell, so cache it under the root key
             await cache.put('/', response.clone())
+            return response
+          }
+          // A 404 for a navigation is almost never the right answer: the app's
+          // chapters are client routes (/calendar), so a host that does not
+          // know them would show the visitor an error page instead of their
+          // workspace. Fall back to the shell we already have and let the
+          // client router show the chapter — or the dashboard if it cannot.
+          if (response.status === 404) {
+            const cached = (await cache.match('/')) || (await cache.match(request))
+            if (cached) return cached
           }
           return response
         } catch {
-          const cache = await caches.open(SHELL_CACHE)
           return (await cache.match('/')) || (await cache.match(request)) || Response.error()
         }
       })(),

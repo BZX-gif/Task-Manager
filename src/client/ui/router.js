@@ -20,6 +20,22 @@ import { setMobileNav, updateBreadcrumb } from './chrome.js'
 import { setAtmosphereScope } from './atmosphere.js'
 import { icon } from './icons.js'
 
+/**
+ * The chapter named by the current URL.
+ *
+ * The URL is written by setAtmosphereScope on every navigation (so /calendar is
+ * a real, shareable address), which means it must also be readable: a deep link
+ * or a reload on /goals has to open Goals rather than dropping the reader back
+ * on the dashboard.
+ */
+export function viewFromPath(pathname) {
+  const raw = pathname ?? (typeof location !== 'undefined' ? location.pathname : '/')
+  const segment = String(raw).split('/').filter(Boolean).pop() || ''
+  const name = segment.toLowerCase()
+  const view = VIEW_ALIASES[name] || name
+  return VIEWS.includes(view) ? view : 'dashboard'
+}
+
 export const VIEWS = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','paper','settings']
 const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,calendar:renderCalendar,schedule:renderSchedule,hyb:renderHyb,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,paper:renderPaper,settings:renderSettings}
 /** Legacy route names kept alive so old links and habits never 404. */
@@ -74,4 +90,9 @@ export function refreshCurrentView(after = 0) {
     renderCurrentView()
   }, wait)
 }
-export function initRouter(){qsa(document,'[data-view]').forEach((button)=>button.addEventListener('click',()=>switchView(button.dataset.view)));on('store:change',()=>refreshCurrentView())}
+export function initRouter(){
+  qsa(document,'[data-view]').forEach((button)=>button.addEventListener('click',()=>switchView(button.dataset.view)))
+  on('store:change',()=>refreshCurrentView())
+  // the browser's back button moves between chapters, since each has a URL
+  if (typeof window !== 'undefined') window.addEventListener('popstate',()=>switchView(viewFromPath()))
+}

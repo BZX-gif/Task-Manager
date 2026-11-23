@@ -1,6 +1,27 @@
 /** The local-first application shell. All application data stays in the browser. */
 export const APP_VERSION = '5.0'
 
+/**
+ * Every client route.
+ *
+ * The application is a single page: the router swaps sections in the browser and
+ * (via setAtmosphereScope) writes the route into the URL so a deep link reads
+ * like `/calendar`. That means the Worker has to answer those paths with the
+ * shell — otherwise the host has no file at `/calendar` and the visitor gets a
+ * 404, which is exactly what happened once the URL started being written.
+ *
+ * This list is the single source of truth: the Worker matches it, and the
+ * inline bootstrap script in the shell uses it to light the right chapter
+ * before the first paint.
+ */
+export const ROUTES = [
+  'dashboard', 'day', 'calendar', 'schedule', 'hyb', 'tasks', 'goals', 'projects',
+  'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings',
+] as const
+
+/** Legacy names still answered, so older bookmarks never 404. */
+export const ROUTE_ALIASES: Record<string, string> = { assistant: 'paper', overview: 'dashboard' }
+
 /** COMMAND 2.0 — navigation organized around the product's functional domains. */
 export const NAV_GROUPS = [
   { label: 'COMMAND', items: [ ['dashboard', 'Command Center', 'overview'], ['day', 'My Day', 'sun'], ['tasks', 'Missions', 'missions'] ] },

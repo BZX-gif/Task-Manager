@@ -3,7 +3,7 @@ import { on } from './core/bus.js'
 import { announceStatus, commit, currentDayKey, ensureRecurringOccurrences, initStore, state, streak, syncScoreHistory, titlesInfo, disciplineStreak, todayStats, flush } from './core/store.js'
 import { addToTop3, removeFromTop3, getTop3Ids, setTop3Ids } from './lib/top3.js'
 import { describeScoreFormula } from './lib/score.js'
-import { initRouter, refreshCurrentView, switchView, getCurrentView } from './ui/router.js'
+import { initRouter, refreshCurrentView, switchView, getCurrentView, viewFromPath } from './ui/router.js'
 import { bindChrome, footerVersion, refreshFocusChip, refreshStreakWidget, renderQuoteInline, setMobileNav, startChromeTimers, toggleMobileNav, openCommandPalette, openShortcuts, updateClockAndGreeting } from './ui/chrome.js'
 import { dayStatus } from './ui/status.js'
 import { completeFocus, hasRunningSession, initFocus, openFocusMode, pauseFocus, resumeFocus, stopFocus } from './ui/focus.js'
@@ -136,7 +136,7 @@ function boot(){
   window.addEventListener('unhandledrejection',(event)=>{if(event?.preventDefault)event.preventDefault();console.warn('[app] an action could not complete',event?.reason?.message||event?.reason);toast('Something could not complete just now. Your saved data is unchanged.','error',{timeout:7000})})
   const persist=()=>{syncScoreHistory(currentDayKey());flush()};window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else{updateClockAndGreeting();refreshCommandStrip();refreshCurrentView();checkReminders()}});window.addEventListener('pagehide',persist)
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&isFocusFullscreen())exitFocusFullscreen()})
-  refreshAll();switchView('dashboard');reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing();if(needsOnboarding())setTimeout(()=>{if(!isModalOpen()&&!isOnboardingOpen())openOnboarding()},450)
+  refreshAll();switchView(viewFromPath());reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing();if(needsOnboarding())setTimeout(()=>{if(!isModalOpen()&&!isOnboardingOpen())openOnboarding()},450)
   minuteInterval=setInterval(()=>{if(document.visibilityState!=='visible')return;const day=currentDayKey();if(day!==lastDay){lastDay=day;ensureRecurringOccurrences(day);syncScoreHistory(day);commit(()=>{},{immediate:true});refreshCommandStrip();return}refreshCommandStrip();if(!isModalOpen()&&!isBriefingOpen()&&!['settings','paper','focus'].includes(getCurrentView())&&!document.querySelector('.calendar-event.is-dragging'))refreshCurrentView()},60000)
   recurrenceInterval=setInterval(()=>{const created=ensureRecurringOccurrences();if(created.length)commit(()=>{},{immediate:true})},3600000)
   const action=new URLSearchParams(location.search).get('action');if(action==='capture')openQuickCapture();if(action==='focus')openFocusRoom()
