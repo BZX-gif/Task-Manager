@@ -450,3 +450,35 @@ test('motion is one quiet language, and it can be switched off', async () => {
   assert.match(animations, /\.cal-month[^{]*\{animation:paper-settle/, 'the calendar settles into view')
   assert.match(animations, /#atmosphere \.atmo-layer\{transition:opacity/, 'the photographs still crossfade')
 })
+
+test('no generic utility classes are left in the application source', async () => {
+  // A page that still wears text-slate-300 is a page that has not joined the
+  // journal — it renders in a colour that belongs to another product. This
+  // scans the actual view and ui sources, so a reintroduced utility fails here.
+  const { readdir } = await import('node:fs/promises')
+  const BANNED = /\b(?:text|bg|border|from|via|to)-(?:slate|gray|zinc|neutral|stone|blue|indigo|violet|purple|pink|rose|cyan|teal|emerald|lime|fuchsia)-(?:[2-9]00|950)\b/
+  const offenders = []
+  for (const dir of ['src/client/views', 'src/client/ui']) {
+    for (const file of await readdir(path.join(root, dir))) {
+      if (!file.endsWith('.js')) continue
+      const text = await readFile(path.join(root, dir, file), 'utf8')
+      const lines = text.split('\n')
+      lines.forEach((line, i) => {
+        const m = line.match(BANNED)
+        if (m) offenders.push(`${dir}/${file}:${i + 1} → ${m[0]}`)
+      })
+    }
+  }
+  assert.deepEqual(offenders, [], `generic palette utilities must be replaced with paper classes:\n  ${offenders.slice(0, 8).join('\n  ')}`)
+})
+
+test('the last generic text roles are defined rather than inherited', async () => {
+  const css = await readFile(path.join(root, 'public', 'static', 'paper.css'), 'utf8')
+  // the classes that replaced the utilities must actually carry the journal's ink
+  for (const cls of ['.empty-title', '.empty-body', '.field-row-label', '.field-row-value', '.tt-strong', '.tt-meta']) {
+    assert.ok(css.includes(`${cls}{`) || css.includes(`${cls} `), `${cls} is styled by paper`)
+  }
+  const head = css.slice(css.indexOf('.empty-title'))
+  assert.match(head.slice(0, 700), /font-family:var\(--font-(display|note)\)/, 'quiet text uses the journal typefaces')
+  assert.match(head.slice(0, 700), /color:var\(--ink/, 'and the journal ink rather than a fixed colour')
+})

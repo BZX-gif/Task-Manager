@@ -2219,3 +2219,45 @@ select.input-field,select.select-field{
     animation-iteration-count:1!important;
   }
 }
+
+/* ============================== quiet text · the last of the generic utilities
+   These replace the old Tailwind slate utilities that were still scattered
+   through the timetable, the focus overlay, quick capture and shared helpers.
+   Named for their role in the journal rather than for a colour, so the same
+   markup reads correctly in both the dark and the parchment theme. */
+.empty-title{
+  font-family:var(--font-display);
+  font-weight:400;
+  font-size:15px;
+  letter-spacing:-.005em;
+  color:var(--ink-soft);
+}
+.empty-body{
+  font-family:var(--font-note);
+  font-style:italic;
+  font-size:13px;
+  line-height:1.65;
+  color:var(--ink-ghost);
+  max-width:34ch;
+}
+.field-row-label{font-size:12px;color:var(--ink-muted);letter-spacing:.01em}
+.field-row-hint{font-size:10.5px;color:var(--ink-ghost)}
+.field-row-value{
+  font-size:12.5px;font-weight:500;color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+/* the timetable's own ink levels */
+.tt-strong{color:var(--ink-soft)}
+.tt-body{color:var(--ink-muted)}
+.tt-meta{color:var(--ink-faint)}
+.tt-faint{color:var(--ink-ghost)}
+.tt-title{color:var(--ink);font-weight:500}
+/* a live block in the timetable is marked in bronze, not a green glow */
+.tt-live{
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:9px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--gold);
+}

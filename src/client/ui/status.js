@@ -19,10 +19,10 @@ export const STREAK_RULE_TEXT = [
 ]
 
 export const STATUS_STYLES = {
-  success: { dot: '#7FC9A8', cell: 'rgba(127,201,168,0.8)', label: 'Counted', text: 'text-emerald-400' },
-  progress: { dot: '#E2BC85', cell: 'rgba(226,188,133,0.45)', label: 'Partial credit', text: 'text-amber-300' },
-  rest: { dot: 'var(--status-rest-dot)', cell: 'var(--status-rest-cell)', label: 'No activity', text: 'text-slate-500' },
-  upcoming: { dot: 'var(--status-upcoming-dot)', cell: 'var(--status-upcoming-cell)', label: 'Upcoming', text: 'text-slate-600' },
+  success: { dot: 'var(--gold)', cell: 'rgba(201,169,107,0.55)', label: 'Counted', text: 'tt-strong' },
+  progress: { dot: 'var(--bronze)', cell: 'rgba(169,130,90,0.5)', label: 'Partial credit', text: 'tt-body' },
+  rest: { dot: 'var(--status-rest-dot)', cell: 'var(--status-rest-cell)', label: 'No activity', text: 'tt-meta' },
+  upcoming: { dot: 'var(--status-upcoming-dot)', cell: 'var(--status-upcoming-cell)', label: 'Upcoming', text: 'tt-faint' },
 }
 
 /**

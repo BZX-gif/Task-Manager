@@ -519,7 +519,7 @@ function setupHtml() {
   return overlayShell(`
     <p class="focus-eyebrow">Focus Mode</p>
     <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-white mt-3 mb-1">Choose your mission</h2>
-    <p class="text-[13px] text-slate-400 mb-6">One task. One timer. No tab switching.</p>
+    <p class="text-[13px] tt-body mb-6">One task. One timer. No tab switching.</p>
     <div class="flex flex-wrap gap-2 justify-center mb-5" id="focus-presets">
       ${FOCUS_PRESETS.map((m) => `<button class="preset-btn ${m === defaultMinutes ? 'preset-active' : ''}" data-minutes="${m}">${m} min</button>`).join('')}
       <button class="preset-btn" data-custom>Custom…</button>
@@ -533,7 +533,7 @@ function setupHtml() {
       <button class="btn-primary focus-enter" id="focus-start">Launch mission</button>
       <button class="btn-ghost" data-focus-close>Cancel</button>
     </div>
-    <p class="text-[11.5px] text-slate-500 mt-5">Tip: press <kbd class="kbd">Esc</kbd> to minimise — the timer keeps running.</p>
+    <p class="text-[11.5px] tt-meta mt-5">Tip: press <kbd class="kbd">Esc</kbd> to minimise — the timer keeps running.</p>
   `)
 }
 
@@ -550,7 +550,7 @@ function launchHtml(launch) {
       <button class="btn-primary focus-enter" id="focus-launch-enter">Enter the zone</button>
       <button class="btn-ghost" data-focus-launch-back>Change plan</button>
     </div>
-    <p class="text-[11.5px] text-slate-500 mt-4">Starts on its own — press <kbd class="kbd">Enter</kbd> to skip the countdown.</p>
+    <p class="text-[11.5px] tt-meta mt-4">Starts on its own — press <kbd class="kbd">Enter</kbd> to skip the countdown.</p>
     ${announceRegion()}
   `, { extraClass: 'focus-launch' })
 }
@@ -635,13 +635,13 @@ function stopConfirmHtml(session) {
     <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-white mt-6 mb-1">End this session?</h2>
     <p class="focus-mission-title mt-2">${escapeHtml(linked ? linked.title : isBreak ? 'Break — step away from the desk' : 'Deep Work')}</p>
     <p class="focus-ended-time font-display tabular-nums mt-6">${formatClock(focused)}</p>
-    <p class="text-[12px] uppercase tracking-[0.24em] text-slate-500 font-bold mt-1">${isBreak ? 'of rest so far' : 'focused so far'}</p>
+    <p class="text-[12px] uppercase tracking-[0.24em] tt-meta font-bold mt-1">${isBreak ? 'of rest so far' : 'focused so far'}</p>
     <div class="focus-energy mt-5" aria-hidden="true">
       <span class="focus-energy-track"></span>
       <span class="focus-energy-fill" style="width:${(ratio * 100).toFixed(1)}%"></span>
     </div>
     <p class="fz-quote mt-5">That is still real work.</p>
-    ${focused < 60 ? '<p class="text-[11.5px] text-slate-500 mt-1">Sessions under a minute aren’t logged, so analytics stay meaningful.</p>' : ''}
+    ${focused < 60 ? '<p class="text-[11.5px] tt-meta mt-1">Sessions under a minute aren’t logged, so analytics stay meaningful.</p>' : ''}
     <div class="focus-controls mt-6">
       <button class="btn-primary focus-primary" data-focus-resume-session>Keep focusing</button>
       <button class="btn-ghost focus-end-btn" data-focus-end-now>End session</button>
@@ -659,7 +659,7 @@ function ceremonyHtml(c) {
       ${signature ? '<div class="signature-crown" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M9 45 5 17l15 12L32 7l12 22 15-12-4 28H9Z"/><path d="M11 51h42"/><circle cx="5" cy="15" r="3"/><circle cx="32" cy="6" r="3"/><circle cx="59" cy="15" r="3"/></svg></div>' : ''}
       <p class="fz-complete-eyebrow"><span aria-hidden="true">✦</span> SESSION COMPLETE <span aria-hidden="true">✦</span></p>
       <p class="focus-clock font-display tabular-nums mt-5">${formatClock(c.record.focusedSeconds)}</p>
-      <p class="text-[11px] uppercase tracking-[0.3em] text-slate-400 font-bold mt-2">Focus Session</p>
+      <p class="text-[11px] uppercase tracking-[0.3em] tt-body font-bold mt-2">Focus Session</p>
       <div class="focus-energy mt-4" aria-hidden="true">
         <span class="focus-energy-track"></span>
         <span class="focus-energy-fill fz-energy-full"></span>
@@ -674,11 +674,11 @@ function ceremonyHtml(c) {
       ${c.task && c.taskMarked ? `<p class="fz-taskline mt-4">“${escapeHtml(c.task.title)}” marked done</p>` : ''}
       ${c.task && !c.taskMarked ? `
         <div class="mt-4 flex flex-col items-center gap-1.5">
-          <p class="text-[13px] text-slate-400">Mission target: “${escapeHtml(c.task.title)}”</p>
+          <p class="text-[13px] tt-body">Mission target: “${escapeHtml(c.task.title)}”</p>
           <button class="btn-ghost" data-ceremony-task>Mark task done</button>
         </div>` : ''}
       ${!c.task && title ? `<p class="fz-taskline mt-4">“${escapeHtml(title)}” is already done — nicely finished anyway.</p>` : ''}
-      ${!c.logged ? '<p class="text-[11.5px] text-slate-500 mt-4">Sessions under a minute aren’t logged, so analytics stay meaningful.</p>' : ''}
+      ${!c.logged ? '<p class="text-[11.5px] tt-meta mt-4">Sessions under a minute aren’t logged, so analytics stay meaningful.</p>' : ''}
       <p class="fz-quote mt-4">“You finished what you started.”</p>
       <div class="focus-controls mt-6">
         <button class="btn-primary focus-primary" data-focus-close>DONE</button>
@@ -1014,7 +1014,7 @@ export function openFocusPickerForTask(taskId) {
   openModal({
     title: `Focus on “${escapeHtml(task.title)}”`,
     body: `
-      <p class="text-[13px] text-slate-400 mb-4">Pick a block length. The timer keeps running even if you minimise it.</p>
+      <p class="text-[13px] tt-body mb-4">Pick a block length. The timer keeps running even if you minimise it.</p>
       <div class="flex flex-wrap gap-2">
         ${presets.map((m) => `<button class="preset-btn" data-start-min="${m}">${m} min</button>`).join('')}
       </div>`,

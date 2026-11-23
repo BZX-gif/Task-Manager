@@ -88,15 +88,15 @@ export function openQuickCapture({ inbox = false, prefill = '' } = {}) {
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <label class="flex items-center gap-2.5 text-[13px] text-slate-300">
+        <label class="flex items-center gap-2.5 text-[13px] tt-strong">
           <input type="checkbox" id="capture-top3" class="rounded border-white/20 bg-base-800"> Add to today's Top 3
         </label>
-        <label class="capture-recurring hidden items-center gap-2 text-[12px] text-slate-400" id="capture-repeat-wrap">
+        <label class="capture-recurring hidden items-center gap-2 text-[12px] tt-body" id="capture-repeat-wrap">
           <input type="checkbox" id="capture-repeat" class="rounded border-white/20 bg-base-800" checked> Keep repeating
         </label>
       </div>
       <div class="flex items-center justify-between gap-3 pt-1">
-        <span class="text-[11.5px] text-slate-500"><kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Enter</kbd> to save · <kbd class="kbd">Esc</kbd> to close</span>
+        <span class="text-[11.5px] tt-meta"><kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Enter</kbd> to save · <kbd class="kbd">Esc</kbd> to close</span>
         <div class="flex gap-2">
           <button type="button" class="btn-ghost" data-modal-close>Cancel</button>
           <button type="submit" class="btn-primary">Add mission</button>

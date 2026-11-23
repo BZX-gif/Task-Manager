@@ -38,9 +38,9 @@ export function renderTimetable() {
     ${conflicts.length
       ? `<div class="glass-card p-4 border-l-4 border-amber-400/60 flex items-start gap-3">
            ${icon('info')}
-           <div class="text-[13px] text-slate-300">
+           <div class="text-[13px] tt-strong">
              <p class="font-semibold text-amber-200">${conflicts.length} block${conflicts.length > 1 ? 's overlap' : ' overlaps'} your protected time</p>
-             <p class="text-slate-400 mt-1">${conflicts.slice(0, 3).map((c) => `${escapeHtml(c.time)} ${escapeHtml(c.title)} (${c.overlapMinutes} min inside “${escapeHtml(c.protectedLabel)}”)`).join(' · ')}</p>
+             <p class="tt-body mt-1">${conflicts.slice(0, 3).map((c) => `${escapeHtml(c.time)} ${escapeHtml(c.title)} (${c.overlapMinutes} min inside “${escapeHtml(c.protectedLabel)}”)`).join(' · ')}</p>
              <button class="btn-ghost mt-2 !py-1.5 !text-xs" data-action="settings">Adjust protected time</button>
            </div>
          </div>`
@@ -49,31 +49,31 @@ export function renderTimetable() {
     ${upcomingReminder
       ? `<div class="glass-card p-3.5 flex items-center gap-3 text-[13px]">
            ${icon('bell')}
-           <span class="text-slate-300"><span class="font-semibold text-white">${escapeHtml(upcomingReminder.title)}</span> — ${escapeHtml(upcomingReminder.body)}</span>
+           <span class="tt-strong"><span class="font-semibold text-white">${escapeHtml(upcomingReminder.title)}</span> — ${escapeHtml(upcomingReminder.body)}</span>
          </div>`
       : ''}
 
     <div class="schedule-summary grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="glass-card p-4">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Blocks done</p>
-        <p class="text-2xl font-display font-extrabold text-white">${stats.blocksDone}<span class="text-base text-slate-500">/${stats.blocksTotal}</span></p>
+        <p class="text-[11px] uppercase tracking-wider font-bold tt-meta">Blocks done</p>
+        <p class="text-2xl font-display font-extrabold text-white">${stats.blocksDone}<span class="text-base tt-meta">/${stats.blocksTotal}</span></p>
       </div>
       <div class="glass-card p-4">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Adherence so far</p>
+        <p class="text-[11px] uppercase tracking-wider font-bold tt-meta">Adherence so far</p>
         <p class="text-2xl font-display font-extrabold text-white">${Math.round(stats.adherence * 100)}%</p>
       </div>
       <div class="glass-card p-4">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Planned today</p>
+        <p class="text-[11px] uppercase tracking-wider font-bold tt-meta">Planned today</p>
         <p class="text-2xl font-display font-extrabold text-white">${formatDuration(stats.plannedMinutes)}</p>
       </div>
       <div class="glass-card p-4">
-        <p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Focused today</p>
+        <p class="text-[11px] uppercase tracking-wider font-bold tt-meta">Focused today</p>
         <p class="text-2xl font-display font-extrabold text-white">${formatDuration(stats.focusedMinutes)}</p>
       </div>
     </div>
 
     <div class="schedule-legend flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
-      ${state.categories.map((c) => `<span class="flex items-center gap-2 text-[13px] text-slate-400"><span class="legend-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</span>`).join('')}
+      ${state.categories.map((c) => `<span class="flex items-center gap-2 text-[13px] tt-body"><span class="legend-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</span>`).join('')}
     </div>
 
     <div class="schedule-list">
@@ -158,10 +158,10 @@ function blockRowHtml(item, log, nowMin) {
       <button class="tt-time text-left" data-block-toggle="${escapeHtml(item.id)}" aria-label="Toggle ${escapeHtml(item.title)}">${escapeHtml(item.time)}</button>
       <button class="min-w-0 text-left block-details" data-block-toggle="${escapeHtml(item.id)}" aria-label="Toggle ${escapeHtml(item.title)}">
         <span class="tt-title truncate block">${escapeHtml(item.title)}</span>
-        <span class="text-[11px] text-slate-500 block">
+        <span class="text-[11px] tt-meta block">
           ${escapeHtml(categoryName(item.cat))} · ${duration} min
           ${isPast && !isDone ? ' · <span class="text-accent-5">missed</span>' : ''}
-          ${isNow ? ' · <span class="text-emerald-400 font-semibold">LIVE</span>' : ''}
+          ${isNow ? ' · <span class="tt-live">LIVE</span>' : ''}
         </span>
       </button>
       <div class="flex items-center gap-1.5">
@@ -216,7 +216,7 @@ export function openBlockModal(id = null) {
   const block = id ? activeTimetable(state).find((b) => b.id === id) : null
   const body = `
     <form id="block-form" class="space-y-4">
-      <p class="text-[12px] text-slate-400 -mt-1">${icon('target')}Saved to the <span class="text-slate-200 font-semibold">${escapeHtml(mission.exam)} ${mission.year}</span> timetable — every mission keeps its own schedule.</p>
+      <p class="text-[12px] tt-body -mt-1">${icon('target')}Saved to the <span class="tt-body font-semibold">${escapeHtml(mission.exam)} ${mission.year}</span> timetable — every mission keeps its own schedule.</p>
       <div>
         <label class="field-label" for="block-title">Title</label>
         <input required class="input-field" id="block-title" name="title" placeholder="e.g. Deep study block" value="${block ? escapeHtml(block.title) : ''}">
