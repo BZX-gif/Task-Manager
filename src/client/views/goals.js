@@ -3,19 +3,46 @@ import { closeModal, confirmDialog, escapeHtml, openModal, toast, qs, qsa } from
 import { uid } from '../lib/state.js'
 import { goalProgress, projectProgress, unlinkDeleted } from '../lib/relationships.js'
 import { formatKeyLabel } from '../lib/dates.js'
-import { icon, pageHeading, empty, ring, bindCommon } from '../ui/common.js'
+import { icon, empty, ring, bindCommon } from '../ui/common.js'
+import { paperHeader, paperCard, sectionTitle, divider, progress as paperProgress, priorityMarker, chapterCard, absent, figure, noteField } from '../ui/paper.js'
 
-let search='', filter='active'
+let search='', filter='active', readingGoalId=null
 const categories=['Personal','Academic','Career','Financial','Fitness','Learning','Custom']
 export function renderGoals() {
   const section=document.getElementById('view-goals');if(!section)return
   const goals=state.goals.filter((g)=>(filter==='all'||(filter==='active'?g.status==='active':g.status===filter))&&`${g.title} ${g.description}`.toLowerCase().includes(search.toLowerCase()))
-  section.innerHTML=`${pageHeading('THE BIGGER PICTURE','Meaningful goals.','Connect the work of today to the person you’re becoming.',`<button class="btn-primary" data-common="goal">${icon('plus')}New goal</button>`)}<div class="filter-row"><div class="segmented">${[['active','In progress'],['completed','Achieved'],['paused','Paused'],['all','All goals']].map(([v,l])=>`<button data-goal-filter="${v}" class="${filter===v?'seg-active':''}">${l}</button>`).join('')}</div><div class="toolbar-search">${icon('search')}<input class="input-field" data-goal-search placeholder="Find a goal…" value="${escapeHtml(search)}" aria-label="Search goals"></div></div><div class="entity-grid">${goals.map((g)=>{const progress=goalProgress(state,g),projects=state.projects.filter((p)=>p.goalId===g.id),tasks=state.tasks.filter((t)=>t.goalId===g.id);return `<article class="card entity-card"><div class="entity-card-top"><span class="entity-icon">${icon('target')}</span><div class="row-actions"><span class="chip ${g.status==='completed'?'chip-good':'chip-accent'}">${escapeHtml(g.category)}</span><button class="icon-btn" data-goal-edit="${escapeHtml(g.id)}" aria-label="Edit ${escapeHtml(g.title)}">${icon('edit')}</button></div></div><h3>${escapeHtml(g.title)}</h3><p class="entity-description">${escapeHtml(g.description||'Every meaningful outcome begins with a small, intentional step.')}</p><div class="entity-progress"><div><span>${g.milestones.filter((m)=>m.done).length} of ${g.milestones.length} milestones</span><strong>${progress}%${g.progressMode==='manual'?' · manual':''}</strong></div><div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div></div><div class="entity-card-footer"><span>${g.targetDate?formatKeyLabel(g.targetDate):'No target date'} · ${projects.length} project${projects.length===1?'':'s'}</span><button class="text-button" data-goal-detail="${escapeHtml(g.id)}">Explore goal ${icon('arrow')}</button></div></article>`}).join('')}</div>${!goals.length?`<div class="card">${empty('target',search?'No matching goals.':filter==='completed'?'Meaningful things take time.':'What are you working toward?',search?'Try another search or filter.':filter==='completed'?'Completed goals will live here. Your progress is never invented.':'A career move. A new skill. A healthier rhythm. Give your ambition a name, then break it into small steps.',`<button class="btn-primary" data-common="goal">${icon('plus')}Create a goal</button>`)}</div>`:''}`
+  if (readingGoalId && !state.goals.some((g)=>g.id===readingGoalId)) readingGoalId=null
+  const reading = readingGoalId ? state.goals.find((g)=>g.id===readingGoalId) : null
+
+  const header = paperHeader({
+    eyebrow: reading ? 'A chapter of your vision' : 'The vision',
+    title: reading ? escapeHtml(reading.title) : 'What you are becoming.',
+    lede: reading
+      ? (reading.description || 'One intentional step at a time.')
+      : 'Every goal is a page in the same book. Name the outcome, then give it a shape.',
+    actions: reading
+      ? `<button class="btn-ghost" data-goal-back>${icon('left')}All goals</button><button class="btn-primary" data-goal-edit="${escapeHtml(reading.id)}">${icon('edit')}Edit goal</button>`
+      : `<button class="btn-primary" data-common="goal">${icon('plus')}New goal</button>`,
+  })
+
+  const filterBar = reading ? '' : `<div class="filter-row"><div class="segmented">${[['active','In progress'],['completed','Achieved'],['paused','Paused'],['all','All goals']].map(([v,l])=>`<button data-goal-filter="${v}" class="${filter===v?'seg-active':''}">${l}</button>`).join('')}</div><div class="toolbar-search">${icon('search')}<input class="input-field" data-goal-search placeholder="Find a goal…" value="${escapeHtml(search)}" aria-label="Search goals"></div></div>`
+
+  section.innerHTML = `${header}${filterBar}${reading ? goalReading(reading) : goalChapters(goals)}`
   bindCommon(section)
   qsa(section, '[data-goal-filter]').forEach((b)=>b.addEventListener('click',()=>{filter=b.dataset.goalFilter;renderGoals()}))
-  qs(section, '[data-goal-search]').addEventListener('input',(e)=>{search=e.target.value;const pos=e.target.selectionStart;renderGoals();const input=qs(section, '[data-goal-search]');input.focus();input.setSelectionRange(pos,pos)})
+  qs(section, '[data-goal-search]')?.addEventListener('input',(e)=>{search=e.target.value;const pos=e.target.selectionStart;renderGoals();const input=qs(section, '[data-goal-search]');if(input){input.focus();input.setSelectionRange(pos,pos)}})
   qsa(section, '[data-goal-edit]').forEach((b)=>b.addEventListener('click',()=>openGoalModal(b.dataset.goalEdit)))
-  qsa(section, '[data-goal-detail]').forEach((b)=>b.addEventListener('click',()=>openGoalDetail(b.dataset.goalDetail)))
+  qsa(section, '[data-goal-detail]').forEach((b)=>b.addEventListener('click',()=>{readingGoalId=b.dataset.goalDetail;renderGoals();try{window.scrollTo({top:0,behavior:'smooth'})}catch{}}))
+  qsa(section, '[data-goal-back]').forEach((b)=>b.addEventListener('click',()=>{readingGoalId=null;renderGoals();try{window.scrollTo({top:0,behavior:'smooth'})}catch{}}))
+  // the in-page reading surface carries the same actions the dialog did
+  qsa(section, '[data-milestone-toggle]').forEach((b)=>b.addEventListener('click',()=>{const goalId=readingGoalId;commit((s)=>{const m=s.goals.find((g)=>g.id===goalId)?.milestones.find((m)=>m.id===b.dataset.milestoneToggle);if(m)m.done=!m.done});renderGoals()}))
+  qsa(section, '[data-detail-edit]').forEach((b)=>b.addEventListener('click',()=>openGoalModal(readingGoalId)))
+  qsa(section, '[data-goal-project]').forEach((b)=>b.addEventListener('click',()=>window.CC.openProjectModal(null,{goalId:readingGoalId,milestoneId:null})))
+  qsa(section, '[data-goal-task]').forEach((b)=>b.addEventListener('click',()=>window.CC.openTaskModal(null,{goalId:readingGoalId,milestoneId:null})))
+  qsa(section, '[data-milestone-project]').forEach((b)=>b.addEventListener('click',()=>window.CC.openProjectModal(null,{goalId:readingGoalId,milestoneId:b.dataset.milestoneProject})))
+  qsa(section, '[data-milestone-task]').forEach((b)=>b.addEventListener('click',()=>window.CC.openTaskModal(null,{goalId:readingGoalId,milestoneId:b.dataset.milestoneTask})))
+  qsa(section, '[data-linked-project]').forEach((b)=>b.addEventListener('click',()=>window.CC.openProjectDetail(b.dataset.linkedProject)))
+  qsa(section, '[data-linked-task]').forEach((b)=>b.addEventListener('click',()=>window.CC.openTaskModal(b.dataset.linkedTask)))
 }
 
 export function milestoneEditor(items=[]) { return `<div data-milestone-editor>${items.map((m)=>milestoneEditRow(m)).join('')}</div><button type="button" class="text-button" data-add-milestone>${icon('plus')}Add a milestone</button>` }
@@ -34,6 +61,133 @@ export function openGoalModal(id=null) {
     box.querySelector('form').addEventListener('submit',(e)=>{e.preventDefault();const title=box.querySelector('#goal-title').value.trim();if(!title)return;const payload={title,description:box.querySelector('#goal-description').value,category:box.querySelector('#goal-category').value,targetDate:box.querySelector('#goal-target').value||null,status:box.querySelector('#goal-status').value,progressMode:box.querySelector('#goal-progress-mode').value,manualProgress:Number(box.querySelector('#goal-manual').value),notes:box.querySelector('#goal-notes').value,milestones:readMilestones(box,goal?.milestones||[])};commit((s)=>{if(goal)Object.assign(s.goals.find((g)=>g.id===id),payload);else s.goals.push({id:uid(),...payload,createdAt:Date.now(),priority:'medium',deadline:null})});closeModal();toast(goal?'Goal updated.':'A meaningful direction, made clear.','success')})
     box.querySelector('[data-goal-delete]')?.addEventListener('click',async()=>{if(await confirmDialog({title:'Delete this goal?',message:'Connected projects and missions stay safe. Their goal link is removed; focus history is preserved.',confirmText:'Delete goal',danger:true})){commit((s)=>{s.goals=s.goals.filter((g)=>g.id!==id);unlinkDeleted(s,'goal',id)});closeModal();toast('Goal removed. Your work is preserved.','info')}})
   }})
+}
+
+/**
+ * The chapter grid. Each goal reads as the opening of a chapter: an eyebrow,
+ * a title set in the display face, its own honest progress, and a way in.
+ */
+function goalChapters(goals) {
+  if (!goals.length) {
+    return paperCard({ body: absent({
+      icon: 'target',
+      title: search ? 'No matching goals.' : filter === 'completed' ? 'Meaningful things take time.' : 'What are you working toward?',
+      body: search ? 'Try another word, or widen the filter.'
+        : filter === 'completed' ? 'Goals you have achieved will be kept here, with the work that carried them.'
+        : 'A career move. A new skill. A healthier rhythm. Give your ambition a name, then break it into small steps.',
+      action: `<button class="btn-primary" data-common="goal">${icon('plus')}Create a goal</button>`,
+    }) })
+  }
+  const chapters = goals.map((g, index) => {
+    const progress = goalProgress(state, g)
+    const projects = state.projects.filter((p) => p.goalId === g.id)
+    const tasks = state.tasks.filter((t) => t.goalId === g.id)
+    const doneTasks = tasks.filter((t) => t.done).length
+    const milestones = g.milestones || []
+    const doneMilestones = milestones.filter((m) => m.done).length
+    return chapterCard({
+      kind: 'goal',
+      eyebrow: `${String(index + 1).padStart(2, '0')} · ${g.category || 'Personal'}`,
+      title: escapeHtml(g.title),
+      body: `<p class="paper-lede">${escapeHtml(g.description || 'Every meaningful outcome begins with a small, intentional step.')}</p>
+        <div class="paper-figure-row paper-figure-row--compact">
+          ${figure(`${doneMilestones}<small>/${milestones.length || 0}</small>`, 'Milestones')}
+          ${figure(String(projects.length), projects.length === 1 ? 'Project' : 'Projects')}
+          ${figure(`${doneTasks}<small>/${tasks.length}</small>`, 'Missions')}
+        </div>`,
+      progressValue: progress,
+      progressLabel: g.progressMode === 'manual' ? 'Self-assessed' : 'From your work',
+      foot: `<span>${g.targetDate ? `Target · ${formatKeyLabel(g.targetDate)}` : 'No target date'}</span>
+        <span class="paper-chapter-links">
+          <button class="text-button" data-goal-edit="${escapeHtml(g.id)}" aria-label="Edit ${escapeHtml(g.title)}">${icon('edit')}</button>
+          <button class="text-button" data-goal-detail="${escapeHtml(g.id)}">Read ${icon('arrow')}</button>
+        </span>`,
+      attrs: `data-goal-chapter="${escapeHtml(g.id)}"`,
+    })
+  }).join('')
+  return `<div class="paper-chapter-grid">${chapters}</div>`
+}
+
+/**
+ * The goal as a page you read, not a dialog you dismiss. Everything the modal
+ * showed is here, laid out in the journal's own columns, and every action is
+ * the original handler — this is a different surface, not a different feature.
+ */
+function goalReading(goal) {
+  const projects = state.projects.filter((p) => p.goalId === goal.id)
+  const tasks = state.tasks.filter((t) => t.goalId === goal.id)
+  const milestones = goal.milestones || []
+  const progress = goalProgress(state, goal)
+  const doneMilestones = milestones.filter((m) => m.done).length
+
+  const marginCol = `
+    <aside class="paper-stack paper-reading-margin">
+      ${paperCard({
+        title: 'The shape of it',
+        body: `<div class="paper-reading-figures">
+          ${figure(`${progress}<small>%</small>`, goal.progressMode === 'manual' ? 'Self-assessed' : 'From your work')}
+          ${figure(`${doneMilestones}<small>/${milestones.length}</small>`, 'Milestones reached')}
+          ${figure(String(projects.length), 'Projects', { note: projects.length ? projects.map((p) => p.title).join(' · ') : 'None yet' })}
+          ${figure(String(tasks.filter((t) => t.done).length) + '<small>/' + tasks.length + '</small>', 'Missions done')}
+        </div>`,
+      })}
+      ${paperCard({
+        title: 'The particulars',
+        body: `<dl class="paper-facts">
+          <div><dt>Area of life</dt><dd>${escapeHtml(goal.category || 'Personal')}</dd></div>
+          <div><dt>Target</dt><dd>${goal.targetDate ? formatKeyLabel(goal.targetDate) : 'Not set'}</dd></div>
+          <div><dt>Status</dt><dd>${escapeHtml(goal.status || 'active')}</dd></div>
+          <div><dt>Tracked by</dt><dd>${goal.progressMode === 'manual' ? 'Your own estimate' : 'Milestones and connected work'}</dd></div>
+        </dl>`,
+      })}
+      ${goal.notes ? paperCard({ title: 'Private notes', body: `<p class="paper-note">${escapeHtml(goal.notes)}</p>` }) : ''}
+    </aside>`
+
+  const milestonesBlock = milestones.length
+    ? milestones.map((m, i) => `<div class="paper-entry${m.done ? ' paper-entry--done' : ''}">
+        <span class="paper-entry-index">${escapeHtml(String(i + 1).padStart(2, '0'))}</span>
+        <div class="paper-entry-body">
+          <div class="paper-entry-title">
+            <button class="task-check ${m.done ? 'checked' : ''}" data-milestone-toggle="${escapeHtml(m.id)}" aria-label="${m.done ? 'Reopen' : 'Complete'} ${escapeHtml(m.title)}" aria-pressed="${m.done ? 'true' : 'false'}">${icon('check')}</button>
+            <span>${escapeHtml(m.title)}</span>
+          </div>
+          <div class="paper-entry-meta">${m.targetDate ? formatKeyLabel(m.targetDate) : 'No date'} · ${projects.filter((p) => p.milestoneId === m.id).length} projects · ${tasks.filter((t) => t.milestoneId === m.id).length} missions</div>
+        </div>
+        <div class="paper-entry-trailing">
+          <button class="icon-btn" data-milestone-project="${escapeHtml(m.id)}" aria-label="Create project for ${escapeHtml(m.title)}">${icon('projects')}</button>
+          <button class="icon-btn" data-milestone-task="${escapeHtml(m.id)}" aria-label="Create mission for ${escapeHtml(m.title)}">${icon('plus')}</button>
+        </div>
+      </div>`).join('')
+    : absent({ icon: 'flag', title: 'Turn ambition into a next step.', body: 'Add milestones, then connect a project or mission to each one.', action: `<button class="btn-ghost" data-detail-edit>${icon('plus')}Add milestones</button>` })
+
+  const linkedRow = (attrs, symbol, title, meta) => `<button class="linked-work-row paper-linked-row" ${attrs}>${icon(symbol)}<strong>${escapeHtml(title)}</strong><span>${meta}</span></button>`
+
+  const mainCol = `
+    <div class="paper-stack">
+      ${paperCard({
+        title: 'The path forward',
+        note: milestones.length ? `${doneMilestones} of ${milestones.length} reached` : 'No milestones yet',
+        action: `<button class="text-button" data-detail-edit>${icon('edit')}Edit goal</button>`,
+        body: `<div class="paper-ledger">${milestonesBlock}</div>`,
+      })}
+      ${paperCard({
+        title: 'Projects that give it a place',
+        action: `<button class="text-button" data-goal-project>${icon('plus')}New project</button>`,
+        body: projects.length
+          ? projects.map((p) => linkedRow(`data-linked-project="${escapeHtml(p.id)}"`, 'projects', p.title, `${projectProgress(state, p)}%`)).join('')
+          : `<p class="paper-lede paper-lede--quiet">A project gives your goal somewhere to take shape.</p>`,
+      })}
+      ${paperCard({
+        title: 'Missions that move it forward',
+        action: `<button class="text-button" data-goal-task>${icon('plus')}Add mission</button>`,
+        body: tasks.length
+          ? tasks.slice(0, 12).map((t) => linkedRow(`data-linked-task="${escapeHtml(t.id)}"`, t.done ? 'check' : 'missions', t.title, t.done ? 'Complete' : t.date ? formatKeyLabel(t.date) : 'Unscheduled')).join('')
+          : `<p class="paper-lede paper-lede--quiet">The connection appears here when you link a mission to this goal.</p>`,
+      })}
+    </div>`
+
+  return `<div class="paper-columns paper-reading">${mainCol}${marginCol}</div>
+    <div class="paper-reading-foot"><button class="btn-ghost" data-goal-back>${icon('left')}All goals</button></div>`
 }
 
 export function openGoalDetail(id) {
