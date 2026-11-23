@@ -131,7 +131,7 @@ export function chapterCard({ kind = 'chapter', eyebrow = '', title = '', body =
 }
 
 /** The note field: the one place handwriting is allowed. */
-export function noteField({ id, label, value = '', rows = 3, placeholder = '' } = {}) {
+export function noteField({ id = 'note', label = '', value = '', rows = 3, placeholder = '' } = {}) {
   return `<div class="paper-note-field">
     <label class="field-label" for="${escapeHtml(id)}">${escapeHtml(label)}</label>
     <textarea id="${escapeHtml(id)}" class="input-field paper-note-input" rows="${rows}" placeholder="${escapeHtml(placeholder)}">${escapeHtml(value)}</textarea>

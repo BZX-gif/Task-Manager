@@ -92,9 +92,17 @@ test('the typefaces are self-hosted and the handwriting is a real face', async (
   const css = await readFile(path.join(root, 'public', 'static', 'paper.css'), 'utf8')
   assert.match(css, /--font-display|Instrument Serif/, 'the display serif is the same voice as the Command Center')
   assert.doesNotMatch(css, /@import\s+url\(|fonts\.googleapis/, 'no remote font loading')
-  // handwriting is scoped to notes only, never to structure
-  const noteUses = css.match(/var\(--font-note\)/g)?.length || 0
-  assert.ok(noteUses >= 1 && noteUses <= 6, `handwriting is used sparingly (${noteUses} sites)`)
+  // handwriting is for personal lines only: notes, ledes, reflections. It must
+  // never be applied to navigation, headings or data.
+  const noteDecls = [...css.matchAll(/font-family:var\(--font-note\)/g)].length
+  assert.ok(noteDecls <= 14, `handwriting stays scoped (${noteDecls} typographic sites)`)
+  // and specifically never to a structural selector
+  for (const selector of ['.nav-item', '.page-heading h1', '.card-header h3', '.chip', '.metric']) {
+    const rule = css.slice(css.indexOf(`${selector}{`))
+    if (!css.includes(`${selector}{`)) continue
+    const body = rule.slice(0, rule.indexOf('}'))
+    assert.doesNotMatch(body, /font-note/, `${selector} must not be handwritten`)
+  }
 })
 
 test('the shared metric strip is re-authored for paper, not boxed tiles', async () => {

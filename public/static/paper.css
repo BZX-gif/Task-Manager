@@ -908,3 +908,505 @@ p{color:var(--ink-soft)}
   .metric-strip .metric:nth-child(n+3){border-top:1px solid var(--rule-hair)}
   .metric-strip .metric strong{font-size:22px}
 }
+
+/* --------------------------------------------------------- the workbook */
+.paper-workbook-figures{
+  border-top:1px solid var(--rule);
+  border-bottom:1px solid var(--rule);
+  padding:14px 0;
+  margin:0 0 var(--gutter);
+}
+.paper-workbook-figures .paper-figure strong{font-size:22px}
+
+/* entity cards (projects, routines) adopt the chapter card's voice */
+.entity-grid{gap:var(--gutter)}
+.entity-card{
+  background:var(--paper-raised);
+  border:1px solid var(--rule);
+  border-radius:var(--r-paper);
+  box-shadow:var(--shadow-paper);
+  padding:23px;
+}
+.entity-card:hover{transform:none;border-color:var(--rule-strong);box-shadow:var(--shadow-lift)}
+.entity-card h3{font-family:var(--font-display);font-weight:400;font-size:19px;letter-spacing:-.01em;color:var(--ink)}
+.entity-description{font-size:12.5px;line-height:1.65;color:var(--ink-faint)}
+.entity-icon{
+  width:26px;height:26px;border-radius:5px;
+  background:var(--paper-inset);
+  border:1px solid var(--rule);
+  color:var(--bronze);
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.entity-icon .icon{width:14px;height:14px}
+.entity-card-top{align-items:center}
+.entity-progress{margin-top:15px}
+.entity-progress > div:first-child{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px}
+.entity-progress > div:first-child span{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+.entity-progress > div:first-child strong{font-family:var(--font-display);font-weight:400;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+.entity-card-footer{
+  border-top:1px solid var(--rule-hair);
+  padding-top:12px;margin-top:15px;
+  font-size:10.5px;color:var(--ink-ghost);
+}
+
+/* the board: three columns as ledger pages */
+.board{gap:var(--gutter);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+.board-column{
+  background:var(--paper-sunken);
+  border:1px solid var(--rule);
+  border-radius:var(--r-paper);
+  padding:16px;
+  min-height:130px;
+}
+.board-column-head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding-bottom:11px;margin-bottom:12px;
+  border-bottom:1px solid var(--rule);
+  font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:600;color:var(--ink-muted);
+}
+.board-column .count-badge,.count-badge{
+  font-family:var(--font-display);
+  font-size:13px;color:var(--bronze);
+  background:none;border:0;padding:0;
+}
+.board-card{
+  background:var(--paper-raised);
+  border:1px solid var(--rule);
+  border-radius:var(--r-paper-sm);
+  padding:15px;
+  margin-bottom:10px;
+  cursor:pointer;
+  transition:border-color 160ms ease,box-shadow 160ms ease;
+}
+.board-card:hover{border-color:var(--rule-strong);box-shadow:var(--shadow-paper)}
+.board-card h4{font-family:var(--font-display);font-weight:400;font-size:15px;color:var(--ink);margin:7px 0 3px}
+.board-card p{font-size:11px;color:var(--ink-faint);margin:0}
+.board-card .progress-track{margin-top:10px}
+
+/* the timeline: a dated ledger */
+.project-timeline{padding:8px 24px}
+.project-timeline-row{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 0;
+  border-bottom:1px solid var(--rule-hair) !important;
+  transition:padding 150ms ease;
+}
+.project-timeline-row:last-child{border-bottom:0 !important}
+.project-timeline-row:hover{padding-left:5px}
+.project-timeline-date{
+  font-size:10.5px;letter-spacing:.06em;color:var(--bronze);
+  min-width:96px;flex:none;font-variant-numeric:tabular-nums;
+}
+.project-timeline-row h4{font-family:var(--font-display);font-weight:400;font-size:15px;color:var(--ink);margin:0}
+.project-timeline-row p{font-size:11px;color:var(--ink-ghost);margin:2px 0 0}
+.project-timeline-row .icon{color:var(--ink-ghost);width:14px;height:14px}
+
+@media (max-width:900px){
+  .board{grid-template-columns:1fr}
+  .project-timeline{padding:4px 18px}
+  .project-timeline-date{min-width:74px}
+}
+
+/* ---------------------------------------------------------- the mission list */
+/* A mission row is a line in a ledger: tick, title, its facts in the margin. */
+.task-list-surface{
+  background:var(--paper-raised);
+  border:1px solid var(--rule);
+  border-radius:var(--r-paper);
+  box-shadow:var(--shadow-paper);
+  padding:6px 24px;
+}
+.task-row{
+  border-top:1px solid var(--rule-hair);
+  padding:15px 0;
+  transition:background 150ms ease;
+  align-items:flex-start;
+}
+.task-row:first-child{border-top:0}
+.task-row:hover{background:transparent}
+.task-row:hover .task-title{color:var(--ink)}
+.task-title{
+  font-family:var(--font-display);
+  font-weight:400;
+  font-size:15.5px;
+  letter-spacing:-.004em;
+  color:var(--ink-soft);
+  line-height:1.4;
+  transition:color 150ms ease;
+}
+.task-row.done .task-title{color:var(--ink-ghost);text-decoration:line-through;text-decoration-color:var(--rule-strong)}
+.task-meta{font-size:10.5px;color:var(--ink-ghost);letter-spacing:.02em;margin-top:3px}
+.list-heading{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:13px 0 11px;
+  border-bottom:1px solid var(--rule);
+  font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  font-weight:600;color:var(--bronze);
+}
+.mission-toolbar{
+  border-bottom:1px solid var(--rule);
+  padding-bottom:13px;margin-bottom:var(--gutter);
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;
+}
+.mission-footer{
+  border-top:1px solid var(--rule-hair);
+  padding-top:13px;margin-top:2px;
+  font-size:10.5px;color:var(--ink-ghost);
+}
+.overview-middle{
+  display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
+  gap:var(--gutter);align-items:start;
+}
+.priority-card{border-left:2px solid var(--gold);border-radius:0 var(--r-paper) var(--r-paper) 0}
+.priority-row{
+  border-top:1px solid var(--rule-hair);
+  padding:12px 0;align-items:center;
+}
+.priority-row:first-child{border-top:0}
+.priority-index{
+  font-family:var(--font-display);
+  font-size:13px;color:var(--bronze);
+  min-width:20px;
+}
+@media (max-width:1000px){
+  .overview-middle{grid-template-columns:1fr}
+}
+@media (max-width:767px){
+  .task-list-surface{padding:4px 17px}
+  .mission-toolbar{gap:9px}
+}
+
+/* --------------------------------------------------------- the daily journal */
+/* My Day reads as today's page: priorities in a ruled column, the day's shape
+   in the margin beside it. */
+.day-journal{align-items:stretch}
+.paper-day-glance{display:flex;flex-direction:column;gap:0}
+.paper-day-glance > div{
+  display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  padding:11px 0;border-top:1px solid var(--rule-hair);
+}
+.paper-day-glance > div:first-child{border-top:0;padding-top:0}
+.paper-day-glance span{font-size:10.5px;letter-spacing:.03em;color:var(--ink-faint)}
+.paper-day-glance strong{
+  font-family:var(--font-display);
+  font-weight:400;font-size:16px;color:var(--ink);
+  font-variant-numeric:tabular-nums;text-align:right;
+}
+.schedule-summary{gap:0}
+.schedule-summary > div{border-top:1px solid var(--rule-hair);padding:11px 0}
+.schedule-summary > div:first-child{border-top:0;padding-top:0}
+.schedule-summary span{font-size:10.5px;color:var(--ink-faint)}
+.schedule-summary strong{font-family:var(--font-display);font-weight:400;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+/* the notice strip becomes a marginal aside, not a coloured alert */
+.notice{
+  background:none;
+  border:0;border-left:2px solid var(--rule-strong);
+  border-radius:0;
+  padding:2px 0 2px 13px;
+  color:var(--ink-faint);
+  font-family:var(--font-note);
+  font-style:italic;
+  font-size:13.5px;
+  line-height:1.6;
+  display:flex;gap:9px;align-items:flex-start;
+}
+.notice .icon{width:14px;height:14px;color:var(--bronze);opacity:.7;margin-top:2px;flex:none}
+/* section-sub is the quiet line under a heading */
+.section-sub{font-family:var(--font-note);font-style:italic;color:var(--ink-muted);font-size:13px;line-height:1.6}
+.section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.section-heading h3,.section-heading h4{font-family:var(--font-display);font-weight:400;font-size:var(--t-section);color:var(--ink);margin:0}
+.detail-section{margin-top:var(--gutter);padding-top:var(--gutter);border-top:1px solid var(--rule-hair)}
+.detail-section:first-of-type{margin-top:14px;padding-top:0;border-top:0}
+.milestone-row{
+  display:flex;align-items:center;gap:11px;
+  padding:11px 0;border-top:1px solid var(--rule-hair);
+}
+.milestone-row:first-of-type{border-top:0}
+.milestone-row strong{font-family:var(--font-display);font-weight:400;font-size:14.5px;color:var(--ink-soft)}
+.milestone-row p{font-size:10.5px;color:var(--ink-ghost);margin:2px 0 0}
+.milestone-row.is-done strong{color:var(--ink-ghost);text-decoration:line-through;text-decoration-color:var(--rule-strong)}
+
+/* ==================================================== the calendar · planner
+   The signature page. Not a generic calendar library: a printed month on
+   parchment, ruled in bronze, with the date numbers set like a planner's and
+   commitments written as appointment labels rather than coloured blocks. */
+.view-calendar-surface{}
+
+/* the toolbar reads as the head of a printed month */
+.cal-toolbar{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:var(--gutter);
+  flex-wrap:wrap;
+  padding:0 0 18px;margin-bottom:2px;
+  border-bottom:1px solid var(--rule);
+}
+.cal-nav{display:flex;align-items:center;gap:14px}
+.cal-nav-label{display:flex;flex-direction:column;gap:3px;min-width:210px}
+.cal-nav-label strong{
+  font-family:var(--font-display);
+  font-weight:400;
+  font-size:var(--t-chapter);
+  letter-spacing:-.016em;
+  color:var(--ink);
+  line-height:1.1;
+}
+.cal-nav-label small{
+  font-family:var(--font-note);
+  font-style:italic;
+  font-size:12px;
+  color:var(--ink-faint);
+  letter-spacing:.01em;
+}
+.cal-nav .icon-btn{border:1px solid var(--rule);border-radius:var(--r-paper-sm);width:30px;height:30px}
+.cal-nav .icon-btn:hover{border-color:var(--bronze);background:var(--paper-inset)}
+
+/* the layer switches are index tabs, not floating chips */
+.cal-layers{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:12px 0;
+  border-bottom:1px solid var(--rule);
+  margin-bottom:var(--gutter);
+}
+.cal-layer{
+  display:inline-flex;align-items:center;gap:6px;
+  background:transparent;border:1px solid transparent;border-radius:4px;
+  padding:5px 9px;
+  font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+  color:var(--ink-ghost);
+  transition:color 150ms ease,border-color 150ms ease;
+}
+.cal-layer:hover{color:var(--ink-soft);border-color:var(--rule)}
+.cal-layer .icon{width:12px;height:12px}
+.cal-layer.is-on{color:var(--ink-soft);border-color:var(--rule)}
+.cal-layer.is-on .cal-layer-dot{background:var(--gold);box-shadow:none}
+.cal-layer-dot{width:4px;height:4px;border-radius:50%;background:var(--rule-strong)}
+.cal-layer-hint{
+  margin-left:auto;display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;color:var(--ink-ghost);letter-spacing:.02em;
+}
+.cal-layer-hint .icon{width:12px;height:12px}
+
+.cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 268px;gap:var(--gutter);align-items:start}
+.cal-main{min-width:0}
+.cal-side{display:flex;flex-direction:column;gap:var(--gutter);min-width:0}
+
+/* ---- the month sheet ---- */
+.cal-month{
+  background:var(--paper-raised);
+  border:1px solid var(--rule);
+  border-radius:var(--r-paper);
+  box-shadow:var(--shadow-paper);
+  overflow:hidden;
+}
+.cal-weekdays{
+  display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+  border-bottom:1px solid var(--rule);
+  background:var(--paper-sunken);
+}
+.cal-weekdays span{
+  padding:9px 10px;
+  font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;
+  color:var(--bronze);
+  text-align:left;
+}
+.cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--rule-hair)}
+.cal-week:last-child{border-bottom:0}
+
+.cal-cell{
+  position:relative;
+  min-height:96px;
+  padding:9px 10px 10px;
+  border-left:1px solid var(--rule-hair);
+  display:flex;flex-direction:column;gap:5px;
+  background:transparent;
+  transition:background 150ms ease;
+}
+.cal-cell:first-child{border-left:0}
+.cal-cell:hover{background:rgba(246,236,220,.028)}
+.cal-cell.is-weekend{background:rgba(8,6,4,.16)}
+.cal-cell.is-outside{opacity:.42}
+.cal-cell.is-selected{background:rgba(var(--accent-paper-rgb),.07);box-shadow:inset 0 0 0 1px rgba(var(--accent-paper-rgb),.28)}
+.cal-cell.is-today{background:rgba(var(--accent-paper-rgb),.05)}
+
+.cal-cell-top{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:19px}
+.cal-cell-day{
+  font-family:var(--font-display);
+  font-size:17px;
+  line-height:1;
+  color:var(--ink-soft);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.01em;
+}
+.cal-cell.is-today .cal-cell-day{
+  color:var(--ink);
+  position:relative;
+}
+/* today is marked by a bronze underline, as a planner rings the date */
+.cal-cell.is-today .cal-cell-day::after{
+  content:'';position:absolute;left:0;right:-1px;bottom:-4px;height:1.5px;
+  background:var(--gold);border-radius:2px;
+}
+.cal-cell.is-selected .cal-cell-day{color:var(--ink)}
+.cal-cell-add{
+  opacity:0;
+  width:17px;height:17px;border-radius:3px;
+  border:1px solid var(--rule);
+  color:var(--ink-faint);
+  display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;
+  transition:opacity 140ms ease,color 140ms ease,border-color 140ms ease;
+}
+.cal-cell-add .icon{width:10px;height:10px}
+.cal-cell:hover .cal-cell-add,.cal-cell-add:focus-visible{opacity:1}
+.cal-cell-add:hover{color:var(--ink);border-color:var(--bronze)}
+.cal-month-tag{
+  font-size:8px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--bronze);font-weight:600;
+}
+
+/* commitments are appointment labels: a rule on the left, a name, a time.
+   The markup ships .cal-chip (with .cal-chip-time / .cal-chip-title). */
+.cal-cell-events{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cal-chip{
+  display:flex;align-items:baseline;gap:5px;
+  padding:1px 0 1px 6px;
+  border-left:1.5px solid var(--bronze);
+  font-size:10px;line-height:1.45;color:var(--ink-soft);
+  text-align:left;background:none;
+  border-top:0;border-right:0;border-bottom:0;border-radius:0;
+  box-shadow:none;
+  width:100%;min-width:0;
+  transition:color 140ms ease,border-color 140ms ease;
+  cursor:pointer;
+}
+.cal-chip:hover{color:var(--ink);border-left-color:var(--gold)}
+.cal-chip--hyb{border-left-color:var(--bronze);opacity:.9}
+.cal-chip--routine,.cal-chip--template{border-left-style:dotted;border-left-color:var(--rule-strong);color:var(--ink-faint)}
+.cal-chip.is-overdue{border-left-color:var(--accent-paper)}
+.cal-chip.is-done{opacity:.5}
+.cal-chip.is-done .cal-chip-title{text-decoration:line-through;text-decoration-color:var(--rule-strong)}
+.cal-chip-time{
+  font-size:8.5px;color:var(--ink-ghost);letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;flex:none;
+}
+.cal-chip-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cal-chip-dot{width:3px;height:3px;border-radius:50%;background:var(--rule-strong);flex:none;margin-bottom:2px}
+.cal-chip-mark{width:3px;height:3px;background:var(--bronze);flex:none;margin-bottom:2px}
+.cal-more{
+  font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-ghost);background:none;border:0;padding:1px 0 0 6px;text-align:left;
+  transition:color 140ms ease;
+}
+.cal-more:hover{color:var(--bronze)}
+.cal-routine-note{display:none}
+.cal-dot{width:3px;height:3px;border-radius:50%;background:var(--rule-strong);display:inline-block}
+.cal-dot--task{background:var(--bronze)}
+.cal-dot--hyb{background:var(--gold);opacity:.7}
+.cal-dot.is-protected{background:var(--ink-ghost)}
+/* legacy names kept so older selectors resolve while the sheet is in place */
+.cal-event-label{
+  display:flex;align-items:baseline;gap:5px;
+  padding:1px 0 1px 6px;
+  border-left:1.5px solid var(--bronze);
+  font-size:10px;
+  line-height:1.45;
+  color:var(--ink-soft);
+  text-align:left;
+  background:none;border-top:0;border-right:0;border-bottom:0;
+  width:100%;
+  min-width:0;
+  transition:color 140ms ease;
+}
+.cal-event-label:hover{color:var(--ink)}
+.cal-event-label time{
+  font-size:8.5px;
+  color:var(--ink-ghost);
+  letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;
+  flex:none;
+}
+.cal-event-label span{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
+}
+.cal-event-label.is-done{opacity:.55}
+.cal-event-label.is-done span{text-decoration:line-through;text-decoration-color:var(--rule-strong)}
+.cal-cell-dots{display:flex;gap:3px;align-items:center}
+.cal-cell-dots i{width:3px;height:3px;border-radius:50%;background:var(--rule-strong);display:block}
+.cal-cell-load{display:none}
+.cal-cell-more{font-size:8.5px;letter-spacing:.1em;color:var(--ink-ghost);text-transform:uppercase;padding-left:6px}
+
+/* ---- the week sheet ---- */
+.cal-week-grid{
+  display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+  background:var(--paper-raised);
+  border:1px solid var(--rule);
+  border-radius:var(--r-paper);
+  box-shadow:var(--shadow-paper);
+  overflow:hidden;
+}
+.cal-week-col{
+  border-left:1px solid var(--rule-hair);
+  padding:13px 11px;
+  min-height:240px;
+  display:flex;flex-direction:column;gap:9px;
+  transition:background 150ms ease;
+}
+.cal-week-col:first-child{border-left:0}
+.cal-week-col.is-weekend{background:rgba(8,6,4,.16)}
+.cal-week-col.is-selected{background:rgba(var(--accent-paper-rgb),.06);box-shadow:inset 0 0 0 1px rgba(var(--accent-paper-rgb),.24)}
+.cal-week-col.is-today{background:rgba(var(--accent-paper-rgb),.045)}
+.cal-week-head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:6px;
+  background:none;border:0;padding:0 0 8px;border-bottom:1px solid var(--rule);
+  width:100%;text-align:left;cursor:pointer;
+}
+.cal-week-head span{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--bronze);font-weight:600}
+.cal-week-head strong{
+  font-family:var(--font-display);font-weight:400;font-size:19px;color:var(--ink-soft);
+  font-variant-numeric:tabular-nums;
+}
+.cal-week-col.is-today .cal-week-head strong{color:var(--ink);text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:4px}
+.cal-week-meta{font-size:9.5px;color:var(--ink-ghost);letter-spacing:.03em}
+.cal-week-list{display:flex;flex-direction:column;gap:3px;flex:1}
+.cal-week-empty{
+  font-size:10px;color:var(--ink-ghost);background:none;border:0;padding:4px 0;
+  text-align:left;display:inline-flex;align-items:center;gap:6px;
+  transition:color 140ms ease;
+}
+.cal-week-empty:hover{color:var(--bronze)}
+.cal-week-empty .icon{width:11px;height:11px}
+.cal-week-add{
+  font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+  color:var(--ink-ghost);background:none;border:0;padding:6px 0 0;
+  border-top:1px solid var(--rule-hair);
+  display:inline-flex;align-items:center;gap:5px;
+  transition:color 140ms ease;
+}
+.cal-week-add:hover{color:var(--bronze)}
+.cal-week-add .icon{width:10px;height:10px}
+
+/* ---- the day rail ---- */
+.cal-side .card{background:var(--paper-raised)}
+
+@media (max-width:1180px){
+  .cal-layout{grid-template-columns:minmax(0,1fr)}
+  .cal-side{flex-direction:row;gap:var(--gutter)}
+  .cal-side .card{flex:1}
+}
+@media (max-width:767px){
+  .cal-toolbar{gap:14px}
+  .cal-nav-label{min-width:0}
+  .cal-nav-label strong{font-size:22px}
+  .cal-weekdays span{padding:7px 6px;font-size:7.5px;letter-spacing:.1em}
+  .cal-cell{min-height:74px;padding:6px 6px 7px;gap:3px}
+  .cal-cell-day{font-size:14px}
+  .cal-cell-add{display:none}
+  .cal-event-label{font-size:8.5px;padding-left:4px;border-left-width:1px}
+  .cal-event-label time{display:none}
+  .cal-month-tag{display:none}
+  .cal-week-grid{grid-template-columns:1fr}
+  .cal-week-col{min-height:0;border-left:0;border-top:1px solid var(--rule-hair);padding:11px}
+  .cal-week-col:first-child{border-top:0}
+  .cal-side{flex-direction:column}
+  .cal-layer-hint{display:none}
+}
