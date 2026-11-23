@@ -137,13 +137,15 @@ test('the app boots and renders the dashboard', async () => {
 })
 
 test('the overview keeps its metrics and actions usable across refreshes', async () => {
-  assert.equal($$('.metric-strip .metric').length, 4)
-  assert.ok($('.command-card'), 'today command card exists')
-  assert.ok($('.score-card'), 'daily score card exists')
+  // the four classic numbers live on as the accessible summary of the day;
+  // the glass panels are their visual expression
+  assert.equal($$('#view-dashboard .metric-strip .metric').length, 4)
+  assert.ok($('.atmo-command'), 'today command panel exists')
+  assert.ok($('.atmo-today-panel .score-ring'), 'today score ring exists')
   window.CC.refreshCurrentView()
   await settle()
-  assert.equal($$('.metric-strip .metric').length, 4, 'metrics survive refresh')
-  click('.quick-actions-card [data-common="new-task"]')
+  assert.equal($$('#view-dashboard .metric-strip .metric').length, 4, 'metrics survive refresh')
+  click('.atmo-actions-panel [data-common="new-task"]')
   await settle()
   assert.ok($('[data-modal-box]'), 'quick action opens mission creation')
   window.CC.closeModal()
@@ -151,7 +153,7 @@ test('the overview keeps its metrics and actions usable across refreshes', async
 })
 
 test('overview shortcuts and mobile dock navigate to the right workspace', () => {
-  click('.up-next-card [data-common="schedule"]')
+  click('.atmo-schedule-panel [data-common="schedule"]')
   assert.equal($('#view-schedule').classList.contains('hidden'), false)
   assert.equal($('#breadcrumb-current').textContent, 'Schedule', 'the breadcrumb names the workspace')
   click('#mobile-dock [data-view="tasks"]')
@@ -173,9 +175,9 @@ test('the original PWA identity is included in the offline shell', async () => {
 })
 
 test('the overview shows the current day and opens the schedule', () => {
-  assert.ok($('.date-block .date-day').textContent.trim().length > 0)
-  assert.ok($('.command-card h2').textContent.trim().length > 0)
-  click('.up-next-card [data-common="schedule"]')
+  assert.ok($('.atmo-date').textContent.trim().length > 0)
+  assert.ok($('.atmo-command-title').textContent.trim().length > 0)
+  click('.atmo-schedule-panel [data-common="schedule"]')
   assert.equal($('#view-schedule').classList.contains('hidden'), false)
   window.CC.switchView('dashboard')
 })
@@ -255,12 +257,11 @@ test('keyboard shortcuts do not fire while interacting with a select', async () 
 })
 
 test('the daily score card explains its own formula', async () => {
-  const scoreCard = $('.score-card')
+  const scoreCard = $('.atmo-today-panel')
   assert.ok(scoreCard, 'score card exists')
-  assert.match(scoreCard.textContent, /Daily execution score/)
+  assert.match(scoreCard.textContent, /Today’s overview/)
   assert.match(scoreCard.querySelector('.score-ring').getAttribute('aria-label'), /of 100|No score/)
-  assert.equal($$('.score-component').length, 4, 'four transparent components')
-  assert.match(scoreCard.innerHTML, /Missions.*Priorities.*Focus.*Adherence/s)
+  assert.match(scoreCard.textContent, /Completed[\s\S]*Remaining[\s\S]*Priorities[\s\S]*Focused/, 'the four components are stated')
   click('[data-score-info]')
   await settle()
   assert.match($('[data-modal-box]').textContent, /nothing hidden|weights|components/i)
@@ -291,15 +292,15 @@ test('Top 3 can be filled, toggled and limited to three', async () => {
   const fourth = window.CC.addTaskToTop3(tasks[3]?.id || 'nope')
   assert.equal(fourth.ok, false)
 
-  const rows = $$('.priority-card .priority-row')
+  const rows = $$('.atmo-priorities-panel .atmo-priority')
   assert.equal(rows.length, 3, 'three priority rows rendered')
-  click($('.priority-card .priority-row .task-check'))
+  click($('.atmo-priorities-panel .atmo-priority .atmo-priority-check'))
   await settle()
   assert.match($('#view-dashboard').innerHTML, /1\/3 done|1\/3/, 'completion is tracked')
 })
 
 test('today command recommends real work and can start a focus session', async () => {
-  const title = $('.command-card h2').textContent.trim()
+  const title = $('.atmo-command-title').textContent.trim()
   assert.ok(title.length > 0)
   assert.ok($('[data-command-start]'), 'there is an actionable item')
 

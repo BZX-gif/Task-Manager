@@ -179,7 +179,7 @@ test('changes are persisted and visible after a restart', async () => {
     await settle(100)
     const tasks = second.window.CC.getState().tasks
     assert.ok(tasks.some((t) => t.title === 'Persistence check'))
-    assert.match(second.$('.priority-card').textContent, /Persistence check/)
+    assert.match(second.$('.atmo-priorities-panel').textContent, /Persistence check/)
   } finally {
     window.close()
     second?.window.close()

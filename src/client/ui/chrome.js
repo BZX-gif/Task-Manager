@@ -1,5 +1,6 @@
 import { MOTIVATIONAL_QUOTES } from '../lib/defaults.js'
 import { greetingLine, salutationOf } from '../lib/briefing.js'
+import { splitGreeting } from '../lib/atmosphere.js'
 import { escapeHtml, el, closeModal, openModal, qsa, scrollToNode, toast } from '../core/dom.js'
 import { commit, currentDayKey, state } from '../core/store.js'
 import { elapsedSeconds, remainingSeconds, sessionTotals } from '../lib/focus.js'
@@ -16,12 +17,32 @@ export function userName(){return state.settings.userName?.trim()||''}
 export function salutation(){return salutationOf(state)}
 /** Time-aware, respectful greeting: "Good evening, Sir." */
 export function greeting(now=new Date()){return greetingLine(state,now)}
+/**
+ * Keep the photographic hero's greeting true to the selected atmosphere and
+ * the saved salutation. Only the two leaf spans are written; the heading's
+ * structure is never replaced.
+ */
+function syncHeroGreeting(now=new Date()){
+  const part=document.querySelector('.atmo-greeting .greeting-part'),name=document.querySelector('.atmo-greeting .greeting-name')
+  if(!part||!name)return
+  const {part:partText,name:nameText}=splitGreeting(greetingLine(state,now))
+  const cleanName=nameText.replace(/\.$/,'')
+  if(part.textContent!==partText)part.textContent=partText
+  if(name.textContent!==cleanName)name.textContent=cleanName
+}
 export function updateClockAndGreeting(){
   const now=new Date(),format=state.settings.timeFormat||'12h'
   const text=(selector,value)=>{const node=el(selector);if(node&&node.textContent!==value)node.textContent=value}
   text('overview-greeting',greeting(now));text('greeting-text',greeting(now));text('command-strip-salute',`At your command, ${salutation()}.`)
   const clock=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:format==='12h'})
   text('live-clock',clock);text('overview-clock',clock)
+  // The photographic hero keeps the greeting split across two leaf spans (the
+  // address, then the italicised name). The tick must keep them coherent with
+  // the chosen atmosphere and the saved salutation — without ever rewriting
+  // the heading wholesale (see tests/unit/chrome-timers.test.js).
+  syncHeroGreeting(now)
+  const atmoDate=el('atmo-date')
+  if(atmoDate){const label=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});if(atmoDate.textContent!==label)atmoDate.textContent=label}
   const avatar=document.querySelector('.brand-avatar'),initial=userName().charAt(0).toLocaleUpperCase()||'P'
   if(avatar&&avatar.textContent!==initial){avatar.textContent=initial;avatar.setAttribute('title',userName()||'Personal workspace')}
   const workspace=document.querySelector('.workspace-avatar');if(workspace)workspace.textContent=initial
@@ -34,8 +55,11 @@ export function updateClockAndGreeting(){
   if(dateFull)dateFull.textContent=fullLabel
   if(dateShort)dateShort.textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})
   if(dateBare&&!dateFull&&!dateShort)dateBare.textContent=fullLabel
+  // Both the classic bar and the photographic day rail ('day-progress-fill')
+  // share one calculation. On the dashboard the rail is the element that
+  // exists; the outer `.atmo-dayrail` carries the accessible label.
   const dayBar=document.getElementById('day-progress'),dayFill=document.getElementById('day-progress-fill')
-  if(dayBar&&dayFill){const toMin=(t)=>{const p=String(t||'').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)};const ws=state.settings.workingHours||{};const start=toMin(ws.start||'08:00');let end=toMin(ws.end||'20:00');if(end<=start)end=start+60;const pct=Math.max(0,Math.min(100,Math.round((now.getHours()*60+now.getMinutes()-start)/(end-start)*100)));dayFill.style.width=pct+'%';dayBar.setAttribute('role','img');dayBar.setAttribute('aria-label',pct+'% of your available hours used')}
+  if(dayFill){const toMin=(t)=>{const p=String(t||'').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)};const ws=state.settings.workingHours||{};const start=toMin(ws.start||'08:00');let end=toMin(ws.end||'20:00');if(end<=start)end=start+60;const pct=Math.max(0,Math.min(100,Math.round((now.getHours()*60+now.getMinutes()-start)/(end-start)*100)));dayFill.style.width=pct+'%';const rail=dayFill.closest('.atmo-dayrail')||dayBar;if(rail){rail.setAttribute('role','img');rail.setAttribute('aria-label',pct+'% of your available hours used')}}
 }
 export function rotateQuote(force=false){const node=el('quote-text');if(!node)return;const i=Math.floor(Math.random()*MOTIVATIONAL_QUOTES.length);if(!force&&node.dataset.index===String(i))return;node.dataset.index=String(i);node.textContent=MOTIVATIONAL_QUOTES[i]}
 export function startChromeTimers(){updateClockAndGreeting();if(clockTimer)clearInterval(clockTimer);clockTimer=setInterval(updateClockAndGreeting,1000);rotateQuote(true);if(quoteTimer)clearInterval(quoteTimer);quoteTimer=setInterval(()=>rotateQuote(),120000)}

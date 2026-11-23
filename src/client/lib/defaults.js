@@ -119,6 +119,8 @@ export const DEFAULT_SETTINGS = {
   signatureFont: 'edition',
   timeFormat: '12h',
   sidebarCollapsed: false,
+  /** auto = follow the local clock; otherwise 'morning' | 'afternoon' | 'evening' */
+  atmosphere: 'auto',
   workingHours: { start: '09:00', end: '18:00' },
   defaultTaskMinutes: 30,
   userName: '',

@@ -170,6 +170,7 @@ export function normalizeSettings(raw) {
     premiumUnlocked: settings.premiumUnlocked === true,
     signatureFont: ['edition', 'editorial', 'instrument'].includes(settings.signatureFont) ? settings.signatureFont : 'edition',
     timeFormat: settings.timeFormat === '24h' ? '24h' : '12h',
+    atmosphere: ['auto', 'morning', 'afternoon', 'evening'].includes(settings.atmosphere) ? settings.atmosphere : DEFAULT_SETTINGS.atmosphere,
     userName: String(settings.userName || '').slice(0, 60),
     salutation: salutation || DEFAULT_SETTINGS.salutation,
     briefingMode: ['daily', 'every', 'off'].includes(settings.briefingMode) ? settings.briefingMode : DEFAULT_SETTINGS.briefingMode,

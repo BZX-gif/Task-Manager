@@ -1,18 +1,31 @@
+/* -------------------------------------------------------------------------
+   THE COMMAND CENTER — the photographic dashboard.
+
+   The composition is editorial rather than a grid of equal cards: a dominant
+   greeting over the photograph, one command line, then three panels of
+   deliberately different weights (today / schedule / priorities), a progress
+   band and a quiet PAPER ribbon.
+
+   Every number, label and action below comes from the same records the rest of
+   the application uses. Nothing on this page is simulated.
+   ------------------------------------------------------------------------- */
+
 import { state, currentDayKey, todayStats, statsFor } from '../core/store.js'
 import { confirmDialog, escapeHtml, qs, qsa } from '../core/dom.js'
-import { addDays, formatDuration, minutesOfDay, weekdayShort, durationHtml } from '../lib/dates.js'
+import { addDays, formatDuration, minutesOfDay, weekdayShort } from '../lib/dates.js'
 import { scheduleFor, blockState, itemDone } from '../lib/planner.js'
 import { goalChain, goalProgress, taskProgress } from '../lib/relationships.js'
 import { top3Stats, top3Candidates } from '../lib/top3.js'
 import { overdueTasks, describeScoreFormula } from '../lib/score.js'
-import { sessionTotals } from '../lib/focus.js'
 import { drawChart, chartColors, alpha, vGrad } from '../core/charts.js'
 import { icon, ring, empty, metric, timeLabel, bindCommon, domainTabs, DOMAIN_TABS } from '../ui/common.js'
 import { buildWorkspaceContext } from '../lib/paper/context.js'
 import { generateAlerts, generateRecommendations } from '../lib/paper/recommendations.js'
 import { goalHealthAll } from '../lib/paper/reasoning.js'
 import { updateClockAndGreeting } from '../ui/chrome.js'
-import { greetingLine, intentionFor, salutationOf } from '../lib/briefing.js'
+import { intentionFor, salutationOf } from '../lib/briefing.js'
+import { atmosphereSwitch, syncSwitchState } from '../ui/atmosphere.js'
+import { atmosphereInfo, resolveAtmosphere, splitGreeting } from '../lib/atmosphere.js'
 import { hybDay, toggleHybPlanDay } from '../core/hyb.js'
 import { energyOf, kindOf } from '../lib/hyb.js'
 
@@ -31,10 +44,10 @@ function overdueLabel(dateKey, todayKey) {
 
 function commandReason(source, relation) {
   const why =
-    source === 'active' ? 'Scheduled right now — this is your window.' :
-    source === 'top3' ? 'One of your three priorities for today.' :
-    source === 'priority' ? 'The highest-priority mission left today.' :
-    source === 'next' ? 'Next on your schedule.' :
+    source === 'active' ? 'This window is open right now — the room is yours.' :
+    source === 'top3' ? 'One of the three things that make today matter.' :
+    source === 'priority' ? 'The highest-priority mission still open today.' :
+    source === 'next' ? 'The next commitment on your schedule.' :
     'An open mission, ready when you are.'
   return relation ? `${why} Toward ${relation}.` : why
 }
@@ -58,13 +71,256 @@ function commandFacts(command, active, nowMinutes) {
 }
 
 function scoreCopy(stats, hasData) {
-  if (!hasData) return ['A fresh canvas.', 'Your day is still yours to shape. One meaningful step is enough to begin.']
-  if (stats.score <= 0) return ['A quiet start.', 'Zero is a starting line, not a verdict. One meaningful step is enough to begin.']
+  if (!hasData) return ['A fresh canvas.', 'One meaningful step is enough to begin. The photograph is yours to fill.']
+  if (stats.score <= 0) return ['A quiet start.', 'Zero is a starting line, not a verdict.']
   if (stats.score >= 80) return ['Finding your rhythm.', 'Built on the commitments you made to yourself.']
   if (stats.score >= 40) return ['Progress, in motion.', 'Small steps are still steps. Keep the thread alive.']
-  return ['One step at a time.', 'A number is a snapshot, not a verdict. Your next win starts here.']
+  return ['One step at a time.', 'A number is a snapshot, not a verdict.']
 }
 
+/* ------------------------------------------------------------ environment */
+
+/** The at-a-glance hero copy: greeting, context and today's intention. */
+function heroBlock({ now, stats, command, salute, intention, openTasks }) {
+  const atmosphereId = resolveAtmosphere(state.settings.atmosphere, now)
+  const { part, name } = splitGreeting(`${atmosphereInfo(atmosphereId).greeting}, ${salute}`)
+  const opened = stats.tasksPlanned + (stats.blocksElapsed || 0)
+  const lead = command
+    ? `${escapeHtml(atmosphereInfo(atmosphereId).note)} ${openTasks.length ? `${openTasks.length} mission${openTasks.length === 1 ? '' : 's'} still open today.` : 'Everything on today’s list is done.'}`
+    : `${escapeHtml(atmosphereInfo(atmosphereId).note)} ${opened ? 'Your day has shape — the next line is yours to write.' : 'Nothing is scheduled yet. One quiet decision is enough to begin.'}`
+  const ws = state.settings.workingHours || {}
+  const start = minutesOfDay(ws.start || '08:00')
+  const end = Math.max(start + 60, minutesOfDay(ws.end || '20:00'))
+  const pct = Math.max(0, Math.min(100, Math.round(((now.getHours() * 60 + now.getMinutes() - start) / (end - start)) * 100)))
+  return `<header class="atmo-hero">
+    <div class="atmo-hero-main">
+      <p class="eyebrow">${escapeHtml(atmosphereInfo(atmosphereId).label)} in the villa</p>
+      <h1 class="atmo-greeting" id="overview-greeting"><span class="greeting-part">${escapeHtml(part)}</span><span class="greeting-name">${escapeHtml(name.replace(/\.$/, ''))}</span></h1>
+      <p class="atmo-lead">${lead}</p>
+      <button class="atmo-intention${intention ? ' is-set' : ' is-empty'}" type="button" data-common="briefing" aria-label="${intention ? `Today’s intention: ${escapeHtml(intention)}. Open the briefing to edit` : 'Set today’s intention'}">
+        <span class="atmo-intention-label">Intention</span>
+        ${icon(intention ? 'check' : 'flag')}
+        <span>${intention ? escapeHtml(intention) : 'Set today’s intention'}</span>
+        ${icon('chevron')}
+      </button>
+    </div>
+    <div class="atmo-hero-aside">
+      <div class="atmo-switch-slot">${atmosphereSwitch()}</div>
+      <p class="atmo-date" id="atmo-date">${now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+      <p class="atmo-clock" id="overview-clock">${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: state.settings.timeFormat !== '24h' })}</p>
+      <div class="atmo-dayrail" role="img" aria-label="${pct}% of your available hours used">
+        <div class="atmo-dayrail-track"><i id="day-progress-fill" style="width:${pct}%"></i></div>
+        <div class="atmo-dayrail-labels"><span>${timeLabel(ws.start || '08:00', true)}</span><span>${timeLabel(ws.end || '20:00', true)}</span></div>
+      </div>
+      <button class="atmo-brief" type="button" data-common="briefing">${icon('bell')}Full briefing</button>
+    </div>
+  </header>`
+}
+
+/* ------------------------------------------------------------- the panels */
+
+function todayPanel({ stats, top3, adherence, focusTarget, consistentDays }) {
+  const done = stats.tasksPlanned ? Math.round((stats.tasksDone / stats.tasksPlanned) * 100) : 0
+  return `<article class="card atmo-panel atmo-today-panel" aria-label="Today’s overview">
+    <div class="atmo-panel-head">
+      <div class="atmo-panel-titles"><h2>Today’s overview</h2><p>${stats.hasAnyActivity ? 'The shape of the day so far.' : 'A quiet canvas, ready for one decision.'}</p></div>
+      <button class="text-button" type="button" data-score-info aria-label="How your score is calculated">${icon('info')}</button>
+    </div>
+    <div class="atmo-today">
+      ${ring(stats.score, 'of 100', !stats.hasAnyActivity)}
+      <div class="atmo-today-facts">
+        <div class="atmo-stat"><span class="atmo-stat-label">Completed</span><strong>${stats.tasksDone}<small>/ ${stats.tasksPlanned}</small></strong></div>
+        <div class="atmo-stat"><span class="atmo-stat-label">Remaining</span><strong>${Math.max(0, stats.tasksPlanned - stats.tasksDone)}</strong></div>
+        <div class="atmo-stat"><span class="atmo-stat-label">Priorities</span><strong>${top3.done}<small>/ ${top3.total || 3}</small></strong></div>
+        <div class="atmo-stat"><span class="atmo-stat-label">Focused</span><strong>${formatDuration(stats.focusedMinutes)}<small>/ ${formatDuration(focusTarget)}</small></strong></div>
+      </div>
+    </div>
+    <div class="atmo-progress">
+      <div class="atmo-progress-row"><span>Missions complete</span><strong>${done}%</strong></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${done}%"></div></div>
+      <div class="atmo-progress-row"><span>Schedule adherence</span><strong>${adherence == null ? '—' : `${adherence}%`}</strong></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${adherence == null ? 0 : adherence}%"></div></div>
+    </div>
+    <p class="atmo-priority-note">${top3.total ? `${top3.done} of ${top3.total} priorities done. <span>${top3.done === top3.total ? 'A clean sweep — well held.' : 'The most important thing still has your name on it.'}</span>` : `<span>Choose up to three priorities</span> and the day will have a centre of gravity.`}</p>
+    <div class="metric-strip metric-strip-sr" aria-label="Today’s numbers">
+      ${metric('missions','Missions completed',`${stats.tasksDone}<small>/${stats.tasksPlanned}</small>`,`${Math.max(0, stats.tasksPlanned - stats.tasksDone)} remaining today`)}
+      ${metric('focus','Focused time',formatDuration(stats.focusedMinutes),`${Math.min(100, Math.round((stats.focusedMinutes / focusTarget) * 100))}% of your daily intention`)}
+      ${metric('calendar','Schedule adherence',adherence == null ? '—' : `${adherence}<small>%</small>`,`${stats.blocksDone} of ${stats.blocksElapsed} elapsed blocks`)}
+      ${metric('routines','Consistency',`${consistentDays}<small> / 7 days</small>`,'Showing up counts. Keep going.')}
+    </div>
+  </article>`
+}
+
+function schedulePanel({ blocks, now, today, nowMinutes }) {
+  const dayBlocks = blocks
+    .filter((b) => b.time && b.kind !== 'protected')
+    .sort((a, b) => minutesOfDay(a.time) - minutesOfDay(b.time))
+  let rows = dayBlocks.slice(0, 7)
+  const upcomingCount = dayBlocks.filter((b) => !itemDone(state, b, today) && minutesOfDay(b.time) + (b.duration || 30) > nowMinutes).length
+  if (!rows.length) {
+    return `<article class="card atmo-panel atmo-schedule-panel" aria-label="My schedule">
+      <div class="atmo-panel-head">
+        <div class="atmo-panel-titles"><h2>My schedule</h2><p>The day, hour by hour.</p></div>
+        <button class="text-button" type="button" data-common="schedule">Open ${icon('upRight')}</button>
+      </div>
+      ${empty('calendar', 'The day is still open.', 'Nothing is placed on the calendar yet. A schedule gives the day its rhythm — or leave space for what arrives.', `<button class="btn-ghost btn-small" type="button" data-common="plan">${icon('sun')}Plan my day</button>`)}
+    </article>`
+  }
+  const items = rows.map((b) => {
+    const stateName = blockState(state, b, today, now, today)
+    const done = itemDone(state, b, today)
+    const live = stateName === 'active'
+    const label = done ? 'Done' : live ? 'Now' : stateName === 'missed' ? 'Missed' : stateName === 'skipped' ? 'Skipped' : stateName === 'delayed' ? 'Moved' : 'Upcoming'
+    return `<div class="atmo-slot${live ? ' is-active is-now' : ''}${done ? ' is-done' : ''}">
+      <span class="atmo-slot-time">${timeLabel(b.time, true)}<small>${formatDuration(b.duration || 30)}</small></span>
+      <div class="atmo-slot-copy"><strong>${escapeHtml(b.title)}</strong><p>${escapeHtml(b.protected ? 'Protected time' : b.kind === 'routine' ? 'Routine' : b.cat ? (state.categories.find((c) => c.id === b.cat)?.name || 'Scheduled') : 'Scheduled')}${b.priority === 'high' ? ' · High priority' : ''}</p></div>
+      <span class="atmo-slot-state">${label}</span>
+    </div>`
+  }).join('')
+  return `<article class="card atmo-panel atmo-schedule-panel" aria-label="My schedule">
+    <div class="atmo-panel-head">
+      <div class="atmo-panel-titles"><h2>My schedule</h2><p>${upcomingCount} still ahead of you today.</p></div>
+      <button class="text-button" type="button" data-common="schedule">Open ${icon('upRight')}</button>
+    </div>
+    <div class="atmo-schedule">${items}</div>
+    <div class="atmo-panel-foot"><span>${dayBlocks.length} commitment${dayBlocks.length === 1 ? '' : 's'} today</span><button class="text-button" type="button" data-common="calendar">Calendar ${icon('arrow')}</button></div>
+  </article>`
+}
+
+function priorityPanel({ top3, candidates }) {
+  const rows = top3.items.map(({ task }, index) => {
+    const chain = goalChain(state, task)
+    const relation = chain.goal?.title || chain.project?.title
+    return `<div class="atmo-priority${task.done ? ' is-done' : ''}">
+      <span class="atmo-priority-index">0${index + 1}</span>
+      <button class="atmo-priority-check${task.done ? ' is-checked' : ''}" type="button" data-priority-toggle="${escapeHtml(task.id)}" aria-label="${task.done ? 'Reopen' : 'Complete'} ${escapeHtml(task.title)}" aria-pressed="${task.done}">${icon('check')}</button>
+      <div class="atmo-priority-copy">
+        <strong>${escapeHtml(task.title)}</strong>
+        <small>${PRIORITY_LABEL[task.priority] || 'Medium'} priority${relation ? ` · ${escapeHtml(relation)}` : ` · ${formatDuration(task.estimateMinutes)}`}${task.subtasks?.length ? ` · ${taskProgress(task)}% of steps` : ''}</small>
+      </div>
+      <div class="atmo-priority-actions">
+        <button class="icon-btn" type="button" data-priority-up="${escapeHtml(task.id)}" aria-label="Move priority up" ${index === 0 ? 'disabled' : ''}>${icon('down', 'rotate-180')}</button>
+        <button class="icon-btn" type="button" data-priority-down="${escapeHtml(task.id)}" aria-label="Move priority down" ${index >= (state.top3[currentDayKey()]?.length || 0) - 1 ? 'disabled' : ''}>${icon('down')}</button>
+        <button class="icon-btn" type="button" data-priority-edit="${escapeHtml(task.id)}" aria-label="Edit ${escapeHtml(task.title)}">${icon('edit')}</button>
+        <button class="icon-btn" type="button" data-priority-delay="${escapeHtml(task.id)}" aria-label="Reschedule ${escapeHtml(task.title)}">${icon('calendar')}</button>
+      </div>
+    </div>`
+  }).join('')
+  const add = top3.total < 3
+    ? (candidates.length
+      ? `<div class="priority-bottom atmo-priority-bottom"><select class="input-field" data-priority-picker aria-label="Choose a priority">${candidates.map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`).join('')}</select><button class="btn btn-secondary btn-small" type="button" data-priority-add>${icon('plus')}Add</button></div>`
+      : `<button class="atmo-add-priority" type="button" data-common="new-task">${icon('plus')}Add a priority</button>`)
+    : ''
+  return `<article class="card atmo-panel atmo-priorities-panel" aria-label="Priorities">
+    <div class="atmo-panel-head">
+      <div class="atmo-panel-titles"><h2>Priorities</h2><p>The few things that make a difference.</p></div>
+      <span class="chip">${top3.done}/${top3.total || 3}</span>
+    </div>
+    <div class="atmo-priorities">${top3.total ? rows : empty('target', 'Less, but better.', 'Choose up to three missions that would make today feel well spent.')}${add}</div>
+    <div class="atmo-panel-foot"><span>${top3.total ? 'Ordered by choice, not by urgency.' : 'Nothing chosen yet.'}</span><button class="text-button" type="button" data-common="day">My Day ${icon('arrow')}</button></div>
+  </article>`
+}
+
+function commandBlock({ command, factsHtml, active }) {
+  const label = active ? 'In the moment' : command ? 'Your next move' : 'Today’s command'
+  const title = command ? escapeHtml(command.title) : 'Make room for<br>what matters.'
+  const reason = command
+    ? commandReasonText
+    : 'A clear plan starts with one small step. What would make today feel meaningful?'
+  return `<section class="card atmo-command${command ? '' : ' is-clear'}" aria-label="Today’s command">
+    <div class="atmo-command-main">
+      <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span>${label}</p>
+      <h2 class="atmo-command-title">${title}</h2>
+      <p class="atmo-command-reason">${reason}</p>
+      ${command ? `<div class="atmo-facts">${factsHtml}</div>` : ''}
+    </div>
+    <div class="atmo-command-actions">
+      ${command
+        ? `<button class="atmo-action-primary" type="button" data-command-start="${escapeHtml(command.id)}" data-is-task="${!!command.task}">${icon('play')}${state.focus.active ? 'Resume focus' : active ? 'Begin focus' : 'Begin mission'}</button>
+           ${command.task
+            ? `<button class="atmo-action-quiet" type="button" data-command-complete="${escapeHtml(command.id)}">${icon('check')}Complete</button>`
+            : `<button class="atmo-action-quiet" type="button" data-command-block="${escapeHtml(command.id)}">${icon('check')}Complete block</button>`}
+           <button class="atmo-link" type="button" data-command-delay="${escapeHtml(command.id)}">Reschedule ${icon('arrow')}</button>`
+        : `<button class="atmo-action-primary" type="button" data-common="plan">${icon('sun')}Plan my day</button>
+           <button class="atmo-action-quiet" type="button" data-common="new-task">${icon('plus')}Add a mission</button>
+           <button class="atmo-link" type="button" data-common="focus">Enter the Focus Room ${icon('arrow')}</button>`}
+    </div>
+  </section>`
+}
+
+/* ---------------------------------------------------------------- ribbons */
+
+function progressBand({ stats, week, today, focusTarget }) {
+  const pct = stats.tasksPlanned ? Math.round((stats.tasksDone / stats.tasksPlanned) * 100) : 0
+  const activeDays = week.filter((d) => d.hasAnyActivity).length
+  const average = Math.round(week.reduce((sum, d) => sum + (d.hasAnyActivity ? d.score : 0), 0) / 7)
+  const max = Math.max(20, ...week.map((d) => (d.hasAnyActivity ? d.score : 0)))
+  return `<article class="card atmo-panel atmo-progress-panel" aria-label="Daily progress">
+    <div class="atmo-panel-head">
+      <div class="atmo-panel-titles"><h2>Daily progress</h2><p>Small steps, visible over a week.</p></div>
+      <button class="text-button" type="button" data-common="progress">Analytics ${icon('upRight')}</button>
+    </div>
+    <div class="atmo-progress-big">
+      <div><strong>${pct}<small>%</small></strong><p>of today’s missions complete${stats.tasksPlanned ? ` · ${stats.tasksDone} of ${stats.tasksPlanned}` : ''}</p></div>
+      <div class="atmo-progress-delta"><b>${activeDays} / 7</b>active days<br><b>${average}</b>avg. score</div>
+    </div>
+    <div class="atmo-week" role="img" aria-label="Execution score for each of the last seven days">
+      ${week.map((d) => {
+        const value = d.hasAnyActivity ? d.score : 0
+        const height = d.hasAnyActivity ? Math.max(8, Math.round((value / max) * 100)) : 6
+        return `<i class="${d.dateKey === today ? 'is-today' : ''}${d.hasAnyActivity ? '' : ' is-empty'}" style="height:${height}%" title="${d.dateKey}: ${d.hasAnyActivity ? `${value}/100` : 'no activity recorded'}"></i>`
+      }).join('')}
+    </div>
+    <div class="atmo-week-labels">${week.map((d) => `<span class="${d.dateKey === today ? 'is-today' : ''}">${weekdayShort(new Date(`${d.dateKey}T12:00:00`).getDay())}</span>`).join('')}</div>
+    <p class="atmo-priority-note">${stats.focusedMinutes ? `${formatDuration(stats.focusedMinutes)} of focused work today — <span>${Math.min(100, Math.round((stats.focusedMinutes / focusTarget) * 100))}% of your daily intention.</span>` : `No focus sessions logged yet. <span>The room is quiet until you begin.</span>`}</p>
+  </article>`
+}
+
+function actionsPanel() {
+  const actions = [
+    ['new-task', 'plus', 'Add a mission'],
+    ['project', 'projects', 'Create a project'],
+    ['plan', 'sun', 'Open the planner'],
+    ['calendar', 'calendar', 'View the calendar'],
+  ]
+  return `<article class="card atmo-panel atmo-actions-panel" aria-label="Quick actions">
+    <div class="atmo-panel-head"><div class="atmo-panel-titles"><h2>Quick actions</h2><p>The shortest path to the next thing.</p></div></div>
+    <div class="atmo-actions">
+      ${actions.map(([action, symbol, label]) => `<button class="atmo-action" type="button" data-common="${action}">${icon(symbol)}${label}${icon('chevron')}</button>`).join('')}
+      <button class="atmo-action" type="button" data-common="capture">${icon('inbox')}Quick capture${icon('chevron')}</button>
+    </div>
+    <div class="atmo-panel-foot"><span>Every action stays on this device.</span></div>
+  </article>`
+}
+
+function paperRibbon({ alerts, stripRecs, slipping }) {
+  const alertCard = `<article class="card atmo-panel atmo-paper-card" aria-label="Alerts">
+    <div class="atmo-panel-head"><div class="atmo-panel-titles"><h2>${icon('bell')} Alerts</h2><p>${alerts.length} open</p></div></div>
+    ${alerts.length ? `<div class="paper-strip-list">${alerts.slice(0, 2).map((a) => `<button class="paper-strip-row" type="button" data-common="paper"><span class="paper-severity severity-${escapeHtml(a.severity)}">${escapeHtml(a.severity)}</span><span><strong>${escapeHtml(a.title)}</strong><small>${escapeHtml(a.detail)}</small></span></button>`).join('')}</div>` : empty('check', 'Nothing needs attention.', 'Overdue work, close deadlines and conflicts would be flagged here.')}
+  </article>`
+  const recCard = `<article class="card atmo-panel atmo-paper-card" aria-label="PAPER recommendations">
+    <div class="atmo-panel-head"><div class="atmo-panel-titles"><h2>${icon('sparkles')} PAPER recommends</h2><p>Reasoned from your own records.</p></div><button class="text-button" type="button" data-common="paper">Open ${icon('upRight')}</button></div>
+    ${stripRecs.length ? `<div class="paper-strip-list">${stripRecs.slice(0, 2).map((r) => `<button class="paper-strip-row" type="button" data-common="paper"><span class="paper-priority">${escapeHtml(r.priority)}</span><span><strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.nextStep || r.detail)}</small></span></button>`).join('')}</div>` : empty('leaf', 'No changes needed right now.', 'When the workspace needs a decision, PAPER will explain exactly why.')}
+  </article>`
+  const goalCard = `<article class="card atmo-panel atmo-paper-card" aria-label="Goal health">
+    <div class="atmo-panel-head"><div class="atmo-panel-titles"><h2>${icon('target')} Goal health</h2><p>Direction, not decoration.</p></div><button class="text-button" type="button" data-common="goals">Goals ${icon('upRight')}</button></div>
+    ${slipping.length ? `<div class="paper-strip-list">${slipping.slice(0, 3).map((h) => `<button class="paper-strip-row" type="button" data-common="goals"><span class="paper-severity">${escapeHtml(h.status.replace('_', ' '))}</span><span><strong>${escapeHtml((state.goals.find((g) => g.id === h.goalId) || {}).title || '')}</strong><small>${Math.round(h.progressPct)}% · ${h.openMissions} open mission${h.openMissions === 1 ? '' : 's'}</small></span></button>`).join('')}</div>` : empty('target', 'Your goals are in good shape.', 'Goals that stall, slip or lose their next step will be named here.')}
+  </article>`
+  return `<div class="atmo-paper">${alertCard}${recCard}${goalCard}</div>`
+}
+
+function weekChartCard() {
+  return `<article class="card atmo-panel atmo-chart" aria-label="Weekly execution score">
+    <div class="atmo-panel-head">
+      <div class="atmo-panel-titles"><h2>Your week, in perspective</h2><p>Execution score · the last seven days.</p></div>
+      <div class="chart-legend"><span><i></i>Score</span></div>
+      <button class="text-button" type="button" data-common="progress" aria-label="Open analytics">${icon('upRight')}</button>
+    </div>
+    <div class="chart-wrap"><canvas id="overviewWeekChart" role="img" aria-label="Daily execution scores for the last seven days"></canvas></div>
+  </article>`
+}
+
+/* the recovery assistant keeps its explicit, non-punitive contract */
 function recoveryRow(task, todayKey) {
   return `<div class="recovery-row">
     <div class="recovery-row-main">
@@ -80,18 +336,13 @@ function recoveryRow(task, todayKey) {
   </div>`
 }
 
-/**
- * Recovery is an assistant, not an alarm. The summary always states the count
- * and the "no catch-up required" promise; the detail view is opt-in and every
- * action is explicit — nothing is completed, moved or abandoned for the user.
- */
 function recoveryCard(overdue, todayKey) {
   const rank = (t) => PRIORITY_RANK[t.priority] ?? 1
   const shown = [...overdue]
     .sort((a, b) => (rank(a) - rank(b)) || String(a.date || '').localeCompare(String(b.date || '')))
     .slice(0, 5)
   const open = recoveryOpen
-  return `<section class="recovery-card" data-recovery aria-label="Mission recovery">
+  return `<section class="recovery-card atmo-recovery" data-recovery aria-label="Mission recovery">
     <div class="recovery-main">
       <span class="recovery-icon" aria-hidden="true">${icon('recover')}</span>
       <div class="recovery-copy">
@@ -112,85 +363,101 @@ function recoveryCard(overdue, todayKey) {
   </section>`
 }
 
+/* --------------------------------------------------------------- renderer */
+
+let commandReasonText = ''
+
 export function renderDashboard() {
   const section = document.getElementById('view-dashboard')
   if (!section) return
-  const today = currentDayKey(), now = new Date(), stats = todayStats(now)
-  const blocks = scheduleFor(state,today)
-  const nowMinutes = now.getHours()*60+now.getMinutes()
-  const active = blocks.find((b) => blockState(state,b,today,now,today) === 'active')
-  const next = blocks.find((b) => minutesOfDay(b.time) > nowMinutes && !itemDone(state,b,today))
+  const today = currentDayKey()
+  const now = new Date()
+  const stats = todayStats(now)
+  const blocks = scheduleFor(state, today)
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const active = blocks.find((b) => blockState(state, b, today, now, today) === 'active')
+  const next = blocks.find((b) => minutesOfDay(b.time) > nowMinutes && !itemDone(state, b, today))
   const openTasks = state.tasks.filter((t) => t.date === today && !t.done && t.status !== 'cancelled' && !t.inbox)
   const top3Ids = state.top3[today] || []
   const priority = openTasks.find((t) => top3Ids.includes(t.id)) || openTasks[0]
-  let current = null, source = null
+  let current = null
+  let source = null
   if (active) { current = active; source = 'active' }
-  else if (priority?.time) { current = blocks.find((b)=>b.taskId===priority.id) || null; source = top3Ids.includes(priority.id) ? 'top3' : 'priority' }
+  else if (priority?.time) { current = blocks.find((b) => b.taskId === priority.id) || null; source = top3Ids.includes(priority.id) ? 'top3' : 'priority' }
   else if (next) { current = next; source = 'next' }
   else if (priority) { current = priority; source = top3Ids.includes(priority.id) ? 'top3' : 'task' }
-  const linkedTask = current?.taskId ? state.tasks.find((t)=>t.id===current.taskId) : current && !current.time && current.estimateMinutes ? current : null
-  const command = current ? { title: linkedTask?.title || current.title, id: linkedTask?.id || current.taskId || current.id, blockId: current.taskId ? `task:${current.taskId}` : current.id, task: !!linkedTask, time: current.time, duration: current.duration || current.estimateMinutes, cat: current.cat, priority: current.priority, goalId: current.goalId || linkedTask?.goalId, projectId: current.projectId || linkedTask?.projectId, source } : null
-  const linkedGoal = command?.goalId ? state.goals.find((g)=>g.id===command.goalId) : null
-  const linkedProject = command?.projectId ? state.projects.find((p)=>p.id===command.projectId) : null
+  const linkedTask = current?.taskId ? state.tasks.find((t) => t.id === current.taskId) : current && !current.time && current.estimateMinutes ? current : null
+  const command = current ? {
+    title: linkedTask?.title || current.title,
+    id: linkedTask?.id || current.taskId || current.id,
+    blockId: current.taskId ? `task:${current.taskId}` : current.id,
+    task: !!linkedTask,
+    time: current.time,
+    duration: current.duration || current.estimateMinutes,
+    cat: current.cat,
+    priority: current.priority,
+    goalId: current.goalId || linkedTask?.goalId,
+    projectId: current.projectId || linkedTask?.projectId,
+    source,
+  } : null
+  const linkedGoal = command?.goalId ? state.goals.find((g) => g.id === command.goalId) : null
+  const linkedProject = command?.projectId ? state.projects.find((p) => p.id === command.projectId) : null
   const relation = linkedGoal?.title || linkedProject?.title || null
+  commandReasonText = command ? escapeHtml(commandReason(source, relation)) : ''
   const facts = command ? commandFacts(command, active, nowMinutes) : []
-  const factsHtml = facts.map((f)=>`<div class="command-fact${f.tone ? ` priority-${f.tone}` : ''}"><span class="command-fact-label">${f.label}</span><strong class="command-fact-value">${f.tone ? '<span class="priority-dot" aria-hidden="true"></span>' : ''}${escapeHtml(f.value)}</strong></div>`).join('')
-  const top3 = top3Stats(state,today)
-  const overdue = overdueTasks(state,today)
-  // the detail view is a convenience, not a remembered preference — once every
-  // mission is resolved the card disappears and the next one starts closed.
+  const factsHtml = facts.map((f) => `<div class="atmo-fact${f.tone ? ` priority-${f.tone}` : ''}"><span class="atmo-fact-label">${f.label}</span><strong class="atmo-fact-value">${f.tone ? '<span class="priority-dot" aria-hidden="true"></span>' : ''}${escapeHtml(f.value)}</strong></div>`).join('')
+  const top3 = top3Stats(state, today)
+  const candidates = top3Candidates(state, today).filter((t) => !top3.items.some((x) => x.task.id === t.id))
+  const overdue = overdueTasks(state, today)
   if (!overdue.length) recoveryOpen = false
-  const upcoming = blocks.filter((b) => b.id !== command?.blockId && !itemDone(state,b,today) && minutesOfDay(b.time)+(b.duration||30) > nowMinutes).slice(0,4)
-  const week = Array.from({length:7},(_,i) => statsFor(addDays(today,i-6),{now}))
+  const week = Array.from({ length: 7 }, (_, i) => statsFor(addDays(today, i - 6), { now }))
   const focusTarget = state.settings.focus.targetMinutes || 180
-  const hasData = stats.hasAnyActivity
-  const candidates = top3Candidates(state,today).filter((t) => !top3.items.some((x) => x.task.id === t.id))
-  const adherence = stats.blocksElapsed ? Math.round(stats.adherence*100) : null
+  const adherence = stats.blocksElapsed ? Math.round(stats.adherence * 100) : null
+  const salute = salutationOf(state)
+  const intention = intentionFor(state, today)
   const paperCtx = buildWorkspaceContext(state, { now })
   const alerts = generateAlerts(state, paperCtx)
   const stripRecs = generateRecommendations(state, paperCtx)
   const slipping = goalHealthAll(state, paperCtx).filter((h) => h.status !== 'on_track' && h.status !== 'complete')
-  const salute = salutationOf(state)
-  const intention = intentionFor(state, today)
-  const briefingDate = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
-  const scoreTitle = scoreCopy(stats, hasData)[0]
-  const scoreBody = scoreCopy(stats, hasData)[1]
-  const commandLabel = active ? 'IN THE MOMENT' : command ? 'YOUR NEXT MOVE' : 'TODAY’S COMMAND'
-  const commandTitle = command ? escapeHtml(command.title) : 'Make room for<br>what matters.'
-  const commandReasonText = command ? escapeHtml(commandReason(source, relation)) : 'A clear plan starts with one small step. What would make today feel meaningful?'
+
   section.innerHTML = `
-    <div class="overview-greeting"><div class="greeting-copy"><p class="eyebrow"><span class="eyebrow-tick" aria-hidden="true"></span>Command briefing</p><h1 id="overview-greeting">${escapeHtml(greetingLine(state, now))}</h1><p class="greeting-lead">${command ? `At your command, ${escapeHtml(salute)}. One clear move is waiting below.` : `At your command, ${escapeHtml(salute)}. Let’s give the day a shape.`}</p><div class="intention-commit"><p class="intention-label">${icon('flag')}Today’s intention</p><button class="greeting-intention ${intention ? 'is-set' : 'is-empty'}" data-common="briefing" aria-label="${intention ? `Today’s intention: ${escapeHtml(intention)}. Open the briefing to edit` : 'Set today’s intention'}">${icon(intention ? 'check' : 'flag')}<span>${intention ? escapeHtml(intention) : 'Set today’s intention'}</span>${icon('chevron')}</button></div></div><div class="date-block"><p class="date-day"><span class="date-full">${briefingDate}</span><span class="date-short">${now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span></p><p class="date-clock" id="overview-clock"></p><div class="day-progress" id="day-progress"><i id="day-progress-fill"></i></div><button class="btn btn-secondary btn-small greeting-brief" data-common="briefing">${icon('bell')}Full briefing</button></div></div>
+    ${heroBlock({ now, stats, command, salute, intention, openTasks })}
     ${overdue.length ? recoveryCard(overdue, today) : ''}
-    <div class="overview-top">
-      <article class="card command-card"><div class="orbital-art" aria-hidden="true"><span></span><span></span><span></span><span></span></div><div class="command-head"><p class="eyebrow"><span class="status-dot"></span>${commandLabel}</p>
-      <h2>${commandTitle}</h2>
-      <p class="command-reason">${commandReasonText}</p></div>
-      ${command ? `<div class="command-facts">${factsHtml}</div>` : ''}
-      <div class="command-actions">${command ? `<button class="btn-primary" data-command-start="${escapeHtml(command.id)}" data-is-task="${!!command.task}">${icon('play')}${state.focus.active ? 'Resume focus' : active ? 'Start focus' : 'Begin mission'}</button>${command.task ? `<button class="btn-ghost" data-command-complete="${escapeHtml(command.id)}">${icon('check')}Complete</button><button class="text-button" data-command-delay="${escapeHtml(command.id)}">Reschedule ${icon('arrow')}</button>` : `<button class="btn-ghost" data-command-block="${escapeHtml(command.id)}">${icon('check')}Complete block</button>`}` : `<button class="btn-primary" data-common="plan">${icon('sun')}Plan my day</button><button class="btn-ghost" data-common="new-task">${icon('plus')}Add a mission</button>`}</div></article>
-      <article class="card score-card"><div class="card-header"><h3>Daily execution score</h3><button class="text-button" data-score-info aria-label="How your score is calculated">${icon('info')}</button></div><div class="score-main">${ring(stats.score,'of 100',!hasData)}<div class="score-copy"><strong>${scoreTitle}</strong><p>${scoreBody}</p></div></div><div class="score-components">${scorePart('Missions',stats.tasksPlanned ? stats.tasksDone/stats.tasksPlanned : null,`${stats.tasksDone}/${stats.tasksPlanned}`)}${scorePart('Priorities',top3.total ? top3.done/top3.total : null,`${top3.done}/${top3.total}`)}${scorePart('Focus',stats.focusedMinutes/focusTarget,`${stats.focusedMinutes}m`)}${scorePart('Adherence',adherence == null ? null : adherence/100,adherence == null ? '—' : `${adherence}%`)}</div><p class="score-footnote">${icon('shield')}Honest numbers. Never a judgment.</p></article>
+    ${commandBlock({ command, factsHtml, active })}
+    <div class="atmo-body">
+      <div class="atmo-column">
+        ${todayPanel({ stats, top3, adherence, focusTarget, consistentDays: week.filter((d) => d.hasAnyActivity).length })}
+        ${progressBand({ stats, week, today, focusTarget })}
+      </div>
+      <div class="atmo-column">
+        ${schedulePanel({ blocks, now, today, nowMinutes })}
+        ${weekChartCard()}
+      </div>
+      <div class="atmo-column">
+        ${priorityPanel({ top3, candidates })}
+        ${actionsPanel()}
+      </div>
     </div>
-    <div class="overview-middle"><article class="card priority-card"><div class="card-header"><div><h3>Today’s priorities <span class="count-badge">${top3.total}/3</span></h3><p class="meta" style="margin-top:5px">The few things that make a difference.</p></div><button class="text-button" data-common="day">My Day ${icon('upRight')}</button></div>
-      ${top3.total ? top3.items.map(({task},i) => priorityRow(task,i)).join('') : empty('target','Less, but better.','Choose up to three missions that define a good day.',`<button class="text-button" data-common="new-task">${icon('plus')}Add your first priority</button>`)}
-      ${top3.total < 3 ? `<div class="priority-bottom">${candidates.length ? `<select class="input-field" data-priority-picker aria-label="Choose a priority">${candidates.map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`).join('')}</select><button class="btn btn-secondary" data-priority-add>${icon('plus')}Add priority</button>` : `<button class="text-button" data-common="new-task">${icon('plus')}Add a priority</button>`}</div>` : ''}
-    </article><article class="card up-next-card"><div class="card-header"><h3>Coming up</h3><button class="text-button" data-common="schedule" aria-label="Open schedule">${icon('upRight')}</button></div>${upcoming.length ? `<div class="timeline-mini">${upcoming.map((b) => `<div class="timeline-mini-row ${blockState(state,b,today,now,today)==='active'?'is-active':''}"><span class="timeline-mini-time">${timeLabel(b.time)}</span><span class="timeline-mini-dot"></span><div class="timeline-mini-info"><strong>${escapeHtml(b.title)}</strong><p>${formatDuration(b.duration)}${b.protected?' · Protected':''}</p>${b.priority === 'high' ? '<span class="chip chip-accent">High priority</span>' : ''}</div></div>`).join('')}</div>` : empty('calendar','Room to breathe.','No upcoming commitments. Make space for focused work or a well-earned break.',`<button class="text-button" data-common="plan">Plan your afternoon ${icon('arrow')}</button>`)}</article></div>
-    <div class="metric-strip">${metric('missions','Missions completed',`${stats.tasksDone}<small>/${stats.tasksPlanned}</small>`,`${openTasks.length} remaining today`)}${metric('focus','Focused time',durationHtml(stats.focusedMinutes),`${Math.min(100,Math.round(stats.focusedMinutes/focusTarget*100))}% of your daily intention`)}${metric('calendar','Schedule adherence',adherence == null ? '—' : `${adherence}<small>%</small>`,`${stats.blocksDone} of ${stats.blocksElapsed} elapsed blocks`)}${metric('routines','Consistency',`${week.filter((d) => d.hasAnyActivity).length}<small> / 7 days</small>`,'Showing up counts. Keep going.')}</div>
-    <div class="paper-strip"><article class="card paper-strip-card"><div class="card-header"><h3>${icon('bell')}Alerts</h3><span class="meta">${alerts.length} open</span></div>${alerts.length ? `<div class="paper-strip-list">${alerts.slice(0,2).map((a) => `<button class="paper-strip-row" data-common="paper"><span class="paper-severity severity-${escapeHtml(a.severity)}">${escapeHtml(a.severity)}</span><span><strong>${escapeHtml(a.title)}</strong><small>${escapeHtml(a.detail)}</small></span></button>`).join('')}</div>` : empty('check','Nothing needs attention.','Overdue work, close deadlines and conflicts would be flagged here.')}</article><article class="card paper-strip-card paper-strip-recs"><div class="card-header"><h3>${icon('sparkles')}PAPER recommends</h3><button class="text-button" data-common="paper">Open PAPER ${icon('upRight')}</button></div>${stripRecs.length ? `<div class="paper-strip-list">${stripRecs.slice(0,2).map((r) => `<button class="paper-strip-row" data-common="paper"><span class="paper-priority">${escapeHtml(r.priority)}</span><span><strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.nextStep || r.detail)}</small></span></button>`).join('')}</div>` : empty('leaf','No changes needed right now.','When the workspace needs a decision, PAPER will explain exactly why.')}</article><article class="card paper-strip-card"><div class="card-header"><h3>${icon('target')}Goal health</h3><button class="text-button" data-common="goals">Goals ${icon('upRight')}</button></div>${slipping.length ? `<div class="paper-strip-list">${slipping.slice(0,3).map((h) => `<button class="paper-strip-row" data-common="goals"><span class="paper-severity">${escapeHtml(h.status.replace('_',' '))}</span><span><strong>${escapeHtml((state.goals.find((g) => g.id === h.goalId) || {}).title || '')}</strong><small>${Math.round(h.progressPct)}% · ${h.openMissions} open mission${h.openMissions === 1 ? '' : 's'}</small></span></button>`).join('')}</div>` : empty('target','Your goals are in good shape.','Goals that stall, slip or lose their next step will be named here.')}</article></div>
-    <div class="overview-bottom"><article class="card week-chart-card"><div class="card-header"><div><h3>Your week, in perspective</h3><p class="meta" style="margin-top:5px">Small steps. Visible progress.</p></div><div class="chart-legend"><span><i></i>Execution score</span></div><button class="text-button" data-common="progress" aria-label="Open analytics">${icon('upRight')}</button></div><div class="chart-wrap"><canvas id="overviewWeekChart" role="img" aria-label="Daily execution scores for the last seven days"></canvas></div>${!week.some((d)=>d.hasAnyActivity)?'<p class="meta" style="text-align:center;margin-top:8px">Your first session is the beginning of this story.</p>':''}</article><article class="card quick-actions-card"><div class="card-header"><h3>A little momentum</h3>${icon('bolt')}</div>${[['briefing','bell','Open today’s briefing'],['new-task','plus','Add a mission'],['focus','focus','Start a focus session'],['plan','sun','Plan my day'],['goal','target','Set a meaningful goal'],['capture','inbox','Quick capture']].map(([a,i,l])=>`<button class="quick-action" data-common="${a}">${icon(i)}${l}${icon('chevron')}</button>`).join('')}</article></div>
-    <div class="overview-goal-banner">${icon('target')}<span>${state.goals.length ? `${state.goals.length} meaningful goal${state.goals.length===1?'':'s'}. Every mission is a step toward something bigger.` : 'Connect what you do today to who you want to become.'}</span><button class="text-button" data-common="goals">${state.goals.length?'Explore your goals':'Create your first goal'} ${icon('arrow')}</button></div>`
+    ${paperRibbon({ alerts, stripRecs, slipping })}
+    <div class="atmo-goal-banner">${icon('target')}<span>${state.goals.length ? `${state.goals.length} meaningful goal${state.goals.length === 1 ? '' : 's'}. Every mission is a step toward something bigger.` : 'Connect what you do today to who you want to become.'}</span><button class="text-button" type="button" data-common="goals">${state.goals.length ? 'Explore your goals' : 'Create your first goal'} ${icon('arrow')}</button></div>`
+
   bindCommon(section)
-  qsa(section, '[data-priority-toggle]').forEach((b)=>b.addEventListener('click',()=>window.CC.toggleMission(b.dataset.priorityToggle)))
-  qsa(section, '[data-priority-edit]').forEach((b)=>b.addEventListener('click',()=>window.CC.openTaskModal(b.dataset.priorityEdit)))
-  qsa(section, '[data-priority-up]').forEach((b)=>b.addEventListener('click',()=>window.CC.movePriority(b.dataset.priorityUp,-1)))
-  qsa(section, '[data-priority-down]').forEach((b)=>b.addEventListener('click',()=>window.CC.movePriority(b.dataset.priorityDown,1)))
-  qsa(section, '[data-priority-delay]').forEach((b)=>b.addEventListener('click',()=>window.CC.openRescheduleModal(b.dataset.priorityDelay)))
-  qs(section, '[data-priority-add]')?.addEventListener('click',()=>window.CC.addTaskToTop3(qs(section, '[data-priority-picker]').value))
-  qs(section, '[data-command-start]')?.addEventListener('click',(e)=>{const b=e.currentTarget; b.dataset.isTask==='true'?window.CC.openFocusMode(b.dataset.commandStart):window.CC.openFocusRoom()})
-  qs(section, '[data-command-complete]')?.addEventListener('click',(e)=>window.CC.toggleMission(e.currentTarget.dataset.commandComplete))
-  qs(section, '[data-command-delay]')?.addEventListener('click',(e)=>window.CC.openRescheduleModal(e.currentTarget.dataset.commandDelay))
-  qs(section, '[data-command-block]')?.addEventListener('click',(e)=>window.CC.toggleScheduleItem(e.currentTarget.dataset.commandBlock,today))
-  qs(section, '[data-score-info]')?.addEventListener('click',()=>window.CC.openScoreInfo())
+  qsa(section, '[data-priority-toggle]').forEach((b) => b.addEventListener('click', () => window.CC.toggleMission(b.dataset.priorityToggle)))
+  qsa(section, '[data-priority-edit]').forEach((b) => b.addEventListener('click', () => window.CC.openTaskModal(b.dataset.priorityEdit)))
+  qsa(section, '[data-priority-up]').forEach((b) => b.addEventListener('click', () => window.CC.movePriority(b.dataset.priorityUp, -1)))
+  qsa(section, '[data-priority-down]').forEach((b) => b.addEventListener('click', () => window.CC.movePriority(b.dataset.priorityDown, 1)))
+  qsa(section, '[data-priority-delay]').forEach((b) => b.addEventListener('click', () => window.CC.openRescheduleModal(b.dataset.priorityDelay)))
+  qs(section, '[data-priority-add]')?.addEventListener('click', () => window.CC.addTaskToTop3(qs(section, '[data-priority-picker]').value))
+  qs(section, '[data-command-start]')?.addEventListener('click', (e) => {
+    const b = e.currentTarget
+    b.dataset.isTask === 'true' ? window.CC.openFocusMode(b.dataset.commandStart) : window.CC.openFocusRoom()
+  })
+  qs(section, '[data-command-complete]')?.addEventListener('click', (e) => window.CC.toggleMission(e.currentTarget.dataset.commandComplete))
+  qs(section, '[data-command-delay]')?.addEventListener('click', (e) => window.CC.openRescheduleModal(e.currentTarget.dataset.commandDelay))
+  qs(section, '[data-command-block]')?.addEventListener('click', (e) => window.CC.toggleScheduleItem(e.currentTarget.dataset.commandBlock, today))
+  qs(section, '[data-score-info]')?.addEventListener('click', () => window.CC.openScoreInfo())
   const recoveryToggle = qs(section, '[data-recovery-toggle]')
-  recoveryToggle?.addEventListener('click',()=>{
+  recoveryToggle?.addEventListener('click', () => {
     recoveryOpen = !recoveryOpen
     const detail = qs(section, '[data-recovery-detail]')
     if (!detail) return
@@ -202,12 +469,12 @@ export function renderDashboard() {
     const chevron = qs(recoveryToggle, '.icon')
     chevron?.classList.toggle('flip-up', recoveryOpen)
   })
-  qsa(section, '[data-recovery-resume]').forEach((b)=>b.addEventListener('click',()=>window.CC.openFocusMode(b.dataset.recoveryResume)))
-  qsa(section, '[data-recovery-reschedule]').forEach((b)=>b.addEventListener('click',()=>window.CC.openRescheduleModal(b.dataset.recoveryReschedule)))
-  qsa(section, '[data-recovery-postpone]').forEach((b)=>b.addEventListener('click',()=>window.CC.postponeMission(b.dataset.recoveryPostpone)))
-  qsa(section, '[data-recovery-abandon]').forEach((b)=>b.addEventListener('click',async()=>{
+  qsa(section, '[data-recovery-resume]').forEach((b) => b.addEventListener('click', () => window.CC.openFocusMode(b.dataset.recoveryResume)))
+  qsa(section, '[data-recovery-reschedule]').forEach((b) => b.addEventListener('click', () => window.CC.openRescheduleModal(b.dataset.recoveryReschedule)))
+  qsa(section, '[data-recovery-postpone]').forEach((b) => b.addEventListener('click', () => window.CC.postponeMission(b.dataset.recoveryPostpone)))
+  qsa(section, '[data-recovery-abandon]').forEach((b) => b.addEventListener('click', async () => {
     const id = b.dataset.recoveryAbandon
-    const task = state.tasks.find((t)=>t.id===id)
+    const task = state.tasks.find((t) => t.id === id)
     if (!task) return
     const ok = await confirmDialog({
       title: 'Abandon this mission?',
@@ -218,11 +485,51 @@ export function renderDashboard() {
     })
     if (ok) window.CC.abandonMission(id)
   }))
+
+  // the transparent weekly chart, drawn only when a canvas can take it
   const colors = chartColors()
-  drawChart('overviewWeekChart',{type:'bar',data:{labels:week.map((d)=>weekdayShort(new Date(d.dateKey+'T12:00:00').getDay())),datasets:[{label:'Execution score',data:week.map((d)=>d.hasAnyActivity?d.score:0),backgroundColor:(ctx)=>{const hot=week[ctx.dataIndex]?.dateKey===today;return vGrad(ctx.chart,hot?colors.accent:colors.seriesHover,hot?alpha(colors.accent,.42):colors.series)},hoverBackgroundColor:(ctx)=>week[ctx.dataIndex]?.dateKey===today?colors.accent:colors.seriesHover,borderRadius:5,maxBarThickness:27}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:colors.tooltipBg,titleColor:colors.text,bodyColor:colors.muted,borderColor:colors.tooltipBorder,borderWidth:1,padding:12,cornerRadius:10,callbacks:{label:(c)=>week[c.dataIndex].hasAnyActivity?`Score: ${c.raw}/100`:'No activity recorded'}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:colors.muted,font:{size:10}}},y:{min:0,max:100,border:{display:false},grid:{color:colors.border},ticks:{stepSize:50,color:colors.muted,font:{size:9}}}}}})
+  drawChart('overviewWeekChart', {
+    type: 'bar',
+    data: {
+      labels: week.map((d) => weekdayShort(new Date(`${d.dateKey}T12:00:00`).getDay())),
+      datasets: [{
+        label: 'Execution score',
+        data: week.map((d) => (d.hasAnyActivity ? d.score : 0)),
+        backgroundColor: (ctx) => {
+          const hot = week[ctx.dataIndex]?.dateKey === today
+          return vGrad(ctx.chart, hot ? colors.accent : colors.seriesHover, hot ? alpha(colors.accent, 0.32) : colors.series)
+        },
+        hoverBackgroundColor: (ctx) => (week[ctx.dataIndex]?.dateKey === today ? colors.accent : colors.seriesHover),
+        borderRadius: 4,
+        maxBarThickness: 26,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: colors.tooltipBg,
+          titleColor: colors.text,
+          bodyColor: colors.muted,
+          borderColor: colors.tooltipBorder,
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 10,
+          callbacks: { label: (c) => (week[c.dataIndex].hasAnyActivity ? `Score: ${c.raw}/100` : 'No activity recorded') },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: colors.muted, font: { size: 10 } } },
+        y: { min: 0, max: 100, border: { display: false }, grid: { color: colors.border }, ticks: { stepSize: 50, color: colors.muted, font: { size: 9 } } },
+      },
+    },
+  })
+  syncSwitchState()
   updateClockAndGreeting()
 }
-function scorePart(label,ratio,detail) { return `<div class="score-component${ratio==null?' is-empty':''}"><label>${label}<span>${detail}</span></label><div class="progress-track"><div class="progress-fill" style="width:${ratio==null?0:Math.min(100,Math.round(ratio*100))}%"></div></div></div>` }
+
 export function priorityRow(task,index,{reorder=true}={}) { const chain=goalChain(state,task); return `<div class="priority-row ${task.done?'is-done':''}"><span class="priority-index">0${index+1}</span><button class="task-check ${task.done?'checked':''}" data-priority-toggle="${escapeHtml(task.id)}" aria-label="${task.done?'Reopen':'Complete'} ${escapeHtml(task.title)}" aria-pressed="${task.done}">${icon('check')}</button><div class="priority-info"><strong>${escapeHtml(task.title)}</strong><p>${task.priority==='high'?'<span class="accent">High priority</span>':'Medium priority'}<span>·</span>${escapeHtml(chain.goal?.title || chain.project?.title || formatDuration(task.estimateMinutes))}</p>${task.subtasks?.length?`<div class="subtask-progress"><div class="progress-track"><div class="progress-fill" style="width:${taskProgress(task)}%"></div></div>${taskProgress(task)}%</div>`:''}</div><div class="row-actions">${reorder?`<button class="icon-btn optional-action" data-priority-up="${escapeHtml(task.id)}" aria-label="Move priority up" ${index===0?'disabled':''}>${icon('down','rotate-180')}</button><button class="icon-btn optional-action" data-priority-down="${escapeHtml(task.id)}" aria-label="Move priority down" ${index>=(state.top3[currentDayKey()]?.length||0)-1?'disabled':''}>${icon('down')}</button>`:''}<button class="icon-btn" data-priority-edit="${escapeHtml(task.id)}" aria-label="Edit ${escapeHtml(task.title)}">${icon('edit')}</button><button class="icon-btn" data-priority-delay="${escapeHtml(task.id)}" aria-label="Reschedule ${escapeHtml(task.title)}">${icon('calendar')}</button></div></div>` }
 
 /**

@@ -28,6 +28,7 @@ import { closeHybDeck, initHyb, isHybDeckOpen, openHybDeck, openHybPlanModal, re
 import { hybSummary } from './core/hyb.js'
 import { setCalendarDate } from './views/calendar.js'
 import { closeOnboarding, isOnboardingOpen, needsOnboarding, openOnboarding } from './ui/onboarding.js'
+import { initAtmosphere, chooseAtmosphere, currentAtmosphere } from './ui/atmosphere.js'
 
 const APP_VERSION='5.0'
 
@@ -115,11 +116,13 @@ window.CC = {
   closeMobileNav:()=>setMobileNav(false),
   checkReminders:()=>checkReminders(),
   refreshQuoteInline:renderQuoteInline,
+  setAtmosphere:(mode)=>chooseAtmosphere(mode),
+  currentAtmosphere:()=>currentAtmosphere(),
 }
 function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isOnboardingOpen()){closeOnboarding();return}if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isHybDeckOpen()){closeHybDeck();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||isHybDeckOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='h'){event.preventDefault();toggleHybDeck()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='c'){event.preventDefault();openCalendar()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='p'){event.preventDefault();switchView('paper')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','tasks','goals','projects','calendar','focus','journal','progress'];switchView(views[Number(event.key)-1])}})}
 let lastDay=currentDayKey(),reminderInterval=null,minuteInterval=null,recurrenceInterval=null
 function boot(){
-  initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();startChromeTimers();bindChrome();initRouter();initFocus();initHyb();initPwa();bindKeyboard()
+  initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();initAtmosphere();startChromeTimers();bindChrome();initRouter();initFocus();initHyb();initPwa();bindKeyboard()
   document.getElementById('quick-add-btn')?.addEventListener('click',()=>openTaskModal())
   document.getElementById('focus-mini-start')?.addEventListener('click',()=>openFocusRoom())
   document.getElementById('active-timer-chip')?.addEventListener('click',()=>openFocusMode())

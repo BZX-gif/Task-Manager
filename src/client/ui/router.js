@@ -17,6 +17,7 @@ import { renderJournal } from '../views/journal.js'
 import { renderCalendar } from '../views/calendar.js'
 import { renderHyb } from '../views/hyb.js'
 import { setMobileNav, updateBreadcrumb } from './chrome.js'
+import { setAtmosphereScope } from './atmosphere.js'
 import { icon } from './icons.js'
 
 export const VIEWS = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','paper','settings']
@@ -33,7 +34,7 @@ export function switchView(view){
   for(const name of VIEWS)el(`view-${name}`)?.classList.toggle('hidden',name!==view)
   qsa(document,'.nav-item').forEach((button)=>{const active=button.dataset.view===view;button.classList.toggle('active-nav',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
   qsa(document,'.dock-item[data-view]').forEach((button)=>{const active=button.dataset.view===view;button.classList.toggle('is-active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
-  setMobileNav(false);updateBreadcrumb(view);renderCurrentView()
+  setMobileNav(false);updateBreadcrumb(view);setAtmosphereScope(view);renderCurrentView()
   const section=el(`view-${view}`);if(section&&booted){section.style.animation='none';void section.offsetWidth;section.style.animation='';section.classList.add('view-enter');if(enterTimers[section.id])clearTimeout(enterTimers[section.id]);enterTimers[section.id]=setTimeout(()=>section.classList.remove('view-enter'),1200)}booted=true
   try{window.scrollTo({top:0,behavior:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})}catch{/* jsdom */}
   emit('view:changed',{view})
