@@ -881,6 +881,12 @@ body{font-size:var(--t-body);line-height:1.6}
   .atmo-switch button.is-active .atmo-name{display:inline}
   .workspace-footer{padding:16px 18px 100px}
 }
+/* Small screens pay for blur with battery and frame-time on mid-range phones.
+   A thinner blur keeps the glass reading as glass without the sustained cost. */
+@media (max-width:767px){
+  :root{--glass-blur:14px}
+}
+
 @media (max-width:420px){
   .atmo-command-actions{flex-direction:column}
   .atmo-command-actions .atmo-action-quiet{width:100%}

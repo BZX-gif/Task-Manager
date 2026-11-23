@@ -166,3 +166,55 @@ test('leaving the dashboard keeps the atmosphere out of the workspace views', as
 test('no console errors across the whole tour', () => {
   assert.deepEqual(errors, [], `expected a silent console, saw: ${errors.slice(0, 3).join(' | ')}`)
 })
+
+test('the room changes itself when the clock crosses a boundary', async () => {
+  // The engine's arithmetic is unit-tested; this proves the *live* path — the
+  // minute tick repaints the document attribute and the photograph layer, with
+  // no reload. It also proves a pinned environment outranks the clock.
+  //
+  // It must drive CC.tickAtmosphere (the app's own module instance): importing
+  // the module here would create a second store, so the DOM would repaint from
+  // one copy while the precedence check read the other.
+  const doc = window.document
+  const activeLayer = () => [...doc.querySelectorAll('#atmosphere .atmo-layer')].filter((l) => l.classList.contains('is-active')).map((l) => l.dataset.layer).join(',')
+  const at = (h, m = 0) => { const d = new Date(); d.setHours(h, m, 0, 0); return d }
+
+  window.CC.setAtmosphere('auto')
+  await settle(150)
+
+  const crossings = [
+    [at(4, 59), 'evening'],
+    [at(5, 0), 'morning'],
+    [at(11, 59), 'morning'],
+    [at(12, 0), 'afternoon'],
+    [at(16, 59), 'afternoon'],
+    [at(17, 0), 'evening'],
+    [at(23, 59), 'evening'],
+  ]
+  for (const [when, expected] of crossings) {
+    window.CC.tickAtmosphere(when)
+    await settle(90)
+    const label = `${when.getHours()}:${String(when.getMinutes()).padStart(2, '0')}`
+    assert.equal(doc.documentElement.dataset.atmosphere, expected, `${label} should read ${expected}`)
+    assert.equal(activeLayer(), expected, `and the ${expected} photograph should be the visible one`)
+  }
+
+  // a pinned environment survives the clock moving underneath it
+  window.CC.setAtmosphere('morning')
+  await settle(150)
+  assert.equal(doc.documentElement.dataset.atmosphereMode, 'morning', 'the pin is recorded')
+  for (const hour of [0, 13, 17, 21]) {
+    window.CC.tickAtmosphere(at(hour))
+    await settle(80)
+    assert.equal(doc.documentElement.dataset.atmosphere, 'morning', `a pinned room must not drift at ${hour}:00`)
+    assert.equal(activeLayer(), 'morning', `and the morning photograph stays on screen at ${hour}:00`)
+  }
+
+  window.CC.setAtmosphere('auto')
+  await settle(150)
+  assert.equal(doc.documentElement.dataset.atmosphereMode, 'auto')
+  const hour = new Date().getHours()
+  const nowExpected = hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 17 ? 'afternoon' : 'evening'
+  assert.equal(doc.documentElement.dataset.atmosphere, nowExpected, 'and auto resumes following the real clock')
+})
+

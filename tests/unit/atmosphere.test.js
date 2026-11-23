@@ -154,6 +154,12 @@ test('the crossfade only animates opacity and honours reduced motion', () => {
   assert.match(css, /--glass-blur:26px/, 'blur sits inside the 20–30px brief')
 })
 
+test('the blur budget is lowered on phones instead of paid at full cost', () => {
+  const mobile = css.slice(css.indexOf('@media (max-width:767px){\n  :root{--glass-blur'))
+  assert.match(mobile.slice(0, 200), /--glass-blur:14px/, 'small screens use a thinner blur')
+  assert.match(css, /--glass-blur:26px/, 'desktop keeps the 20–30px brief')
+})
+
 test('the glass is warm translucent ivory with a fine border, not frosted plastic', () => {
   assert.match(css, /--glass-1:rgba\(22,18,13,\.60\)/, 'the scrim is warm and deep enough for contrast')
   assert.match(css, /--glass-line:rgba\(246,236,220,\.16\)/, 'the hairline is low opacity warm white')
