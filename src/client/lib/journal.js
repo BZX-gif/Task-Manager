@@ -74,11 +74,13 @@ export function normalizeEntry(raw) {
     note: text(raw.note, 4000),
     win: text(raw.win, 280),
     nextStep: text(raw.nextStep, 280),
+    // what needed improvement — optional, and only ever written by the reader
+    better: text(raw.better, 280),
     mood,
     energy,
     updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : Date.now(),
   }
-  const empty = !entry.note && !entry.win && !entry.nextStep && !entry.mood && !entry.energy
+  const empty = !entry.note && !entry.win && !entry.nextStep && !entry.better && !entry.mood && !entry.energy
   return empty ? null : entry
 }
 

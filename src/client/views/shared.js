@@ -44,8 +44,8 @@ export function emptyState({ icon = 'clipboard', title = 'Nothing here yet', bod
   return `
     <div class="empty-state">
       ${svgIcon(icon.includes('calendar') ? 'calendar' : icon.includes('inbox') ? 'inbox' : 'check')}
-      <p class="text-sm font-medium text-slate-300">${escapeHtml(title)}</p>
-      ${body ? `<p class="text-[12.5px] text-slate-500 max-w-sm">${escapeHtml(body)}</p>` : ''}
+      <p class="empty-title">${escapeHtml(title)}</p>
+      ${body ? `<p class="empty-body">${escapeHtml(body)}</p>` : ''}
       ${action}
     </div>`
 }
@@ -57,7 +57,7 @@ export function chip(text, { tone = '' } = {}) {
 export function fieldRow(label, valueHtml, hintText = '') {
   return `
     <div class="flex items-center justify-between gap-3 py-1.5">
-      <span class="text-[13px] text-slate-400">${escapeHtml(label)}${hintText ? ` <span class="text-[11px] text-slate-600">${escapeHtml(hintText)}</span>` : ''}</span>
-      <span class="text-[13.5px] font-semibold text-slate-100">${valueHtml}</span>
+      <span class="field-row-label">${escapeHtml(label)}${hintText ? ` <span class="field-row-hint">${escapeHtml(hintText)}</span>` : ''}</span>
+      <span class="field-row-value">${valueHtml}</span>
     </div>`
 }

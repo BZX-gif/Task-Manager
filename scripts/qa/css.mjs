@@ -88,6 +88,10 @@ function matchesSimple(el, part) {
   const attrs = [...part.matchAll(/\[([\w-]+)(?:=["']?([^"'\]]+)["']?)?\]/g)]
   const tag = part.match(/^[a-zA-Z][\w-]*/)?.[0]
   if (tag && el.tag !== tag) return false
+  // `:root` matches only the document element. Without this, every element in
+  // the path "matched" :root and inherited its declarations, so the audit read
+  // the dark tokens on every node and the parchment theme looked broken.
+  if (/:root(?![-\w])/.test(part) && !el.isRoot) return false
   for (const id of ids) if (el.id !== id) return false
   for (const c of classes) if (!(el.classes || []).includes(c)) return false
   for (const [, name, value] of attrs) {

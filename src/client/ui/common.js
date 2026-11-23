@@ -2,7 +2,18 @@ import { escapeHtml } from '../core/dom.js'
 import { state } from '../core/store.js'
 import { icon } from './icons.js'
 export { icon }
-export function pageHeading(eyebrow, title, subtitle, actions = '') { return `<div class="page-heading"><div><p class="eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(subtitle)}</p></div>${actions ? `<div class="heading-actions">${actions}</div>` : ''}</div>` }
+/**
+ * The chapter opening.
+ *
+ * Every interior page calls this, so the PAPER header is defined once. It now
+ * emits the journal's own structure — the eyebrow as a chapter mark, the title
+ * in the display serif, the lede as a line of italic prose — rather than the
+ * old dashboard heading. `paperHeader` in ui/paper.js remains for pages that
+ * need to compose the same shape with richer content.
+ */
+export function pageHeading(eyebrow, title, subtitle, actions = '') {
+  return `<header class="page-heading paper-header"><div class="paper-header-main"><p class="eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}</div>${actions ? `<div class="heading-actions">${actions}</div>` : ''}</header>`
+}
 export function actionButton(action, label, symbol = 'plus', primary = false) { return `<button class="${primary ? 'btn-primary' : 'btn-ghost'}" data-common="${action}">${icon(symbol)}${escapeHtml(label)}</button>` }
 export function ring(value, label = 'of 100', empty = false) { const pct = Math.max(0,Math.min(100,Number(value)||0)); return `<div class="score-ring" role="img" aria-label="${empty ? 'No score yet' : `${pct} ${label}`}"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="ring-track" cx="50" cy="50" r="43"/><circle class="ring-value" cx="50" cy="50" r="43" stroke-dasharray="270.18" stroke-dashoffset="${270.18*(1-pct/100)}"/></svg><div class="ring-label"><strong>${empty ? '—' : Math.round(pct)}</strong><small>${escapeHtml(label)}</small></div></div>` }
 export function empty(iconName, title, description, action = '') { return `<div class="empty-state">${icon(iconName)}<p>${escapeHtml(title)}</p><p>${escapeHtml(description)}</p>${action}</div>` }

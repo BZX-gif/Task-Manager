@@ -19,7 +19,12 @@ const GUTTER = (w) => (w >= 768 ? 44 : 20)
 // Build the fixture on demand so the audit is runnable from a clean checkout.
 const FIXTURE = '/tmp/command-qa-fixture.html'
 execFileSync(process.execPath, ['scripts/qa/preview.mjs', 'auto', 'dashboard', FIXTURE], { stdio: 'ignore' })
-const rules = parseCss(await readFile('public/static/atmosphere.css', 'utf8'))
+// the whole cascade, in load order: a rule in paper.css can widen a layout
+const SHEETS = ['style', 'studio', 'system', 'atmosphere', 'paper']
+const rules = []
+for (const sheet of SHEETS) {
+  try { rules.push(...parseCss(await readFile(`public/static/${sheet}.css`, 'utf8'))) } catch { /* optional sheet */ }
+}
 const px = (v, fallback = 0) => {
   if (v == null || v === '') return fallback
   const n = parseFloat(String(v))
@@ -45,13 +50,14 @@ const gridTracks = (tpl) => {
 }
 
 const problems = []
+const COVERAGE = { scopes: 0, widths: 0, nodes: 0 }
 for (const width of WIDTHS) {
   setViewport(width)
   const dom = new JSDOM(await readFile(FIXTURE, 'utf8'))
   const doc = dom.window.document
   const contentW = width - SIDEBAR(width) - GUTTER(width) * 2
   const rootEl = doc.documentElement
-  const rootPath = [{ tag: 'html', id: '', classes: Array.from(rootEl.classList || []), attrs: Object.fromEntries(Array.from(rootEl.attributes).filter((a) => a.name.startsWith('data-')).map((a) => [a.name, a.value])) }]
+  const rootPath = [{ tag: 'html', isRoot: true, id: '', classes: Array.from(rootEl.classList || []), attrs: Object.fromEntries(Array.from(rootEl.attributes).filter((a) => a.name.startsWith('data-')).map((a) => [a.name, a.value])) }]
   const rootDecls = resolveVars(computed(rules, rootPath), null, width)
 
   const pathOf = (el) => {
@@ -64,32 +70,39 @@ for (const width of WIDTHS) {
     return p
   }
 
-  // walk only the dashboard subtree: that is the redesigned surface
-  const scope = doc.querySelector('#view-dashboard')
-  if (!scope) { problems.push({ width, msg: 'no #view-dashboard in fixture' }); continue }
-  const all = [scope, ...scope.querySelectorAll('*')]
-  for (const el of all) {
-    const style = resolveVars(computed(rules, pathOf(el)), rootDecls, width)
-    const label = `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : ''}`
-    // 1 · a hard min-width wider than the whole content column can never fit
-    const minW = style['min-width']
-    if (parsePx(minW) && +parsePx(minW)[1] > contentW) {
-      problems.push({ width, el: label.slice(0, 90), msg: `min-width ${minW} exceeds the ${Math.round(contentW)}px content column` })
-    }
-    // 2 · grids whose fixed minimums already exceed the content column
-    if (style.display && /grid/.test(style.display) && style['grid-template-columns']) {
-      const tracks = gridTracks(style['grid-template-columns'])
-      if (tracks.length > 1) {
-        const fixedMin = tracks.reduce((a, t) => a + t.min, 0)
-        const gaps = (tracks.length - 1) * px(style.gap ?? style['column-gap'], 0)
-        if (fixedMin + gaps > contentW + 1) {
-          problems.push({ width, el: label.slice(0, 90), msg: `grid min ${Math.round(fixedMin + gaps)}px > content ${Math.round(contentW)}px (${style['grid-template-columns']})` })
+  // Every route is measured: PAPER is product-wide, so the fit guarantee has to
+  // cover the whole application rather than only the redesigned dashboard.
+  const scopeIds = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','paper','settings']
+  const scopes = scopeIds.map((id) => doc.getElementById(`view-${id}`)).filter(Boolean)
+  if (!scopes.length) { problems.push({ width, msg: 'no views in fixture' }); continue }
+  COVERAGE.widths += 1
+  COVERAGE.scopes = Math.max(COVERAGE.scopes, scopes.length)
+
+  for (const scope of scopes) {
+    const scopeId = scope.id.replace('view-', '')
+    const all = [scope, ...scope.querySelectorAll('*')]
+    COVERAGE.nodes += all.length
+    for (const el of all) {
+      const style = resolveVars(computed(rules, pathOf(el)), rootDecls, width)
+      const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).slice(0, 3).join('.') : ''
+      const label = `${scopeId} · ${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${cls ? '.' + cls : ''}`
+      const minW = style['min-width']
+      if (parsePx(minW) && +parsePx(minW)[1] > contentW) {
+        problems.push({ width, el: label.slice(0, 96), msg: `min-width ${minW} exceeds the ${Math.round(contentW)}px content column` })
+      }
+      if (style.display && /grid/.test(style.display) && style['grid-template-columns']) {
+        const tracks = gridTracks(style['grid-template-columns'])
+        if (tracks.length > 1) {
+          const fixedMin = tracks.reduce((a, t) => a + t.min, 0)
+          const gaps = (tracks.length - 1) * px(style.gap ?? style['column-gap'], 0)
+          if (fixedMin + gaps > contentW + 1) {
+            problems.push({ width, el: label.slice(0, 96), msg: `grid min ${Math.round(fixedMin + gaps)}px > content ${Math.round(contentW)}px (${style['grid-template-columns']})` })
+          }
         }
       }
-    }
-    // 3 · inline no-wrap text given an explicitly huge width
-    if (parsePx(style.width) && +parsePx(style.width)[1] > contentW + 40) {
-      problems.push({ width, el: label.slice(0, 90), msg: `hard width ${style.width} > content ${Math.round(contentW)}px` })
+      if (parsePx(style.width) && +parsePx(style.width)[1] > contentW + 40) {
+        problems.push({ width, el: label.slice(0, 96), msg: `hard width ${style.width} > content ${Math.round(contentW)}px` })
+      }
     }
   }
 }
@@ -97,7 +110,7 @@ for (const width of WIDTHS) {
 const seen = new Set()
 const unique = problems.filter((p) => { const k = p.el + p.msg.replace(/\d+/g, '#') + p.msg.slice(30, 60); if (seen.has(k)) return false; seen.add(k); return true })
 if (!unique.length) {
-  console.log(`✔ fit audit: no guaranteed horizontal overflow at ${WIDTHS.join(', ')} px`)
+  console.log(`✔ fit audit: ${COVERAGE.scopes} routes × ${COVERAGE.widths} widths (${COVERAGE.nodes} boxes): no guaranteed horizontal overflow`)
 } else {
   console.log(`✖ fit audit: ${unique.length} guaranteed-overflow sites\n`)
   for (const p of unique.slice(0, 30)) console.log(`  ${p.width}px · ${p.el}\n      ${p.msg}`)

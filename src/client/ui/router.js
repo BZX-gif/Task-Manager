@@ -32,7 +32,9 @@ export function switchView(view){
   if(view!==currentView)destroyAllCharts()
   currentView=view
   for(const name of VIEWS)el(`view-${name}`)?.classList.toggle('hidden',name!==view)
-  qsa(document,'.nav-item').forEach((button)=>{const active=button.dataset.view===view;button.classList.toggle('active-nav',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
+  const CHAPTER_PARENT={schedule:'calendar',hyb:'day',routines:'day',review:'progress',forecast:'progress'}
+  const chapter=CHAPTER_PARENT[view]||view
+  qsa(document,'.nav-item').forEach((button)=>{const active=button.dataset.view===chapter;button.classList.toggle('active-nav',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
   qsa(document,'.dock-item[data-view]').forEach((button)=>{const active=button.dataset.view===view;button.classList.toggle('is-active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')})
   setMobileNav(false);updateBreadcrumb(view);setAtmosphereScope(view);renderCurrentView()
   const section=el(`view-${view}`);if(section&&booted){section.style.animation='none';void section.offsetWidth;section.style.animation='';section.classList.add('view-enter');if(enterTimers[section.id])clearTimeout(enterTimers[section.id]);enterTimers[section.id]=setTimeout(()=>section.classList.remove('view-enter'),1200)}booted=true

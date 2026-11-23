@@ -30,6 +30,7 @@ import { hybDay, scheduleHybPlan, toggleHybPlanDay } from '../core/hyb.js'
 import { setScheduleDate } from './schedule.js'
 import { openHybPlanModal } from '../ui/hyb.js'
 import { bindCommon, icon, pageHeading, timeLabel, domainTabs, DOMAIN_TABS } from '../ui/common.js'
+import { paperHeader } from '../ui/paper.js'
 import { on } from '../core/bus.js'
 
 const MAX_CELL_EVENTS = 3
@@ -96,12 +97,12 @@ export function renderCalendar() {
   const summary = daySummary(state, selected, { layers, todayKey: today })
 
   section.innerHTML = `
-    ${pageHeading(
-      'THE WHOLE MONTH',
-      'Calendar.',
-      'Everything you have committed to, planned or written down — in one grid. Tap a day to see it, tap the plus to add a HYB plan.',
-      `<button class="btn-ghost" data-common="schedule">${icon('clock')}Day schedule</button><button class="btn-primary" data-cal-new-plan="${selected}">${icon('bolt')}Add HYB plan</button>`,
-    )}
+    ${paperHeader({
+      eyebrow: 'The planner',
+      title: 'Calendar.',
+      lede: 'Everything you have committed to, planned or written down — on one sheet. Tap a day to read it; the plus writes a plan into it.',
+      actions: `<button class="btn-ghost" data-common="schedule">${icon('clock')}Day schedule</button><button class="btn-primary" data-cal-new-plan="${selected}">${icon('bolt')}Add HYB plan</button>`,
+    })}
     ${domainTabs('calendar', DOMAIN_TABS.time)}
 
     <div class="cal-toolbar">

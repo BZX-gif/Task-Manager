@@ -10,8 +10,8 @@
    the application uses. Nothing on this page is simulated.
    ------------------------------------------------------------------------- */
 
-import { state, currentDayKey, todayStats, statsFor } from '../core/store.js'
-import { confirmDialog, escapeHtml, qs, qsa } from '../core/dom.js'
+import { state, currentDayKey, todayStats, statsFor, commit } from '../core/store.js'
+import { confirmDialog, escapeHtml, qs, qsa, toast } from '../core/dom.js'
 import { addDays, formatDuration, minutesOfDay, weekdayShort } from '../lib/dates.js'
 import { scheduleFor, blockState, itemDone } from '../lib/planner.js'
 import { goalChain, goalProgress, taskProgress } from '../lib/relationships.js'
@@ -19,11 +19,13 @@ import { top3Stats, top3Candidates } from '../lib/top3.js'
 import { overdueTasks, describeScoreFormula } from '../lib/score.js'
 import { drawChart, chartColors, alpha, vGrad } from '../core/charts.js'
 import { icon, ring, empty, metric, timeLabel, bindCommon, domainTabs, DOMAIN_TABS } from '../ui/common.js'
+import { paperHeader, paperCard, divider, progress as paperProgress, priorityMarker, agendaRow, absent, figure, noteField } from '../ui/paper.js'
 import { buildWorkspaceContext } from '../lib/paper/context.js'
 import { generateAlerts, generateRecommendations } from '../lib/paper/recommendations.js'
 import { goalHealthAll } from '../lib/paper/reasoning.js'
 import { updateClockAndGreeting } from '../ui/chrome.js'
 import { intentionFor, salutationOf } from '../lib/briefing.js'
+import { entryFor, saveEntry } from '../lib/journal.js'
 import { atmosphereSwitch, syncSwitchState } from '../ui/atmosphere.js'
 import { atmosphereInfo, resolveAtmosphere, splitGreeting } from '../lib/atmosphere.js'
 import { hybDay, toggleHybPlanDay } from '../core/hyb.js'
@@ -246,6 +248,52 @@ function commandBlock({ command, factsHtml, active }) {
            <button class="atmo-link" type="button" data-common="focus">Enter the Focus Room ${icon('arrow')}</button>`}
     </div>
   </section>`
+}
+
+/* ------------------------------------------------------------- the reflection
+
+   The optional evening page. Four short prompts, never required, written into
+   the same journal entry the Journal chapter edits — so a reflection written
+   here shows up there, and nothing is duplicated into a second store. */
+
+const dayLabel = (key) => new Date(`${key}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+const REFLECTION_FIELDS = [
+  ['win', 'What went well', 'Even something small'],
+  ['better', 'What needed work', 'Honestly, without judgement'],
+  ['nextStep', 'Tomorrow’s focus', 'One thing, not five'],
+]
+
+function reflectionCard(dayKey) {
+  const entry = entryFor(state, dayKey) || {}
+  const written = REFLECTION_FIELDS.filter(([key]) => entry[key]).length
+  const notes = entry.note || ''
+  return `<article class="card reflection-card" aria-label="Today’s reflection">
+    <div class="card-header">
+      <div>
+        <h3>The evening page</h3>
+        <p class="meta">${written ? `${written} of ${REFLECTION_FIELDS.length} reflections written` : 'Optional. Close the day, or leave it open.'}</p>
+      </div>
+      ${written ? `<span class="chip">Kept</span>` : ''}
+    </div>
+    <div class="reflection-grid">
+      ${REFLECTION_FIELDS.map(
+        ([key, label, hint]) => `
+        <label class="reflection-field">
+          <span>${label}</span>
+          <input class="input-field" data-reflection="${key}" maxlength="280" value="${escapeHtml(entry[key] || '')}" placeholder="${escapeHtml(hint)}" aria-label="${label}">
+        </label>`,
+      ).join('')}
+    </div>
+    <label class="reflection-field reflection-field--note">
+      <span>A few more lines</span>
+      <textarea class="input-field" data-reflection="note" rows="2" maxlength="4000" placeholder="Anything else worth remembering about today">${escapeHtml(notes)}</textarea>
+    </label>
+    <div class="reflection-foot">
+      <p>Written into your journal for ${escapeHtml(dayLabel(dayKey))}. Nothing is shared.</p>
+      <button class="btn-ghost" data-reflection-save>${icon('check')}Save reflection</button>
+    </div>
+  </article>`
 }
 
 /* ---------------------------------------------------------------- ribbons */
@@ -560,8 +608,18 @@ export function renderMyDay() {
   const section=document.getElementById('view-day'); if(!section)return
   const today=currentDayKey(), stats=todayStats(), top3=top3Stats(state,today), blocks=scheduleFor(state,today)
   const tasks=state.tasks.filter((t)=>t.date===today&&!t.inbox&&t.status!=='cancelled').sort((a,b)=>Number(a.done)-Number(b.done)||(a.time||'99').localeCompare(b.time||'99'))
-  section.innerHTML=`<div class="page-heading"><div><p class="eyebrow">${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}).toUpperCase()}</p><h1>Make today count.</h1><p>Not everything. Just the things that matter.</p></div><div class="heading-actions"><button class="btn-ghost" data-common="recover">${icon('recover')}Recover my day</button><button class="btn-primary" data-common="plan">${icon('sun')}Plan my day</button></div></div>${domainTabs('day', DOMAIN_TABS.myDay)}<div class="overview-middle"><article class="card priority-card"><div class="card-header"><h3>Your three priorities</h3><span class="chip chip-accent">${top3.done}/${top3.total} complete</span></div>${top3.items.length?top3.items.map(({task},i)=>priorityRow(task,i)).join(''):empty('target','Choose your direction.','Pick three missions that would make today meaningful.')}${top3.total<3?`<button class="btn-ghost" style="margin-top:16px" data-common="new-task">${icon('plus')}Add a priority</button>`:''}<div class="notice" style="margin-top:22px">${icon('leaf')}Leave room for being human. A good plan has space to breathe.</div></article><article class="card"><div class="card-header"><h3>The day at a glance</h3>${icon('sun')}</div><div class="schedule-summary"><div><span>Missions completed</span><strong>${stats.tasksDone} / ${stats.tasksPlanned}</strong></div><div><span>Time intentionally focused</span><strong>${formatDuration(stats.focusedMinutes)}</strong></div><div><span>Time blocks planned</span><strong>${blocks.length}</strong></div><div><span>Daily execution score</span><strong>${stats.hasAnyActivity?stats.score+' / 100':'Not enough data'}</strong></div></div><button class="btn-ghost" style="width:100%;margin-top:24px" data-common="focus">${icon('focus')}Enter the Focus Room</button></article></div><article class="card"><div class="card-header"><div><h3>Today’s missions</h3><p class="meta">${tasks.filter((t)=>!t.done).length} open · ${tasks.filter((t)=>t.done).length} complete</p></div><button class="text-button" data-common="new-task">${icon('plus')}Add mission</button></div>${tasks.length?tasks.map((t)=>priorityRow(t,tasks.indexOf(t),{reorder:false})).join(''):empty('missions','A little intention goes a long way.','Add a mission, estimate your time, and give it a place in your day.',`<button class="btn-primary" data-common="new-task">${icon('plus')}Add a mission</button>`)}</article>${hybTodayCard(today,hybDay(today))}`
+  const dayLabel=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
+  const intention=intentionFor(state,new Date())
+  section.innerHTML=`${paperHeader({eyebrow:dayLabel,title:'Make today count.',lede:intention?`Today’s intention — ${intention}`:'Not everything. Just the things that matter.',actions:`<button class="btn-ghost" data-common="recover">${icon('recover')}Recover my day</button><button class="btn-primary" data-common="plan">${icon('sun')}Plan my day</button>`})}${domainTabs('day', DOMAIN_TABS.myDay)}<div class="overview-middle day-journal"><article class="card priority-card paper-card--rule"><div class="card-header"><div><h3>Today’s three</h3><p class="meta">Chosen by you, not by urgency</p></div><span class="chip chip-accent">${top3.done}/${top3.total} complete</span></div>${top3.items.length?top3.items.map(({task},i)=>priorityRow(task,i)).join(''):empty('target','Choose your direction.','Pick three missions that would make today meaningful.')}${top3.total<3?`<button class="btn-ghost" style="margin-top:16px" data-common="new-task">${icon('plus')}Add a priority</button>`:''}<div class="notice" style="margin-top:22px">${icon('leaf')}Leave room for being human. A good plan has space to breathe.</div></article><article class="card"><div class="card-header"><div><h3>The day at a glance</h3><p class="meta">Measured from your own day</p></div>${icon('sun')}</div><div class="schedule-summary paper-day-glance"><div><span>Missions completed</span><strong>${stats.tasksDone} / ${stats.tasksPlanned}</strong></div><div><span>Time intentionally focused</span><strong>${formatDuration(stats.focusedMinutes)}</strong></div><div><span>Time blocks planned</span><strong>${blocks.length}</strong></div><div><span>Daily execution score</span><strong>${stats.hasAnyActivity?stats.score+' / 100':'Not enough data'}</strong></div></div><button class="btn-ghost" style="width:100%;margin-top:24px" data-common="focus">${icon('focus')}Enter the Focus Room</button></article></div>${reflectionCard(today)}<article class="card"><div class="card-header"><div><h3>Today’s missions</h3><p class="meta">${tasks.filter((t)=>!t.done).length} open · ${tasks.filter((t)=>t.done).length} complete</p></div><button class="text-button" data-common="new-task">${icon('plus')}Add mission</button></div>${tasks.length?tasks.map((t)=>priorityRow(t,tasks.indexOf(t),{reorder:false})).join(''):empty('missions','A little intention goes a long way.','Add a mission, estimate your time, and give it a place in your day.',`<button class="btn-primary" data-common="new-task">${icon('plus')}Add a mission</button>`)}</article>${hybTodayCard(today,hybDay(today))}`
   bindCommon(section)
+  section.querySelector('[data-reflection-save]')?.addEventListener('click',()=>{
+    const patch={}
+    qsa(section,'[data-reflection]').forEach((field)=>{patch[field.dataset.reflection]=field.value})
+    const hasAny=Object.values(patch).some((v)=>String(v||'').trim())
+    commit((draft)=>{saveEntry(draft,today,patch)})
+    toast(hasAny?'Reflection kept for today.':'Reflection cleared.','success')
+    renderMyDay()
+  })
   qsa(section, '[data-priority-toggle]').forEach((b)=>b.addEventListener('click',()=>window.CC.toggleMission(b.dataset.priorityToggle)))
   qsa(section, '[data-priority-edit]').forEach((b)=>b.addEventListener('click',()=>window.CC.openTaskModal(b.dataset.priorityEdit)))
   qsa(section, '[data-priority-delay]').forEach((b)=>b.addEventListener('click',()=>window.CC.openRescheduleModal(b.dataset.priorityDelay)))

@@ -209,10 +209,14 @@ test('the dashboard keeps every functional hook the application relies on', () =
 
 /* -------------------------------------------------- cascade & token contract */
 
-test('the atmosphere sheet loads last so its overrides are deliberate', () => {
+test('the sheets load in a deliberate order: base, atmosphere, then paper', () => {
   const links = [...shell.matchAll(/href="\/static\/([\w-]+)\.css"/g)].map((m) => m[1])
-  assert.equal(links[links.length - 1], 'atmosphere', `sheet order is ${links.join(' → ')}`)
   assert.ok(links.includes('style'), 'the base sheet is still shipped')
+  const atmo = links.indexOf('atmosphere')
+  const paper = links.indexOf('paper')
+  assert.ok(atmo > links.indexOf('system'), 'atmosphere overrides the base sheets')
+  assert.ok(paper > atmo, 'and paper, the global design system, overrides both')
+  assert.equal(links[links.length - 1], 'paper', `sheet order is ${links.join(' → ')}`)
 })
 
 test('the redesign does not steal the signature-font or mono tokens', () => {
