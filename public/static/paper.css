@@ -2261,3 +2261,82 @@ select.input-field,select.select-field{
   text-transform:uppercase;
   color:var(--gold);
 }
+
+/* ---------------------------------------------------------- the evening page
+   My Day closes with four optional prompts rather than a form. They are set as
+   a written page: each prompt a small-caps question, its answer an underlined
+   line, and the whole card quieter than the priorities above it. */
+.reflection-card{
+  margin-top:var(--gutter);
+  background:var(--paper-raised);
+}
+.reflection-card .card-header{align-items:flex-start}
+.reflection-card .card-header h3{font-size:var(--t-section)}
+.reflection-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0;
+  margin-top:4px;
+}
+.reflection-field{display:block;min-width:0;border-left:1px solid var(--rule-hair);padding:0 18px}
+.reflection-field:first-child{border-left:0;padding-left:0}
+.reflection-field > span{
+  display:block;
+  font-size:8.5px;letter-spacing:.19em;text-transform:uppercase;font-weight:600;
+  color:var(--bronze);
+  margin-bottom:8px;
+}
+/* the answers are written on a line, not boxed */
+.reflection-field .input-field{
+  background:transparent;
+  border:0;
+  border-bottom:1px solid var(--rule);
+  border-radius:0;
+  padding:2px 0 8px;
+  font-family:var(--font-note);
+  font-style:italic;
+  font-size:14px;
+  min-height:0;
+}
+.reflection-field .input-field:focus{
+  border-bottom-color:var(--bronze);
+  box-shadow:none;
+  background:transparent;
+}
+.reflection-field--note{
+  margin-top:22px;
+  padding:18px 0 0;
+  border-left:0;
+  border-top:1px solid var(--rule-hair);
+}
+.reflection-field--note .input-field{
+  font-family:var(--font-note);
+  font-style:italic;
+  font-size:14px;
+  line-height:1.7;
+  resize:vertical;
+  border:0;
+  border-bottom:1px solid var(--rule);
+}
+.reflection-foot{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  margin-top:20px;padding-top:16px;
+  border-top:1px solid var(--rule);
+}
+.reflection-foot p{
+  font-family:var(--font-note);
+  font-style:italic;
+  font-size:12px;
+  color:var(--ink-ghost);
+  margin:0;
+  max-width:46ch;
+  line-height:1.6;
+}
+.reflection-foot .btn-ghost{flex:none}
+@media (max-width:900px){
+  .reflection-grid{grid-template-columns:1fr}
+  .reflection-field{border-left:0;padding:0;border-top:1px solid var(--rule-hair);padding-top:14px;margin-top:14px}
+  .reflection-field:first-child{border-top:0;padding-top:0;margin-top:0}
+  .reflection-foot{flex-direction:column;align-items:flex-start}
+  .reflection-foot .btn-ghost{width:100%;justify-content:center}
+}

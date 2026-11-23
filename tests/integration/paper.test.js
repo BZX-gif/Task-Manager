@@ -482,3 +482,32 @@ test('the last generic text roles are defined rather than inherited', async () =
   assert.match(head.slice(0, 700), /font-family:var\(--font-(display|note)\)/, 'quiet text uses the journal typefaces')
   assert.match(head.slice(0, 700), /color:var\(--ink/, 'and the journal ink rather than a fixed colour')
 })
+
+test('My Day closes with a reflection that is really kept', async () => {
+  const view = await go('day')
+  const card = view.querySelector('.reflection-card')
+  assert.ok(card, 'the day ends with an evening page')
+  // the brief's three prompts, plus somewhere to say more
+  const prompts = [...card.querySelectorAll('.reflection-field > span')].map((s) => s.textContent.trim())
+  assert.ok(prompts.some((p) => /went well/i.test(p)), 'asks what went well')
+  assert.ok(prompts.some((p) => /needed/i.test(p)), 'asks what needed improvement')
+  assert.ok(prompts.some((p) => /tomorrow/i.test(p)), 'asks for tomorrow’s focus')
+  assert.ok(card.querySelector('[data-reflection="note"]'), 'and leaves room for more')
+
+  // writing it is real: the value survives a save and re-render
+  const win = card.querySelector('[data-reflection="win"]')
+  win.value = 'Finished the audit'
+  card.querySelector('[data-reflection-save]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+  await new Promise((r) => setTimeout(r, 250))
+  const after = view.querySelector('.reflection-card')
+  assert.equal(after.querySelector('[data-reflection="win"]').value, 'Finished the audit', 'the reflection is kept')
+  assert.match(after.querySelector('.meta').textContent, /1 of 3/, 'and the card counts what has been written')
+
+  // it lives in the journal, so the Journal chapter reads the same entry.
+  // (Storage is written on a debounce, so assert the observable path instead of
+  // racing localStorage — the journal reading it back *is* the proof of sharing.)
+  const journal = await go('journal')
+  assert.match(journal.textContent, /Finished the audit/, 'the journal chapter shows it')
+
+  assert.equal(errors.length, 0, `no runtime errors: ${errors.slice(0, 2).join(' | ')}`)
+})
