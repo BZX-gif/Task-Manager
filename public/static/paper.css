@@ -1312,37 +1312,7 @@ p{color:var(--ink-soft)}
 .cal-dot--task{background:var(--bronze)}
 .cal-dot--hyb{background:var(--gold);opacity:.7}
 .cal-dot.is-protected{background:var(--ink-ghost)}
-/* legacy names kept so older selectors resolve while the sheet is in place */
-.cal-event-label{
-  display:flex;align-items:baseline;gap:5px;
-  padding:1px 0 1px 6px;
-  border-left:1.5px solid var(--bronze);
-  font-size:10px;
-  line-height:1.45;
-  color:var(--ink-soft);
-  text-align:left;
-  background:none;border-top:0;border-right:0;border-bottom:0;
-  width:100%;
-  min-width:0;
-  transition:color 140ms ease;
-}
-.cal-event-label:hover{color:var(--ink)}
-.cal-event-label time{
-  font-size:8.5px;
-  color:var(--ink-ghost);
-  letter-spacing:.02em;
-  font-variant-numeric:tabular-nums;
-  flex:none;
-}
-.cal-event-label span{
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
-}
-.cal-event-label.is-done{opacity:.55}
-.cal-event-label.is-done span{text-decoration:line-through;text-decoration-color:var(--rule-strong)}
-.cal-cell-dots{display:flex;gap:3px;align-items:center}
-.cal-cell-dots i{width:3px;height:3px;border-radius:50%;background:var(--rule-strong);display:block}
-.cal-cell-load{display:none}
-.cal-cell-more{font-size:8.5px;letter-spacing:.1em;color:var(--ink-ghost);text-transform:uppercase;padding-left:6px}
+
 
 /* ---- the week sheet ---- */
 .cal-week-grid{
@@ -1410,8 +1380,6 @@ p{color:var(--ink-soft)}
   .cal-cell{min-height:74px;padding:6px 6px 7px;gap:3px}
   .cal-cell-day{font-size:14px}
   .cal-cell-add{display:none}
-  .cal-event-label{font-size:8.5px;padding-left:4px;border-left-width:1px}
-  .cal-event-label time{display:none}
   .cal-month-tag{display:none}
   .cal-week-grid{grid-template-columns:1fr}
   .cal-week-col{min-height:0;border-left:0;border-top:1px solid var(--rule-hair);padding:11px}
@@ -2407,4 +2375,129 @@ select.input-field,select.select-field{
   .paper-reading{grid-template-columns:minmax(0,1fr)}
   .paper-reading-margin{position:static;order:-1}
   .paper-reading-margin .paper-reading-figures{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* ============================================== the day's timeline · ruled ink
+   The schedule and the planner both draw time as a page ruled by the hour. A
+   commitment is an appointment written on that rule, not a filled tile: a
+   bronze spine, a name, a time. Only a conflict or a protected window earns a
+   second signal, and even then it is a hairline, not a wash. */
+:root[data-atmosphere-view=workspace] .calendar-event{
+  background:none;
+  border:0;
+  border-left:2px solid var(--bronze);
+  border-radius:0;
+  padding:4px 0 4px 10px;
+  gap:3px;
+  box-shadow:none;
+  overflow:visible;
+}
+:root[data-atmosphere-view=workspace] .calendar-event:hover{
+  transform:none;
+  box-shadow:none;
+  border-left-color:var(--gold);
+  background:rgba(246,236,220,.03);
+}
+:root[data-atmosphere-view=workspace] .calendar-event strong{
+  font-family:var(--font-body);
+  font-weight:500;
+  font-size:11.5px;
+  color:var(--ink);
+  letter-spacing:.005em;
+}
+:root[data-atmosphere-view=workspace] .calendar-event p{
+  font-size:9.5px;
+  color:var(--ink-ghost);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.02em;
+}
+:root[data-atmosphere-view=workspace] .calendar-event.is-active{
+  border-left-color:var(--accent-paper);
+  box-shadow:none;
+  background:rgba(var(--accent-paper-rgb),.06);
+}
+:root[data-atmosphere-view=workspace] .calendar-event.is-done{opacity:.5}
+:root[data-atmosphere-view=workspace] .calendar-event.is-missed,
+:root[data-atmosphere-view=workspace] .calendar-event.is-conflict{
+  border-left-color:#B4654A;
+  background:rgba(180,101,74,.06);
+}
+:root[data-atmosphere-view=workspace] .calendar-event.is-protected{
+  border-left-style:double;
+  border-left-color:var(--gold);
+  background:none;
+}
+:root[data-atmosphere-view=workspace] .calendar-event.is-break{
+  border-left-color:var(--rule-strong);
+  background:none;
+}
+:root[data-atmosphere-view=workspace] .calendar-event.is-break strong{color:var(--ink-muted);font-style:italic;font-weight:400}
+/* the hour scale is printed, not labelled by a UI chip */
+:root[data-atmosphere-view=workspace] .timeline-hour{
+  font-family:var(--font-display);
+  font-weight:400;
+  font-size:11px;
+  color:var(--ink-ghost);
+  letter-spacing:.05em;
+  font-variant-numeric:tabular-nums;
+}
+/* the mini timeline in the margin follows the same rule */
+:root[data-atmosphere-view=workspace] .timeline-mini::before{background:var(--rule)}
+:root[data-atmosphere-view=workspace] .timeline-mini-time{
+  font-family:var(--font-body);
+  font-weight:500;
+  font-size:10px;
+  color:var(--ink-ghost);
+  letter-spacing:.02em;
+}
+:root[data-atmosphere-view=workspace] .timeline-mini-dot{
+  background:var(--paper);
+  border:1.5px solid var(--bronze);
+  width:6px;height:6px;
+  left:49px;
+}
+:root[data-atmosphere-view=workspace] .timeline-mini-row.is-active .timeline-mini-dot{
+  background:var(--gold);
+  border-color:var(--gold);
+  box-shadow:none;
+}
+:root[data-atmosphere-view=workspace] .timeline-mini-row strong,
+:root[data-atmosphere-view=workspace] .timeline-mini-row p{color:var(--ink-soft)}
+
+/* ============================================ HYB · lanes written in the margin
+   A hybrid plan is lighter than a mission, so it is drawn lighter than one: a
+   dotted rule, small caps, and a status word rather than a coloured slab. */
+/* NB: HYB's chips and lanes are styled at their real class names above
+   (.hyb-lane, .hyb-week-day). Earlier guesses (hyb-card, hyb-plan-card) never
+   matched the markup and have been removed rather than left as dead rules. */
+:root[data-atmosphere-view=workspace] .hyb-chip{
+  background:none;
+  border:1px solid var(--rule);
+  border-radius:3px;
+  font-size:8.5px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  padding:2px 6px;
+}
+:root[data-atmosphere-view=workspace] .hyb-chip .icon{opacity:.7;width:10px;height:10px}
+:root[data-atmosphere-view=workspace] .hyb-week-day strong{font-family:var(--font-display);font-weight:400;color:var(--ink)}
+:root[data-atmosphere-view=workspace] .hyb-week-day span{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--bronze);font-weight:600}
+
+/* ================================ progress · charts read as engraved figures
+   The charts keep their data and their axes; only the surface changes. Grid
+   lines become hairlines, labels move to the paper ink, and nothing glows. */
+:root[data-atmosphere-view=workspace] .chart-wrap,
+:root[data-atmosphere-view=workspace] .heat-cell{border-radius:2px}
+:root[data-atmosphere-view=workspace] .heat-cell{border:1px solid rgba(240,229,211,.04)}
+:root[data-atmosphere-view=workspace] .heat-cell.level-0{background:rgba(240,229,211,.045)}
+
+/* ================================================ review · the week, rewritten
+   The weekly review is a written page with three questions and a summary of
+   what actually moved. */
+:root[data-atmosphere-view=workspace] .review-day{
+  background:none;border:0;border-top:1px solid var(--rule-hair);border-radius:0;padding:11px 0;
+}
+:root[data-atmosphere-view=workspace] .review-day strong{
+  font-family:var(--font-display);font-weight:400;font-size:14px;color:var(--ink-soft);
 }

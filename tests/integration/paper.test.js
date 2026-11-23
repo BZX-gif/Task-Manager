@@ -639,3 +639,47 @@ test('the parchment theme is real, not just declared', async () => {
   }
   assert.equal(checked.length, 3, 'all three were actually checked')
 })
+
+test('paper does not carry dead selectors for markup that does not ship', async () => {
+  // A rule for a class nothing renders is worse than no rule: it looks like
+  // work and does nothing. Collect the classes paper genuinely styles, then
+  // check the ones that name a component really exist in the rendered app.
+  const css = await readFile(path.join(root, 'public', 'static', 'paper.css'), 'utf8')
+  const styled = new Set([...css.matchAll(/\.([a-z][\w-]{2,})/gi)].map((m) => m[1]))
+  // build the app's rendered vocabulary. Seed one dated mission first, so the
+  // calendar has entries to draw — an unseeded day is legitimately empty, and
+  // checking only that would say nothing about the chip styles.
+  const live = window.CC.getState()
+  const d = new Date()
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  if (!live.tasks.some((t) => t.id === 'm_vocab')) {
+    live.tasks.push({
+      id: 'm_vocab', title: 'A mission the calendar must draw', date: key, time: '09:00',
+      priority: 'medium', status: 'ready', done: false, cat: null, estimateMinutes: 45,
+      subtasks: [], history: [], inbox: false, flexible: true, progress: null,
+      recurrence: null, createdAt: Date.now(), completedAt: null,
+    })
+  }
+  const seen = new Set()
+  for (const route of ROUTES) {
+    const view = await go(route)
+    for (const el of [view, ...view.querySelectorAll('*')]) {
+      if (typeof el.className === 'string') el.className.split(/\s+/).filter(Boolean).forEach((c) => seen.add(c))
+    }
+  }
+  for (const sel of ['hyb-lane', 'hyb-week-day', 'hyb-week-load', 'cal-cell', 'task-row', 'entity-card', 'paper-header', 'page-heading']) {
+    assert.ok(styled.has(sel), `${sel} is styled by paper`)
+    assert.ok(seen.has(sel), `${sel} actually renders in the app`)
+  }
+  // furniture that only appears in one sub-view is checked at its source
+  for (const [sel, file] of [['board-card', 'projects.js'], ['project-timeline', 'projects.js'], ['cal-chip', 'calendar.js']]) {
+    const source = await readFile(path.join(root, 'src', 'client', 'views', file), 'utf8')
+    assert.ok(source.includes(sel), `${sel} is emitted by ${file}`)
+    assert.ok(styled.has(sel), `and paper styles ${sel}`)
+  }
+  // and the names paper invents must not pretend to be real components
+  for (const dead of ['hyb-card', 'hyb-plan-card', 'cal-event-label', 'focus-room-meta']) {
+    if (!styled.has(dead)) continue
+    assert.ok(seen.has(dead), `${dead} is styled by paper but never renders — remove the dead rule`)
+  }
+})
