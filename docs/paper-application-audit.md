@@ -144,3 +144,64 @@ Every existing data hook. The redesign changes markup and styles; it must not
 remove a `data-*` handler, a store write, or a route. The test suite (433
 tests) plus the fit and contrast audits are the guard. Where a page is rebuilt
 (goals, projects, calendar), the existing hooks are re-verified explicitly.
+
+---
+
+## 8 · Where the redesign stands
+
+Written as work lands, so the document stays the honest record rather than the
+original plan. Every claim below is backed by a test in
+`tests/integration/paper.test.js` or by a QA script that fails loudly.
+
+### The system
+
+| Piece | State |
+| --- | --- |
+| Tokens (paper, ink, bronze, gold, champagne, rule, radii, margins) | done — `public/static/paper.css`, loaded last |
+| Typefaces | Instrument Serif for display, DM Sans for body, a note face for personal lines, all self-hosted |
+| Component library (`ui/paper.js`) | header, section title, card, divider, progress, priority marker, entry, agenda row, absent, figure, figure row, chapter card, note field |
+| One header for every route | `pageHeading()` in `ui/common.js` now emits the PAPER header, so all sixteen inherit it from one function |
+| Sidebar as journal index | five chapter groups, bronze chapter mark, collapsed and mobile states |
+| Motion | one vocabulary (rise, settle, rule, veil), all ≤1.5s, all disabled under reduced motion |
+
+### The chapters
+
+| Chapter | State | The signature |
+| --- | --- | --- |
+| Command Center | kept from the previous pass | villa photography, atmosphere engine |
+| My Day | done | dated chapter opening, today's intention as the lede, priorities on a bronze rule, marginal figures, and an **evening page** whose four prompts write into the journal |
+| Missions | done | ledger, plus a **mission workspace**: objective, steps, connected work, the record |
+| Goals | done | chapter grid → reading page with milestones that toggle in place |
+| Projects | done | workbook header and marginal figures over the three views (list, board, timeline) |
+| Calendar | done | a printed month: serif month title, planner date numbers, bronze-underlined today, appointment labels rather than coloured blocks |
+| Focus | done | the timer is the largest object; everything else withdraws; full screen empties the room |
+| Briefing | done | a letter: salutation, lede, intention, figures between hairlines, a signature at the foot |
+| Progress · Review · Forecast · Journal · Routines · Schedule · HYB · Settings | done | ruled lists, small-caps labels, serif figures, no coloured tiles |
+| Notes / journal | keeps its existing editor, restyled as a notebook page | |
+
+### What was removed rather than restyled
+
+The brief forbids pages that look like unrelated SaaS. Twenty-nine Tailwind
+palette utilities were replaced with paper roles, and two genuinely off-palette
+colours (a mint green and an amber) were corrected to gold and bronze. A test
+now scans the sources so they cannot return.
+
+### What is verified, and how
+
+- **458 tests**, 25 of them on PAPER behaviour: the three calendar modes and its
+  navigation, the plan write path, the briefing's letter structure, the focus
+  session lifecycle, the reflection round-trip into the journal, the mission
+  workspace, and that no chapter still opens with the old heading.
+- **Contrast** 0 failures over 144 sampled region × atmosphere pairs, worst 5.53:1.
+- **Fit** 16 routes × 10 widths, 4,330 boxes, no guaranteed horizontal overflow.
+- The tests were checked for teeth: breaking the calendar mode switch, adding a
+  bouncing animation, or reintroducing a slate utility each makes the suite fail.
+
+### Known limits, stated plainly
+
+- There is no browser in this environment, so visual QC is jsdom plus parsed
+  CSS computation. Colours, type and layout are asserted from the cascade; they
+  have not been photographed.
+- Week and Agenda modes are restyled but the month is the designed signature;
+  the brief's "Week / Day / Agenda" maps to the existing week, schedule and
+  agenda views rather than to four new ones.
