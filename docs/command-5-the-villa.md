@@ -58,9 +58,15 @@ shows a blurry frame and a slow one never shows nothing.
 --glass-blur: 26px;                 /* inside the 20–30px brief */
 ```
 
-Blur is only paid for where it buys readability (panels over photography).
-`prefers-reduced-transparency` swaps in an opaque surface, and
-`prefers-reduced-motion` collapses every crossfade to 1 ms.
+Blur is only paid for where it buys readability (panels over photography), and
+it is *not* paid in full on phones: under 768px the blur drops to 14px, because a
+sustained 26px blur over a full-viewport photograph is a real battery and
+frame-time cost on mid-range hardware. `prefers-reduced-transparency` swaps in an
+opaque surface, and `prefers-reduced-motion` collapses every crossfade to 1 ms.
+
+The critical path on a cold load is one small photograph (110 kB) plus the two
+preloaded fonts; the full-width version and the two neighbouring rooms arrive
+off the critical path.
 
 ## 5 · Typography
 
@@ -84,7 +90,7 @@ things that can be decided exactly and things that cannot:
 | `npm run qa:fit` | walks the rendered DOM at **10 widths (1440→320)** and proves no grid, min-width or hard width can exceed its column — **0 guaranteed overflow** |
 | `scripts/smoke-render.mjs` | boots the real bundle and drives the UI |
 | `scripts/qa-sweep.mjs` | 0 errors, 0 warnings across all probes |
-| `tests/integration/atmosphere.test.js` | the selector → DOM → layer → storage path, in both directions |
+| `tests/integration/atmosphere.test.js` | the selector → DOM → layer → storage path in both directions, **plus the live boundary crossing**: every boundary is walked and both the document attribute and the visible photograph layer must follow, and a pinned room must ignore ticks at 00:00/13:00/17:00/21:00 |
 | `tests/unit/atmosphere.test.js` | boundaries, override precedence, greeting split, asset budget, precache completeness, cascade order, signature-font precedence |
 
 **Not verified here: aesthetics in a real browser.** Final judgement of
