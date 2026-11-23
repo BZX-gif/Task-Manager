@@ -587,3 +587,55 @@ test('paper does not flatten the Command Center’s own surfaces', async () => {
   assert.match(css, /:root\[data-atmosphere-view=workspace\] \.card:hover\{border-color:var\(--rule-strong\)\}/,
     'paper cards warm on hover, scoped to the workspace')
 })
+
+test('the parchment theme is real, not just declared', async () => {
+  // The audit harness had a bug: `:root` was treated as matching every element,
+  // so the dark tokens won on every node and the light theme could never be
+  // seen. That is fixed in scripts/qa/css.mjs; this test asserts the *values*
+  // reach real elements in the parchment theme.
+  const { parseCss, computed, resolveVars, setViewport } = await import('../../scripts/qa/css.mjs')
+  const { JSDOM } = await import('jsdom')
+  setViewport(1440)
+  const SHEETS = ['style', 'studio', 'system', 'atmosphere', 'paper']
+  const rules = []
+  for (const sheet of SHEETS) {
+    try { rules.push(...parseCss(await readFile(path.join(root, 'public', 'static', `${sheet}.css`), 'utf8'))) } catch { /* optional */ }
+  }
+  // Render the route in the live app first: the served shell's view sections
+  // are empty, so querying it would find nothing and the test would pass
+  // vacuously. This uses the markup the application actually produced.
+  await go('calendar')
+  const html = window.document.documentElement.outerHTML.replace(/data-theme="[^"]*"/, 'data-theme="light"')
+  const doc = new JSDOM(html).window.document
+  const pathOf = (n) => {
+    const p = []
+    let x = n
+    while (x && x.nodeType === 1) {
+      p.unshift({ tag: x.tagName.toLowerCase(), isRoot: x === doc.documentElement, id: x.id || '', classes: Array.from(x.classList || []), attrs: Object.fromEntries(Array.from(x.attributes).filter((a) => a.name.startsWith('data-')).map((a) => [a.name, a.value])) })
+      x = x.parentElement
+    }
+    return p
+  }
+  const rootDecls = resolveVars(computed(rules, pathOf(doc.documentElement)), null, 1440)
+
+  // the ground and the ink are parchment and sepia
+  assert.match(rootDecls['--paper'], /^#F6F0E5$/i, 'the light ground is warm ivory, not white or grey')
+  assert.match(rootDecls['--ink'], /^#2A2118$/i, 'and the ink is warm sepia, not black')
+
+  // and those tokens actually reach the page rather than being overridden
+  const inkIsDark = (hex) => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+    if (!m) return null
+    const v = parseInt(m[1], 16)
+    return ((v >> 16) + ((v >> 8) & 255) + (v & 255)) / 3 < 110
+  }
+  const checked = []
+  for (const sel of ['.cal-nav-label strong', '.cal-cell-day', '.page-heading h1']) {
+    const el = doc.querySelector(sel)
+    assert.ok(el, `${sel} must exist in the rendered page — an empty fixture proves nothing`)
+    const c = resolveVars(computed(rules, pathOf(el)), rootDecls, 1440)
+    assert.ok(inkIsDark(c.color), `${sel} uses dark ink on parchment (got ${c.color})`)
+    checked.push(sel)
+  }
+  assert.equal(checked.length, 3, 'all three were actually checked')
+})

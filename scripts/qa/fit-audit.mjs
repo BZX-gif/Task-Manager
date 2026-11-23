@@ -57,7 +57,7 @@ for (const width of WIDTHS) {
   const doc = dom.window.document
   const contentW = width - SIDEBAR(width) - GUTTER(width) * 2
   const rootEl = doc.documentElement
-  const rootPath = [{ tag: 'html', id: '', classes: Array.from(rootEl.classList || []), attrs: Object.fromEntries(Array.from(rootEl.attributes).filter((a) => a.name.startsWith('data-')).map((a) => [a.name, a.value])) }]
+  const rootPath = [{ tag: 'html', isRoot: true, id: '', classes: Array.from(rootEl.classList || []), attrs: Object.fromEntries(Array.from(rootEl.attributes).filter((a) => a.name.startsWith('data-')).map((a) => [a.name, a.value])) }]
   const rootDecls = resolveVars(computed(rules, rootPath), null, width)
 
   const pathOf = (el) => {
