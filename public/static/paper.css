@@ -2340,3 +2340,62 @@ select.input-field,select.select-field{
   .reflection-foot{flex-direction:column;align-items:flex-start}
   .reflection-foot .btn-ghost{width:100%;justify-content:center}
 }
+
+/* ============================================== the mission · a reading page
+   A mission opened from the ledger becomes a spread: the brief in the main
+   column, the particulars in the margin, the record along the foot. */
+.paper-reading{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 296px;
+  gap:calc(var(--gutter) * 1.4);
+  align-items:start;
+}
+.paper-reading-main{min-width:0}
+.paper-reading-margin{position:sticky;top:22px}
+.mission-objective{
+  font-family:var(--font-body);
+  font-size:14.5px;
+  line-height:1.78;
+  color:var(--ink-soft);
+  max-width:62ch;
+  margin:0;
+}
+.mission-objective + .paper-note{margin-top:22px}
+/* the record: a quiet vertical line with marks */
+.mission-history{position:relative;padding-left:15px}
+.mission-history::before{
+  content:'';position:absolute;left:2px;top:7px;bottom:7px;
+  width:1px;background:var(--rule);
+}
+.mission-history-row{
+  position:relative;
+  display:flex;align-items:flex-start;gap:12px;
+  padding:9px 0;
+}
+.mission-history-mark{
+  position:absolute;left:-15px;top:15px;
+  width:5px;height:5px;border-radius:50%;
+  background:var(--paper);border:1px solid var(--bronze);
+}
+.mission-history-row strong{
+  display:block;
+  font-family:var(--font-display);
+  font-weight:400;
+  font-size:13.5px;
+  color:var(--ink-soft);
+  text-transform:capitalize;
+}
+.mission-history-row p{
+  font-size:10.5px;color:var(--ink-ghost);margin:2px 0 0;
+  font-variant-numeric:tabular-nums;
+}
+.mission-history-row time{
+  margin-left:auto;flex:none;
+  font-size:9.5px;letter-spacing:.06em;color:var(--ink-ghost);
+  text-transform:uppercase;
+}
+@media (max-width:1000px){
+  .paper-reading{grid-template-columns:minmax(0,1fr)}
+  .paper-reading-margin{position:static;order:-1}
+  .paper-reading-margin .paper-reading-figures{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

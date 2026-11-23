@@ -511,3 +511,47 @@ test('My Day closes with a reflection that is really kept', async () => {
 
   assert.equal(errors.length, 0, `no runtime errors: ${errors.slice(0, 2).join(' | ')}`)
 })
+
+test('a mission opens as a workspace, not only a dialog', async () => {
+  // seed one mission with everything a workspace should be able to show.
+  // The app keeps its state in memory, so write through the public API rather
+  // than into localStorage — the store would not see a storage-only write.
+  const live = window.CC.getState()
+  const d = new Date()
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  live.tasks.push({
+    id: 'm_workspace', title: 'Finish the audit report', date: key, priority: 'high',
+    status: 'in_progress', description: 'Write the findings up so the team can act on them.',
+    notes: 'Two pages, no more.', horizon: 'daily', done: false, cat: null, estimateMinutes: 90,
+    subtasks: [{ id: 'w1', title: 'Draft the outline', done: true }, { id: 'w2', title: 'Write findings', done: false }],
+    history: [{ at: Date.now(), action: 'edited', from: 'inbox', to: key }],
+    inbox: false, flexible: true, progress: null, recurrence: null, createdAt: Date.now(), completedAt: null,
+  })
+
+  const view = await go('tasks')
+  const row = view.querySelector('[data-task-open="m_workspace"]') || view.querySelector('[data-task-open]')
+  assert.ok(row, 'a mission row offers a way in')
+  row.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+  await new Promise((r) => setTimeout(r, 200))
+
+  const page = window.document.getElementById('view-tasks')
+  assert.ok(page.querySelector('.paper-reading'), 'it opens as a spread')
+  assert.ok(page.querySelector('h1')?.textContent.trim().length, 'with the mission as its title')
+  assert.ok(page.querySelector('.mission-objective')?.textContent.trim().length, 'the objective is written out')
+  assert.ok(page.querySelectorAll('.paper-entry').length >= 2, 'the steps are listed')
+  assert.ok(page.querySelectorAll('.paper-reading-margin .paper-card').length >= 1, 'the particulars sit in the margin')
+  assert.ok(page.querySelectorAll('.paper-facts dt').length >= 4, 'with real facts about the mission')
+  assert.ok(page.querySelector('[data-mission-back]'), 'and a way back to the ledger')
+
+  // steps are interactive, and progress follows
+  const before = [...page.querySelectorAll('[data-subtask-toggle]')].map((b) => b.getAttribute('aria-pressed'))
+  page.querySelectorAll('[data-subtask-toggle]')[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+  await new Promise((r) => setTimeout(r, 200))
+  const after = [...window.document.getElementById('view-tasks').querySelectorAll('[data-subtask-toggle]')].map((b) => b.getAttribute('aria-pressed'))
+  assert.notEqual(after.join(), before.join(), 'a step can be completed from the workspace')
+
+  window.document.querySelector('[data-mission-back]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+  await new Promise((r) => setTimeout(r, 200))
+  assert.ok(window.document.querySelector('#view-tasks [data-task-open]'), 'and the ledger returns')
+  assert.equal(errors.length, 0, `no runtime errors: ${errors.slice(0, 2).join(' | ')}`)
+})

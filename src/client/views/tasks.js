@@ -11,17 +11,27 @@ import { goalChain, taskProgress } from '../lib/relationships.js'
 import { minutesByTask } from '../lib/focus.js'
 import { uid, MISSION_STATUSES } from '../lib/state.js'
 import { icon, empty, bindCommon, goalOptions, projectOptions, timeLabel } from '../ui/common.js'
-import { paperHeader } from '../ui/paper.js'
+import { paperHeader, sectionTitle, paperCard, progress, priorityMarker, absent, figure } from '../ui/paper.js'
 import { categoryColor, categoryName, categoryOptions, priorityRank } from './shared.js'
 
 export const FILTERS=['today','upcoming','inbox','recurring','all','done']
 const FILTER_LABELS={today:'Today',upcoming:'Upcoming',inbox:'Inbox',recurring:'Repeating',all:'All missions',done:'Completed'}
 const STATUS_LABELS={not_started:'Not started',ready:'Ready',in_progress:'In progress',completed:'Completed',paused:'Paused',rescheduled:'Rescheduled',cancelled:'Skipped'}
 let filter='today',searchTerm='',statusFilter='all',categoryFilter='all',horizonFilter='all',showFilters=false
+/* the mission currently open as a full page, if any */
+let readingMissionId=null
 export function setMissionFilter(value){if(FILTERS.includes(value))filter=value}
 export function renderTasks(){
   const section=document.getElementById('view-tasks');if(!section)return
   const today=currentDayKey(),list=filteredTasks(today),inboxCount=state.tasks.filter((t)=>t.inbox&&!t.done).length
+  if (readingMissionId && !state.tasks.some((t)=>t.id===readingMissionId)) readingMissionId=null
+  const reading = readingMissionId ? state.tasks.find((t)=>t.id===readingMissionId) : null
+  if (reading) {
+    section.innerHTML = missionReading(reading, today)
+    bindCommon(section)
+    bindMissionReading(section, reading)
+    return
+  }
   section.innerHTML=`${paperHeader({eyebrow:'The chapters',title:'Your missions.',lede:'Everything you need to move forward. Nothing you don’t.',actions:`<button class="btn-ghost" data-action="quick-capture">${icon('bolt')}Quick capture</button><button class="btn-primary" data-action="new-task">${icon('plus')}New mission</button>`})}<div class="mission-toolbar"><div class="segmented" id="task-filter-seg" aria-label="Filter missions">${FILTERS.map((f)=>`<button data-f="${f}" class="${filter===f?'seg-active':''}" aria-pressed="${filter===f}">${FILTER_LABELS[f]}${f==='inbox'&&inboxCount?` <span class="count-badge">${inboxCount}</span>`:''}</button>`).join('')}</div><button class="icon-btn ${showFilters?'is-selected':''}" data-show-filters aria-label="More filters" aria-expanded="${showFilters}">${icon('filter')}</button></div><div class="filter-row"><div class="toolbar-search">${icon('search')}<input class="input-field" placeholder="Search your missions…" value="${escapeHtml(searchTerm)}" data-task-search aria-label="Search missions"></div><span class="meta">${state.tasks.filter((t)=>!t.done&&t.status!=='cancelled').length} open missions</span></div>${showFilters?`<div class="advanced-filters"><label class="field-label">Status<select class="input-field" data-status-filter><option value="all">Any status</option>${MISSION_STATUSES.map((s)=>`<option value="${s}" ${statusFilter===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}</select></label><label class="field-label">Area<select class="input-field" data-category-filter><option value="all">All categories</option>${categoryOptions(categoryFilter)}</select></label><label class="field-label">Horizon<select class="input-field" data-horizon-filter>${[['all','Any horizon'],['daily','Daily'],['weekly','This week'],['long_term','Long term'],['quick','Quick win']].map(([v,l])=>`<option value="${v}" ${horizonFilter===v?'selected':''}>${l}</option>`).join('')}</select></label><button class="text-button" data-clear-filters>Clear filters</button></div>`:''}<div class="task-list-surface"><div class="list-heading"><div><p>YOUR NEXT STEPS</p><h3>${FILTER_LABELS[filter]}</h3></div><span data-task-count>${list.length} mission${list.length===1?'':'s'}</span></div><div data-task-list>${list.length?list.map((t)=>taskRowHtml(t,today)).join(''):emptyStateForFilter()}</div></div><div class="mission-footer">${icon('shield')}Your missions and focus history stay on this device.</div>`
   bindCommon(section)
   qsa(section,'#task-filter-seg button').forEach((b)=>b.addEventListener('click',()=>{filter=b.dataset.f;renderTasks()}))
@@ -32,11 +42,151 @@ export function renderTasks(){
   qsa(section, '[data-action]').forEach((b)=>b.addEventListener('click',()=>{if(b.dataset.action==='new-task')openTaskModal();else window.CC.openQuickCapture({inbox:b.dataset.action==='quick-capture-inbox'})}))
   bindRows(section)
 }
+/* ------------------------------------------------------- the mission workspace
+
+   A mission opens as a spread, not a dialog: the brief in the main column, the
+   particulars in the margin, and the record of what happened along the foot.
+   Everything here is read from the mission itself — objective, deadline,
+   progress, milestones, connected project and goal, its own history. */
+
+function missionReading(task, today) {
+  const chain = goalChain(state, task)
+  const project = task.projectId ? state.projects.find((p) => p.id === task.projectId) : null
+  const goal = chain?.goal || (task.goalId ? state.goals.find((g) => g.id === task.goalId) : null)
+  const milestone = goal?.milestones?.find((m) => m.id === task.milestoneId) || null
+  const subtasks = task.subtasks || []
+  const subDone = subtasks.filter((x) => x.done).length
+  const pct = taskProgress(task)
+  const focused = minutesByTask(state.focus.sessions, task.id)
+  const overdue = !task.done && task.status !== 'cancelled' && task.date && task.date < today
+  const history = (task.history || []).slice(-12).reverse()
+  const siblings = state.tasks.filter((t) => t.id !== task.id && project && t.projectId === project.id)
+
+  const header = paperHeader({
+    eyebrow: overdue ? 'Overdue' : task.done ? 'Completed' : 'A mission',
+    title: task.title,
+    lede: task.description || 'No description written yet. Open the mission to add the detail that matters.',
+    actions: `<button class="btn-ghost" data-mission-back>${icon('left')}All missions</button>
+      <button class="btn-ghost" data-mission-edit="${escapeHtml(task.id)}">${icon('edit')}Edit</button>
+      ${task.done
+        ? `<button class="btn-ghost" data-task-toggle="${escapeHtml(task.id)}">${icon('check')}Reopen</button>`
+        : `<button class="btn-primary" data-mission-focus="${escapeHtml(task.id)}">${icon('focus')}Focus on this</button>`}`,
+  })
+
+  const margin = `<aside class="paper-stack paper-reading-margin">
+    ${paperCard({
+      title: 'Where it stands',
+      body: `<div class="paper-reading-figures">
+        ${figure(`${pct}<small>%</small>`, 'Complete')}
+        ${figure(task.date ? formatKeyLabel(task.date, { weekday: false }) : '—', 'Planned')}
+        ${figure(task.deadline ? formatKeyLabel(task.deadline, { weekday: false }) : '—', 'Due')}
+        ${figure(formatDuration(focused), 'Focused')}
+      </div>
+      ${progress(pct, { label: subtasks.length ? `${subDone} of ${subtasks.length} steps` : 'No steps written' })}`,
+    })}
+    ${paperCard({
+      title: 'The particulars',
+      body: `<dl class="paper-facts">
+        <div><dt>Status</dt><dd>${escapeHtml(STATUS_LABELS[task.status] || 'Ready')}</dd></div>
+        <div><dt>Priority</dt><dd>${priorityMarker(task.priority)}</dd></div>
+        <div><dt>Estimate</dt><dd>${formatDuration(task.estimateMinutes || 0)}</dd></div>
+        <div><dt>Area</dt><dd>${escapeHtml(categoryName(task.cat, 'Unfiled'))}</dd></div>
+        <div><dt>Horizon</dt><dd>${escapeHtml(String(task.horizon || 'daily').replace('_', ' '))}</dd></div>
+        ${task.time ? `<div><dt>Starts</dt><dd>${escapeHtml(timeLabel(task.time))}</dd></div>` : ''}
+        ${task.recurrence ? `<div><dt>Repeats</dt><dd>${escapeHtml(recurrenceLabel(task.recurrence))}</dd></div>` : ''}
+      </dl>`,
+    })}
+    ${chain?.goal || project ? paperCard({
+      title: 'Connected work',
+      body: `<div class="linked-work-row"><span>Goal</span><button class="text-button" data-mission-goal="${escapeHtml(goal?.id || '')}">${escapeHtml(goal?.title || 'None')}</button></div>
+        <div class="linked-work-row"><span>Milestone</span><strong>${escapeHtml(milestone?.title || 'None')}</strong></div>
+        <div class="linked-work-row"><span>Project</span><button class="text-button" data-mission-project="${escapeHtml(project?.id || '')}">${escapeHtml(project?.title || 'None')}</button></div>`,
+    }) : ''}
+  </aside>`
+
+  const steps = subtasks.length
+    ? subtasks.map((sub, i) => `<div class="paper-entry${sub.done ? ' paper-entry--done' : ''}">
+        <span class="paper-entry-index">${escapeHtml(String(i + 1).padStart(2, '0'))}</span>
+        <div class="paper-entry-body">
+          <div class="paper-entry-title">
+            <button class="task-check ${sub.done ? 'checked' : ''}" data-subtask-toggle="${escapeHtml(sub.id)}" aria-pressed="${sub.done}" aria-label="${sub.done ? 'Reopen' : 'Complete'} ${escapeHtml(sub.title)}">${icon('check')}</button>
+            <span>${escapeHtml(sub.title)}</span>
+          </div>
+        </div>
+      </div>`).join('')
+    : absent({ icon: 'list', title: 'Break it into steps.', body: 'A mission with steps is a mission you can start today.', action: `<button class="btn-ghost" data-mission-edit="${escapeHtml(task.id)}">${icon('plus')}Add steps</button>` })
+
+  const timeline = history.length
+    ? `<div class="mission-history">${history.map((h) => `<div class="mission-history-row">
+        <span class="mission-history-mark" aria-hidden="true"></span>
+        <div><strong>${escapeHtml(h.action || 'edited')}</strong><p>${h.from || h.to ? `${escapeHtml(h.from || '—')} → ${escapeHtml(h.to || '—')}` : 'Updated'}</p></div>
+        <time>${new Date(h.at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</time>
+      </div>`).join('')}</div>`
+    : absent({ icon: 'clock', title: 'A quiet record.', body: 'Edits, reschedules and completion will be noted here as they happen.' })
+
+  const around = siblings.length
+    ? siblings.slice(0, 6).map((t) => `<div class="linked-work-row">
+        <span>${t.done ? 'Completed' : t.date ? formatKeyLabel(t.date, { weekday: false }) : 'Inbox'}</span>
+        <button class="text-button" data-mission-open="${escapeHtml(t.id)}">${escapeHtml(t.title)}</button>
+      </div>`).join('')
+    : ''
+
+  return `${header}
+    <div class="paper-reading">
+      <div class="paper-reading-main">
+        <section class="detail-section">
+          ${sectionTitle('The objective', { as: 'h2', note: task.description ? 'As written' : '' })}
+          <p class="mission-objective">${escapeHtml(task.description || 'No objective written yet — say what “done” actually means.')}</p>
+          ${task.notes ? `<p class="paper-note">${escapeHtml(task.notes)}</p>` : ''}
+        </section>
+        <section class="detail-section">
+          ${sectionTitle('Steps', { as: 'h2', note: subtasks.length ? `${subDone} of ${subtasks.length} complete` : '' })}
+          ${steps}
+        </section>
+        ${around ? `<section class="detail-section">
+          ${sectionTitle('Elsewhere in this project', { as: 'h2' })}
+          ${around}
+        </section>` : ''}
+        <section class="detail-section">
+          ${sectionTitle('The record', { as: 'h2', note: history.length ? 'Most recent first' : '' })}
+          ${timeline}
+        </section>
+      </div>
+      ${margin}
+    </div>`
+}
+
+function bindMissionReading(section, task) {
+  qsa(section, '[data-mission-back]').forEach((b) => b.addEventListener('click', () => { readingMissionId = null; renderTasks() }))
+  qsa(section, '[data-mission-edit]').forEach((b) => b.addEventListener('click', () => openTaskModal(b.dataset.missionEdit)))
+  qsa(section, '[data-mission-focus]').forEach((b) => b.addEventListener('click', () => window.CC.openFocusMode(b.dataset.missionFocus)))
+  qsa(section, '[data-mission-open]').forEach((b) => b.addEventListener('click', () => { readingMissionId = b.dataset.missionOpen; renderTasks(); try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch {} }))
+  qsa(section, '[data-task-toggle]').forEach((b) => b.addEventListener('click', () => { toggleMission(b.dataset.taskToggle); renderTasks() }))
+  qsa(section, '[data-subtask-toggle]').forEach((b) => b.addEventListener('click', () => {
+    commit((draft) => {
+      const live = draft.tasks.find((t) => t.id === task.id)
+      const sub = live?.subtasks?.find((x) => x.id === b.dataset.subtaskToggle)
+      if (sub) sub.done = !sub.done
+    })
+    renderTasks()
+  }))
+  qsa(section, '[data-mission-goal]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.missionGoal) window.CC.openGoalDetail(b.dataset.missionGoal) }))
+  qsa(section, '[data-mission-project]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.missionProject) window.CC.openProjectDetail(b.dataset.missionProject) }))
+}
+
+/** Open a mission as a full page (used by the ledger and by deep links). */
+export function openMissionReading(id) {
+  readingMissionId = id
+  renderTasks()
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch {}
+}
+
 function filteredTasks(today){const term=searchTerm.trim().toLowerCase();let list=[...state.tasks];if(filter==='today')list=list.filter((t)=>t.date===today&&!t.inbox);else if(filter==='upcoming')list=list.filter((t)=>t.date&&t.date>today&&!t.done);else if(filter==='inbox')list=list.filter((t)=>t.inbox);else if(filter==='recurring')list=list.filter((t)=>t.recurrence);else if(filter==='done')list=list.filter((t)=>t.done);else list=list.filter((t)=>!t.inbox);if(statusFilter!=='all')list=list.filter((t)=>t.status===statusFilter);if(categoryFilter!=='all')list=list.filter((t)=>t.cat===categoryFilter);if(horizonFilter!=='all')list=list.filter((t)=>t.horizon===horizonFilter);if(term)list=list.filter((t)=>`${t.title} ${t.description||''} ${t.notes||''} ${categoryName(t.cat,'')} ${state.goals.find((g)=>g.id===t.goalId)?.title||''}`.toLowerCase().includes(term));return list.sort((a,b)=>Number(a.done)-Number(b.done)||(a.date||'9999').localeCompare(b.date||'9999')||priorityRank(a.priority)-priorityRank(b.priority)||b.createdAt-a.createdAt)}
 function emptyStateForFilter(){return searchTerm?empty('search','No matching missions.','Try another search or clear your filters.'):filter==='inbox'?empty('inbox','A clear head starts here.','Capture an idea now. Decide what to do with it later.','<button class="btn-ghost" data-action="quick-capture-inbox">Capture something</button>'):empty('missions',filter==='done'?'Your progress will live here.':'A little room for what matters.',filter==='done'?'Completed missions stay in your history.':'Add a clear next step, or choose a different filter.','<button class="btn-ghost" data-action="new-task">'+icon('plus')+'Add a mission</button>')}
-export function taskRowHtml(task,today){const overdue=!task.done&&task.status!=='cancelled'&&task.date&&task.date<today,chain=goalChain(state,task),focused=minutesByTask(state.focus.sessions,task.id),progress=taskProgress(task),subDone=task.subtasks?.filter((s)=>s.done).length||0;return `<article class="task-row ${task.done?'done':''} ${overdue?'is-overdue':''} ${task.status==='cancelled'?'is-skipped':''}" data-task-row="${escapeHtml(task.id)}"><button class="task-check ${task.done?'checked':''}" data-task-toggle="${escapeHtml(task.id)}" aria-label="${task.done?'Reopen':'Complete'} ${escapeHtml(task.title)}" aria-pressed="${task.done}" ${task.status==='cancelled'?'disabled':''}>${icon('check')}</button><span class="priority-dot priority-${task.priority}" title="${task.priority} priority"></span><button class="task-content block-details text-left" data-task-edit="${escapeHtml(task.id)}"><span class="task-title">${escapeHtml(task.title)}</span><span class="task-meta">${task.cat?`<span><i class="legend-dot" style="background:${categoryColor(task.cat)}"></i>${escapeHtml(categoryName(task.cat))}</span>`:''}<span class="${overdue?'warning':''}">${icon(task.inbox?'inbox':'calendar')}${task.inbox?'Inbox':task.date?`${overdue?'Overdue · ':''}${formatKeyLabel(task.date)}${task.time?' · '+timeLabel(task.time):''}`:'No date'}</span><span>${formatDuration(task.estimateMinutes)}</span>${task.recurrence?`<span>${icon('routines')}${escapeHtml(recurrenceLabel(task.recurrence))}</span>`:''}${chain.goal?`<span>${icon('target')}${escapeHtml(chain.goal.title)}</span>`:''}${focused?`<span>${formatDuration(focused)} focused</span>`:''}${isTop3(state,today,task.id)?'<span class="chip chip-accent">Priority</span>':''}${task.status!=='ready'&&task.status!=='completed'?`<span class="chip">${STATUS_LABELS[task.status]||task.status}</span>`:''}</span>${task.subtasks?.length?`<span class="task-sub-progress"><span class="progress-track"><span class="progress-fill" style="width:${progress}%"></span></span>${subDone}/${task.subtasks.length} steps</span>`:''}</button><div class="row-actions">${!task.done&&task.status!=='cancelled'?`<button class="icon-btn" data-task-focus="${escapeHtml(task.id)}" aria-label="Focus on ${escapeHtml(task.title)}">${icon('play')}</button>`:''}<button class="icon-btn" data-task-edit="${escapeHtml(task.id)}" aria-label="Edit ${escapeHtml(task.title)}">${icon('edit')}</button><button class="icon-btn danger-hover" data-task-delete="${escapeHtml(task.id)}" aria-label="Delete ${escapeHtml(task.title)}">${icon('trash')}</button></div></article>`}
+export function taskRowHtml(task,today){const overdue=!task.done&&task.status!=='cancelled'&&task.date&&task.date<today,chain=goalChain(state,task),focused=minutesByTask(state.focus.sessions,task.id),progress=taskProgress(task),subDone=task.subtasks?.filter((s)=>s.done).length||0;return `<article class="task-row ${task.done?'done':''} ${overdue?'is-overdue':''} ${task.status==='cancelled'?'is-skipped':''}" data-task-row="${escapeHtml(task.id)}"><button class="task-check ${task.done?'checked':''}" data-task-toggle="${escapeHtml(task.id)}" aria-label="${task.done?'Reopen':'Complete'} ${escapeHtml(task.title)}" aria-pressed="${task.done}" ${task.status==='cancelled'?'disabled':''}>${icon('check')}</button><span class="priority-dot priority-${task.priority}" title="${task.priority} priority"></span><button class="task-content block-details text-left" data-task-open="${escapeHtml(task.id)}" data-task-edit="${escapeHtml(task.id)}"><span class="task-title">${escapeHtml(task.title)}</span><span class="task-meta">${task.cat?`<span><i class="legend-dot" style="background:${categoryColor(task.cat)}"></i>${escapeHtml(categoryName(task.cat))}</span>`:''}<span class="${overdue?'warning':''}">${icon(task.inbox?'inbox':'calendar')}${task.inbox?'Inbox':task.date?`${overdue?'Overdue · ':''}${formatKeyLabel(task.date)}${task.time?' · '+timeLabel(task.time):''}`:'No date'}</span><span>${formatDuration(task.estimateMinutes)}</span>${task.recurrence?`<span>${icon('routines')}${escapeHtml(recurrenceLabel(task.recurrence))}</span>`:''}${chain.goal?`<span>${icon('target')}${escapeHtml(chain.goal.title)}</span>`:''}${focused?`<span>${formatDuration(focused)} focused</span>`:''}${isTop3(state,today,task.id)?'<span class="chip chip-accent">Priority</span>':''}${task.status!=='ready'&&task.status!=='completed'?`<span class="chip">${STATUS_LABELS[task.status]||task.status}</span>`:''}</span>${task.subtasks?.length?`<span class="task-sub-progress"><span class="progress-track"><span class="progress-fill" style="width:${progress}%"></span></span>${subDone}/${task.subtasks.length} steps</span>`:''}</button><div class="row-actions">${!task.done&&task.status!=='cancelled'?`<button class="icon-btn" data-task-focus="${escapeHtml(task.id)}" aria-label="Focus on ${escapeHtml(task.title)}">${icon('play')}</button>`:''}<button class="icon-btn" data-task-edit="${escapeHtml(task.id)}" aria-label="Edit ${escapeHtml(task.title)}">${icon('edit')}</button><button class="icon-btn danger-hover" data-task-delete="${escapeHtml(task.id)}" aria-label="Delete ${escapeHtml(task.title)}">${icon('trash')}</button></div></article>`}
 function bindRows(section){
   qsa(section, '[data-task-toggle]').forEach((b)=>b.addEventListener('click',()=>toggleMission(b.dataset.taskToggle)))
+  qsa(section, '[data-task-open]').forEach((b)=>b.addEventListener('click',()=>openMissionReading(b.dataset.taskOpen)))
   qsa(section, '[data-task-edit]').forEach((b)=>b.addEventListener('click',()=>openTaskModal(b.dataset.taskEdit)))
   qsa(section, '[data-task-focus]').forEach((b)=>b.addEventListener('click',()=>window.CC.openFocusMode(b.dataset.taskFocus)))
   qsa(section, '[data-task-delete]').forEach((b)=>b.addEventListener('click',()=>deleteMission(b.dataset.taskDelete)))
