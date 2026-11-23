@@ -64,12 +64,12 @@ after(() => {
 })
 
 test('the command card names the real task and its facts', () => {
-  const title = $('.command-card h2')?.textContent.trim()
+  const title = $('.atmo-command-title')?.textContent.trim()
   assert.equal(title, 'Ship the design audit', 'the linked mission title leads, not the generic block label')
-  assert.match($('.command-card .command-reason')?.textContent || '', /priorities|Scheduled right now|highest-priority|Next on your schedule|ready when you are/)
-  const facts = $$('.command-card .command-fact')
+  assert.match($('.atmo-command .atmo-command-reason')?.textContent || '', /make today matter|window is open|highest-priority|next commitment|ready when you are/)
+  const facts = $$('.atmo-command .atmo-fact')
   assert.equal(facts.length, 4, 'what / why / when / priority are stated as facts')
-  const labels = facts.map((fact) => fact.querySelector('.command-fact-label')?.textContent)
+  const labels = facts.map((fact) => fact.querySelector('.atmo-fact-label')?.textContent)
   assert.deepEqual(labels.slice(0, 3), ['Scheduled', 'Length', 'Priority'])
   assert.ok(['Window', 'Remaining'].includes(labels[3]), 'the fourth fact is the time window')
 })

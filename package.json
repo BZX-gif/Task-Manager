@@ -16,7 +16,11 @@
     "preview": "wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "test:integration": "npm run build && node --test \"tests/integration/*.test.js\""
+    "test:integration": "npm run build && node --test \"tests/integration/*.test.js\"",
+    "qa:preview": "node scripts/qa/preview.mjs auto dashboard /tmp/preview.html",
+    "qa:contrast": "node scripts/qa/contrast-audit.mjs",
+    "qa:fit": "node scripts/qa/fit-audit.mjs",
+    "qa": "npm run qa:contrast && npm run qa:fit"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

@@ -9,8 +9,6 @@ dist/
 public/static/js/
 public/static/tailwind.css
 public/static/vendor/
-public/static/fonts/
-public/static/fonts.css
 
 # local secrets / env
 .dev.vars
@@ -20,3 +18,9 @@ public/static/fonts.css
 # logs & os noise
 *.log
 .DS_Store
+
+# intermediate art; the shipped WebP variants are tracked
+public/images/*-source.png
+
+# local QA scratch (held the pre-persistent renderer)
+.arena/

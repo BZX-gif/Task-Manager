@@ -11,6 +11,9 @@ interface Window {
   CC: {
     version: string
     switchView(view: string): void
+    setAtmosphere(mode: 'auto' | 'morning' | 'afternoon' | 'evening'): void
+    currentAtmosphere(): 'morning' | 'afternoon' | 'evening'
+    tickAtmosphere(now?: Date): 'morning' | 'afternoon' | 'evening'
     refreshAll(): void
     refreshCurrentView(delay?: number): void
     openTaskModal(id?: string | null, options?: { date?: string; inbox?: boolean; prefill?: string; goalId?: string | null; projectId?: string | null; milestoneId?: string | null }): void

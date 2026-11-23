@@ -8,7 +8,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
 const root = process.cwd()
-const cssFiles = ['public/static/style.css', 'public/static/system.css', 'public/static/studio.css']
+const cssFiles = ['public/static/style.css', 'public/static/system.css', 'public/static/studio.css', 'public/static/atmosphere.css']
 let allCss = ''
 for (const f of cssFiles) allCss += (await readFile(path.join(root, f), 'utf8')) + '\n'
 
