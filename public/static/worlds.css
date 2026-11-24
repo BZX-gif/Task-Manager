@@ -115,20 +115,68 @@
 }
 
 /* --------------------------------------------------- 3 · persistent shell
-   One navigation identity on every route: dark translucent glass, hairline
-   separators, a bronze chapter mark and the same icon set everywhere. */
-:root:not([data-scene=villa]) .sidebar{
-  background:linear-gradient(180deg,rgba(17,14,11,.80),rgba(13,10,8,.72));
+   One navigation identity on every route: a bespoke portrait of the hotel
+   gallery behind dark translucent glass, hairline separators, a bronze chapter
+   mark and the same icon set everywhere. The index is a room too. */
+.sidebar{
+  isolation:isolate;overflow:hidden;
+  background:linear-gradient(180deg,rgba(17,14,11,.84),rgba(11,9,7,.90))!important;
   -webkit-backdrop-filter:blur(22px) saturate(130%);
   backdrop-filter:blur(22px) saturate(130%);
   border-right:1px solid rgba(246,236,220,.13);
   box-shadow:12px 0 60px -40px rgba(0,0,0,.9);
 }
-:root:not([data-scene=villa]) .sidebar::after{
+.sidebar::before{
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(13,10,8,.44),rgba(9,7,5,.72) 58%,rgba(9,7,5,.86)),
+    url('/assets/atmospheres/navigation/gallery-corridor-sm.webp') center top/cover no-repeat;
+  opacity:.90;
+  transition:opacity 600ms ease;
+}
+.sidebar::after{
   content:'';position:absolute;top:0;right:-1px;bottom:0;width:1px;
   background:linear-gradient(180deg,transparent,rgba(208,164,108,.34) 24%,transparent 72%);
   pointer-events:none;
 }
+
+/* The selected-room card turns the index into a key to the current world. */
+.sidebar-room{
+  display:flex;align-items:stretch;gap:11px;min-width:0;
+  margin:0 2px 16px;padding:7px;
+  border:1px solid rgba(246,236,220,.17);
+  border-radius:13px;
+  background:linear-gradient(145deg,rgba(32,25,18,.62),rgba(12,9,7,.50));
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 1px 0 rgba(255,246,232,.09) inset,0 16px 34px -22px rgba(0,0,0,.9);
+}
+.sidebar-room-photo{
+  flex:0 0 58px;min-height:66px;border-radius:8px;
+  background-position:center center;background-size:cover;background-repeat:no-repeat;
+  border:1px solid rgba(246,236,220,.16);
+  box-shadow:0 8px 20px -10px rgba(0,0,0,.9);
+  transition:background-image 400ms ease;
+}
+.sidebar-room-copy{display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0}
+.sidebar-room-copy>span{
+  font-size:8.5px;font-weight:600;letter-spacing:.20em;text-transform:uppercase;
+  color:#DDB57C;
+}
+.sidebar-room-copy strong{
+  font-family:var(--font-display);font-weight:400;font-size:15px;line-height:1.16;
+  color:#FFF4E2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sidebar-room-copy small{
+  font-size:9.5px;line-height:1.3;color:rgba(240,229,211,.62);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.sidebar-collapsed .sidebar-room{padding:5px;justify-content:center}
+.sidebar-collapsed .sidebar-room-photo{flex-basis:38px;min-height:44px}
+.sidebar-collapsed .sidebar-room-copy{display:none}
+.mobile-nav .sidebar-room{
+  margin:0 18px 14px;background:rgba(12,9,7,.52);border-color:rgba(246,236,220,.16);
+}
+.mobile-nav .sidebar-room-photo{flex-basis:52px;min-height:58px}
 :root:not([data-scene=villa]) .topbar,
 :root:not([data-scene=villa]) .command-strip{
   background:linear-gradient(180deg,rgba(17,14,11,.72),rgba(17,14,11,.56))!important;
@@ -200,8 +248,10 @@
   background:rgba(12,9,7,.45);color:rgba(240,229,211,.48);
   border-top:1px solid rgba(246,236,220,.09);
 }
-:root:not([data-scene=villa]) .mobile-nav{
-  background:linear-gradient(160deg,rgba(19,15,11,.96),rgba(11,9,7,.98));
+.mobile-nav{
+  background:
+    linear-gradient(160deg,rgba(17,13,10,.90),rgba(10,8,6,.96)),
+    url('/assets/atmospheres/navigation/gallery-corridor-sm.webp') center top/cover no-repeat!important;
   -webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);
   border-left:1px solid rgba(208,164,108,.22);
 }

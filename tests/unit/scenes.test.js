@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import {
-  SCENES, SCENE_IDS, VIEW_SCENE, isSceneId, sceneForView, sceneImage, sceneInfo,
+  SCENES, SCENE_IDS, VIEW_SCENE, NAVIGATION_ART, isSceneId, sceneForView, sceneImage, sceneInfo,
 } from '../../src/client/lib/scenes.js'
 
 const root = process.cwd()
@@ -46,6 +46,20 @@ test('the eight photographs ship in two optimised WebP widths', async () => {
     assert.ok(small < full, 'and the small frame is genuinely smaller')
     assert.ok(sw.includes(scene.imageSmall), `${scene.id} is available offline`)
   }
+})
+
+test('the navigation rail has its own commissioned portrait', async () => {
+  for (const file of [NAVIGATION_ART.image, NAVIGATION_ART.imageSmall]) {
+    const info = await stat(path.join(root, 'public', file)).catch(() => null)
+    assert.ok(info && info.size > 10_000, `${file} is a real photograph`)
+  }
+  const full = (await stat(path.join(root, 'public', NAVIGATION_ART.image))).size
+  const small = (await stat(path.join(root, 'public', NAVIGATION_ART.imageSmall))).size
+  assert.ok(full < 420_000 && small < 160_000, 'the navigation artwork stays inside the asset budget')
+  assert.ok(sw.includes(NAVIGATION_ART.imageSmall), 'the rail artwork is available offline')
+  assert.ok(shell.includes(NAVIGATION_ART.imageSmall), 'the rail artwork is preloaded in the shell')
+  assert.match(css, /\.sidebar::before\{[\s\S]*gallery-corridor-sm\.webp/, 'the sidebar carries the photograph')
+  assert.match(css, /\.sidebar-room\{/, 'and the current-room card is part of the design system')
 })
 
 test('all sixteen routes resolve to a room, with the villa kept for the Command Center', () => {
