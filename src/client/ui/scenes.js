@@ -79,6 +79,29 @@ function warmNeighbours(id) {
 }
 
 /**
+ * The navigation rail carries a small proof of the room you selected. It uses
+ * the same photograph as the page itself, so the index and the environment
+ * always agree — including when the villa changes time of day.
+ */
+export function refreshSidebarRoom() {
+  if (typeof document === 'undefined') return
+  const id = ROOT()?.dataset.scene || CURRENT.id || 'villa'
+  const scene = isSceneId(id) ? sceneInfo(id) : sceneInfo('villa')
+  const atmosphere = ROOT()?.dataset.atmosphere || 'morning'
+  const image = sceneImage(scene.id, atmosphere).imageSmall
+  for (const card of document.querySelectorAll('[data-sidebar-room]')) {
+    if (!(card instanceof HTMLElement)) continue
+    card.dataset.room = scene.id
+    const photo = card.querySelector('[data-sidebar-room-photo]')
+    if (photo instanceof HTMLElement) photo.style.backgroundImage = `url('${image}')`
+    const name = card.querySelector('[data-sidebar-room-name]')
+    if (name) name.textContent = scene.name
+    const place = card.querySelector('[data-sidebar-room-place]')
+    if (place) place.textContent = scene.place
+  }
+}
+
+/**
  * Paint the room that belongs to a route. The villa is a no-op here: it is
  * already painted by the atmosphere engine's three layers.
  */
@@ -88,6 +111,7 @@ export function setScene(view, { initial = false } = {}) {
   CURRENT.id = id
   CURRENT.view = view
   ROOT()?.setAttribute('data-scene', id)
+  refreshSidebarRoom()
   if (!document.getElementById('scene')) ensureSceneLayers()
   if (id === 'villa') {
     // The villa has its own three-layer atmosphere; the rooms stand down.

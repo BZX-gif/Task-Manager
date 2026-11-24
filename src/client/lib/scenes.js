@@ -134,6 +134,12 @@ export const VIEW_SCENE = {
   settings: 'villa',
 }
 
+/** The portrait commissioned for the navigation rail itself. */
+export const NAVIGATION_ART = {
+  image: '/assets/atmospheres/navigation/gallery-corridor.webp',
+  imageSmall: '/assets/atmospheres/navigation/gallery-corridor-sm.webp',
+}
+
 /** The photographic rooms, in the order the layers are preloaded. */
 export const SCENE_IDS = SCENES.filter((scene) => scene.id !== 'villa').map((scene) => scene.id)
 

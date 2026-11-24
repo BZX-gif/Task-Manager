@@ -16,7 +16,7 @@
 
 import { emit, on } from '../core/bus.js'
 import { commit, currentDayKey, state } from '../core/store.js'
-import { ensureSceneLayers, setScene } from './scenes.js'
+import { ensureSceneLayers, refreshSidebarRoom, setScene } from './scenes.js'
 import {
   ATMOSPHERES,
   atmosphereInfo,
@@ -116,6 +116,8 @@ export function setAtmosphere(id, { initial = false } = {}) {
     layer.classList.toggle('is-active', entry.id === id)
   }
   root?.setAttribute('data-atmosphere', id)
+  // the navigation preview follows the villa's time of day too
+  refreshSidebarRoom()
   if (previous !== id) emit('atmosphere:change', { id, previous })
   // full-resolution upgrade after the small image has painted
   const paint = () => upgradeLayer(id).then(() => warmNext(id))

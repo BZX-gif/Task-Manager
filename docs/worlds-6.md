@@ -51,7 +51,22 @@ bootstrap writes before first paint. The client then creates one crossfading
 layer per room, paints the small file first, decodes the full file before
 swapping, and warms neighbouring rooms off the critical path.
 
-## 3 · The chapter opening
+## 3 · The navigation is a room too
+
+The sidebar has its own commissioned portrait: a quiet hotel gallery corridor
+with a central vanishing point, generated for the rail and shipped at
+`public/assets/atmospheres/navigation/gallery-corridor*.webp`. It sits behind
+the same dark glass as the rest of the shell, so the index reads as part of the
+property rather than a generic admin panel. The mobile drawer uses the same
+artwork.
+
+A small glass card in both navigation surfaces shows the room currently
+selected — its photograph, name and place — and follows the selected atmosphere
+when the villa changes time of day. The card is generated from the same scene
+registry as the page and the photograph layers, so the index cannot disagree
+with the environment it points to.
+
+## 4 · The chapter opening
 
 `sceneHero()` in `src/client/ui/scenes.js` is now the single source of the
 opening for every view (`paperHeader` and `pageHeading` both delegate to it).
@@ -78,7 +93,7 @@ The eight named sections then arrange the shared components differently:
 The daily briefing overlay itself takes the lounge photograph behind its
 letter, so the environment is continuous when `B` opens the briefing.
 
-## 4 · What was deliberately preserved
+## 5 · What was deliberately preserved
 
 - Every route, `data-*` hook, modal, form and keyboard shortcut.
 - The villa's three-layer atmosphere engine, its local-time boundaries and its
@@ -88,10 +103,10 @@ letter, so the environment is continuous when `B` opens the briefing.
 - The `data-atmosphere-view` attribute and the existing component class names,
   so behavioural tests still exercise the real application.
 
-## 5 · Verification
+## 6 · Verification
 
-- `npm run verify` — 480 tests, including the new world map and room-routing
-  suites; lint, both typechecks and a production build.
+- `npm run verify` — 482 tests, including the new world map, room-routing and
+  navigation-portrait suites; lint, both typechecks and a production build.
 - `npm run qa:contrast` — 0 failures in 144 region × atmosphere samples, worst
   5.53:1 for the villa (unchanged).
 - `npm run qa:fit` — 16 routes × 10 widths, no guaranteed horizontal overflow.

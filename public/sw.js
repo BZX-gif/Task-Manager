@@ -23,6 +23,7 @@ const SHELL_ASSETS = [
   '/assets/atmospheres/focus/private-study-night-sm.webp',
   '/assets/atmospheres/briefing/hotel-lounge-morning-sm.webp',
   '/assets/atmospheres/journal/writing-room-sm.webp',
+  '/assets/atmospheres/navigation/gallery-corridor-sm.webp',
   '/static/fonts/instrument-serif-400.woff2',
   '/static/fonts/instrument-serif-400-italic.woff2',
   '/static/fonts/dm-sans-400.woff2',

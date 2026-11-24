@@ -90,6 +90,31 @@ test('each named section paints its own photograph and one active layer', async 
   assert.equal(seen.size, 7, 'seven different photographs were activated')
 })
 
+test('the navigation rail shows the same world in its own glass frame', async () => {
+  const rooms = {
+    day: ['My Day', 'penthouse-sunrise-sm.webp'],
+    tasks: ['Missions', 'mountain-workspace-sm.webp'],
+    goals: ['Goals', 'coastal-villa-sm.webp'],
+    projects: ['Projects', 'creative-studio-sm.webp'],
+    calendar: ['Calendar & Schedule', 'resort-terrace-sm.webp'],
+    focus: ['Focus', 'private-study-night-sm.webp'],
+    paper: ['Daily Briefing', 'hotel-lounge-morning-sm.webp'],
+  }
+  for (const [route, [name, asset]] of Object.entries(rooms)) {
+    await visit(route)
+    for (const card of $$('[data-sidebar-room]')) {
+      assert.equal(card.querySelector('[data-sidebar-room-name]').textContent, name, `${route} is named in the navigation`)
+      assert.match(card.querySelector('[data-sidebar-room-photo]').getAttribute('style'), new RegExp(asset), `${route} is pictured in the navigation`)
+      assert.match(card.querySelector('[data-sidebar-room-place]').textContent, /.{12,}/)
+    }
+  }
+  await visit('dashboard')
+  const card = $('.sidebar [data-sidebar-room]')
+  assert.equal(card.dataset.room, 'villa')
+  assert.match(card.querySelector('[data-sidebar-room-name]').textContent, /Command Center/)
+  assert.match(card.querySelector('[data-sidebar-room-photo]').getAttribute('style'), /atmosphere-(morning|afternoon|night)-sm\.webp/, 'the villa preview follows the selected hour')
+})
+
 test('every chapter has its own editorial opening with figures from real data', async () => {
   for (const route of ['day', 'tasks', 'goals', 'projects', 'calendar', 'focus', 'paper', 'journal']) {
     const section = await visit(route)
