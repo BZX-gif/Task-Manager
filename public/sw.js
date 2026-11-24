@@ -7,13 +7,22 @@
    • /api/* is never cached — AI responses must always be live.
    ------------------------------------------------------------------------- */
 
-const VERSION = 'v5-0-1'
+const VERSION = 'v6-0-0'
 const SHELL_CACHE = `cc-shell-${VERSION}`
 const ASSET_CACHE = `cc-assets-${VERSION}`
 
 const SHELL_ASSETS = [
   '/',
   '/static/atmosphere.css',
+  '/static/worlds.css',
+  '/assets/atmospheres/myday/penthouse-sunrise-sm.webp',
+  '/assets/atmospheres/missions/mountain-workspace-sm.webp',
+  '/assets/atmospheres/goals/coastal-villa-sm.webp',
+  '/assets/atmospheres/projects/creative-studio-sm.webp',
+  '/assets/atmospheres/calendar/resort-terrace-sm.webp',
+  '/assets/atmospheres/focus/private-study-night-sm.webp',
+  '/assets/atmospheres/briefing/hotel-lounge-morning-sm.webp',
+  '/assets/atmospheres/journal/writing-room-sm.webp',
   '/static/fonts/instrument-serif-400.woff2',
   '/static/fonts/instrument-serif-400-italic.woff2',
   '/static/fonts/dm-sans-400.woff2',

@@ -97,7 +97,7 @@ function heroBlock({ now, stats, command, salute, intention, openTasks }) {
   return `<header class="atmo-hero">
     <div class="atmo-hero-main">
       <p class="eyebrow">${escapeHtml(atmosphereInfo(atmosphereId).label)} in the villa</p>
-      <h1 class="atmo-greeting" id="overview-greeting"><span class="greeting-part">${escapeHtml(part)}</span><span class="greeting-name">${escapeHtml(name.replace(/\.$/, ''))}</span></h1>
+      <h1 class="atmo-greeting" id="overview-greeting"><span class="greeting-part">${escapeHtml(part)}</span><span class="greeting-name">${escapeHtml(name.replace(/\.$/, ''))}</span><span class="greeting-punctuation sr-only">.</span></h1>
       <p class="atmo-lead">${lead}</p>
       <button class="atmo-intention${intention ? ' is-set' : ' is-empty'}" type="button" data-common="briefing" aria-label="${intention ? `Today’s intention: ${escapeHtml(intention)}. Open the briefing to edit` : 'Set today’s intention'}">
         <span class="atmo-intention-label">Intention</span>

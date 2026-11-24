@@ -102,10 +102,10 @@ export function applyTheme() {
   const brandLabel = document.querySelector('.brand-name-label')
   const brandDot = document.querySelector('.brand-name-dot')
   const brandHome = document.querySelector('.brand-home')
-  if (brandLabel) brandLabel.textContent = signature ? 'HYB' : 'command'
+  if (brandLabel) brandLabel.textContent = signature ? 'HYB' : 'paper'
   if (brandDot) { if (signature) brandDot.setAttribute('hidden', ''); else brandDot.removeAttribute('hidden') }
-  brandHome?.setAttribute('aria-label', signature ? 'HYB Crown Studio overview' : 'Command overview')
-  document.title = signature ? 'HYB · Crown Studio' : 'Command · Your Personal Command Center'
+  brandHome?.setAttribute('aria-label', signature ? 'HYB Crown Studio overview' : 'PAPER home')
+  document.title = signature ? 'HYB · Crown Studio' : 'PAPER · Personal Command Platform'
   const favicon = document.querySelector('link[rel="icon"]')
   if (favicon) favicon.setAttribute('href', signature ? '/static/favicon-crown.svg' : '/static/favicon.svg')
   if (previousEdition !== (document.documentElement.dataset.edition || '')) {

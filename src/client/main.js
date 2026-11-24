@@ -30,7 +30,7 @@ import { setCalendarDate } from './views/calendar.js'
 import { closeOnboarding, isOnboardingOpen, needsOnboarding, openOnboarding } from './ui/onboarding.js'
 import { initAtmosphere, chooseAtmosphere, currentAtmosphere, tickAtmosphere } from './ui/atmosphere.js'
 
-const APP_VERSION='5.0'
+const APP_VERSION='6.0'
 
 /**
  * The onboarding flow is shown once. Completion is written through the store

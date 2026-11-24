@@ -1,6 +1,7 @@
 import { escapeHtml } from '../core/dom.js'
 import { state } from '../core/store.js'
 import { icon } from './icons.js'
+import { sceneHero } from './scenes.js'
 export { icon }
 /**
  * The chapter opening.
@@ -12,7 +13,7 @@ export { icon }
  * need to compose the same shape with richer content.
  */
 export function pageHeading(eyebrow, title, subtitle, actions = '') {
-  return `<header class="page-heading paper-header"><div class="paper-header-main"><p class="eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}</div>${actions ? `<div class="heading-actions">${actions}</div>` : ''}</header>`
+  return sceneHero({ eyebrow, title: escapeHtml(title), lede: subtitle || '', actions })
 }
 export function actionButton(action, label, symbol = 'plus', primary = false) { return `<button class="${primary ? 'btn-primary' : 'btn-ghost'}" data-common="${action}">${icon(symbol)}${escapeHtml(label)}</button>` }
 export function ring(value, label = 'of 100', empty = false) { const pct = Math.max(0,Math.min(100,Number(value)||0)); return `<div class="score-ring" role="img" aria-label="${empty ? 'No score yet' : `${pct} ${label}`}"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="ring-track" cx="50" cy="50" r="43"/><circle class="ring-value" cx="50" cy="50" r="43" stroke-dasharray="270.18" stroke-dashoffset="${270.18*(1-pct/100)}"/></svg><div class="ring-label"><strong>${empty ? '—' : Math.round(pct)}</strong><small>${escapeHtml(label)}</small></div></div>` }

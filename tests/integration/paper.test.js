@@ -73,10 +73,10 @@ const visit = async (view) => { window.CC.switchView(view); await settle(340); r
 
 /* ------------------------------------------------------------------ system */
 
-test('the PAPER sheet ships after every other stylesheet', async () => {
+test('the PAPER system ships before the final world layer', async () => {
   const src = await readFile(path.join(root, 'src', 'shell.ts'), 'utf8')
   const srcLinks = [...src.matchAll(/href="\/static\/([\w-]+)\.css"/g)].map((m) => m[1])
-  assert.equal(srcLinks[srcLinks.length - 1], 'paper', `source order is ${srcLinks.join(' → ')}`)
+  assert.equal(srcLinks[srcLinks.length - 1], 'worlds', `source order is ${srcLinks.join(' → ')}`)
   const css = await readFile(path.join(root, 'public', 'static', 'paper.css'), 'utf8')
   assert.ok(css.length > 8000, 'the sheet is substantial')
   assert.match(css, /--paper:#/, 'it defines the paper ground')
@@ -84,7 +84,7 @@ test('the PAPER sheet ships after every other stylesheet', async () => {
   assert.match(css, /--rule:/, 'and the hairline rules')
   assert.match(css, /--font-note/, 'and the handwriting face')
   const links = [...shell.matchAll(/href="\/static\/([\w-]+)\.css"/g)].map((m) => m[1])
-  assert.equal(links[links.length - 1], 'paper', `served order is ${links.join(' → ')}`)
+  assert.equal(links[links.length - 1], 'worlds', `served order is ${links.join(' → ')}`)
   assert.ok(links.indexOf('paper') > links.indexOf('atmosphere'), 'paper wins the cascade over atmosphere')
 })
 
@@ -266,14 +266,25 @@ test('the shell keeps one sidebar and one header on every route', async () => {
   }
 })
 
-test('photography is reserved for the pages about being present', async () => {
+test('every chapter opens in its own photographic environment', async () => {
   const doc = window.document
-  for (const route of ['goals', 'tasks', 'calendar', 'settings']) {
-    await visit(route)
-    assert.equal(doc.documentElement.dataset.atmosphereView, 'workspace', `${route} is a paper page`)
+  const expected = {
+    day: 'day', tasks: 'missions', goals: 'goals', projects: 'projects',
+    calendar: 'terrace', focus: 'study', paper: 'lounge', journal: 'writing',
   }
+  for (const [route, scene] of Object.entries(expected)) {
+    await visit(route)
+    assert.equal(doc.documentElement.dataset.atmosphereView, 'workspace', `${route} keeps the shared workspace chrome`)
+    assert.equal(doc.documentElement.dataset.scene, scene, `${route} paints its own room`)
+    const active = [...doc.querySelectorAll('#scene .scene-layer.is-active')].map((n) => n.dataset.sceneLayer)
+    assert.deepEqual(active, [scene], `${route} has exactly one active photograph`)
+    assert.ok(doc.querySelector(`#view-${route} .scene-hero h1`), `${route} has an editorial opening`)
+  }
+  await visit('settings')
+  assert.equal(doc.documentElement.dataset.scene, 'villa', 'secondary rooms stay in the villa')
   await visit('dashboard')
-  assert.equal(doc.documentElement.dataset.atmosphereView, 'dashboard', 'the Command Center keeps its photograph')
+  assert.equal(doc.documentElement.dataset.atmosphereView, 'dashboard', 'the Command Center keeps its villa photographs')
+  assert.equal(doc.documentElement.dataset.scene, 'villa')
 })
 
 test('the tour is silent', () => {
@@ -588,7 +599,7 @@ test('paper does not flatten the Command Center’s own surfaces', async () => {
     'paper cards warm on hover, scoped to the workspace')
 })
 
-test('the parchment theme is real, not just declared', async () => {
+test('the light theme keeps warm ink on glass and light type over the photograph', async () => {
   // The audit harness had a bug: `:root` was treated as matching every element,
   // so the dark tokens won on every node and the light theme could never be
   // seen. That is fixed in scripts/qa/css.mjs; this test asserts the *values*
@@ -596,7 +607,7 @@ test('the parchment theme is real, not just declared', async () => {
   const { parseCss, computed, resolveVars, setViewport } = await import('../../scripts/qa/css.mjs')
   const { JSDOM } = await import('jsdom')
   setViewport(1440)
-  const SHEETS = ['style', 'studio', 'system', 'atmosphere', 'paper']
+  const SHEETS = ['style', 'studio', 'system', 'atmosphere', 'paper', 'worlds']
   const rules = []
   for (const sheet of SHEETS) {
     try { rules.push(...parseCss(await readFile(path.join(root, 'public', 'static', `${sheet}.css`), 'utf8'))) } catch { /* optional */ }
@@ -629,12 +640,21 @@ test('the parchment theme is real, not just declared', async () => {
     const v = parseInt(m[1], 16)
     return ((v >> 16) + ((v >> 8) & 255) + (v & 255)) / 3 < 110
   }
+  // Data on translucent light glass stays sepia; type laid directly on the
+  // photograph is warm ivory, because the room behind it is dark.
+  const isWarmLight = (hex) => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+    if (!m) return null
+    const n = parseInt(m[1], 16)
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+    return (r + g + b) / 3 > 170 && r > b
+  }
   const checked = []
-  for (const sel of ['.cal-nav-label strong', '.cal-cell-day', '.page-heading h1']) {
+  for (const [sel, test] of [['.cal-cell-day', inkIsDark], ['.cal-nav-label strong', isWarmLight], ['.page-heading h1', isWarmLight]]) {
     const el = doc.querySelector(sel)
     assert.ok(el, `${sel} must exist in the rendered page — an empty fixture proves nothing`)
     const c = resolveVars(computed(rules, pathOf(el)), rootDecls, 1440)
-    assert.ok(inkIsDark(c.color), `${sel} uses dark ink on parchment (got ${c.color})`)
+    assert.ok(test(c.color), `${sel} has the intended light-theme ink (got ${c.color})`)
     checked.push(sel)
   }
   assert.equal(checked.length, 3, 'all three were actually checked')

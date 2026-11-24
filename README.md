@@ -1,6 +1,6 @@
-# Command · Personal Command Center
+# PAPER · Personal Command Platform
 
-A local-first personal productivity workspace: **what matters today, where your time goes, and how the week is really going**.
+A local-first personal command platform: **what matters today, where your time goes, and how the week is really going**. Every chapter opens into its own original photographic environment, with one persistent glass navigation system.
 
 Command is an original interface with a warm, editorial identity — warm near-black dark mode by default, a warm paper light theme, serif display type with monospace numerals, local SVG icons, restrained motion, and a dedicated mobile dock/drawer. It is a working product, not a landing page: missions, goals, projects, routines, scheduling, focus, analytics, review, reminders, backup/restore and the built-in PAPER intelligence engine are all wired to real browser-local data.
 

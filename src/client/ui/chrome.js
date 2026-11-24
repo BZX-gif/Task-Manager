@@ -1,6 +1,6 @@
 import { MOTIVATIONAL_QUOTES } from '../lib/defaults.js'
-import { greetingLine, salutationOf } from '../lib/briefing.js'
-import { splitGreeting } from '../lib/atmosphere.js'
+import { addresseeOf, greetingLine, salutationOf } from '../lib/briefing.js'
+import { atmosphereInfo, resolveAtmosphere, splitGreeting } from '../lib/atmosphere.js'
 import { escapeHtml, el, closeModal, openModal, qsa, scrollToNode, toast } from '../core/dom.js'
 import { commit, currentDayKey, state } from '../core/store.js'
 import { elapsedSeconds, remainingSeconds, sessionTotals } from '../lib/focus.js'
@@ -25,7 +25,10 @@ export function greeting(now=new Date()){return greetingLine(state,now)}
 function syncHeroGreeting(now=new Date()){
   const part=document.querySelector('.atmo-greeting .greeting-part'),name=document.querySelector('.atmo-greeting .greeting-name')
   if(!part||!name)return
-  const {part:partText,name:nameText}=splitGreeting(greetingLine(state,now))
+  // The villa's greeting follows its atmosphere, so a pinned room and the
+  // live clock can never disagree about which photograph is on screen.
+  const room = resolveAtmosphere(state?.settings?.atmosphere, now)
+  const {part:partText,name:nameText}=splitGreeting(`${atmosphereInfo(room).greeting}, ${addresseeOf(state)}`)
   const cleanName=nameText.replace(/\.$/,'')
   if(part.textContent!==partText)part.textContent=partText
   if(name.textContent!==cleanName)name.textContent=cleanName
@@ -33,7 +36,10 @@ function syncHeroGreeting(now=new Date()){
 export function updateClockAndGreeting(){
   const now=new Date(),format=state.settings.timeFormat||'12h'
   const text=(selector,value)=>{const node=el(selector);if(node&&node.textContent!==value)node.textContent=value}
-  text('overview-greeting',greeting(now));text('greeting-text',greeting(now));text('command-strip-salute',`At your command, ${salutation()}.`)
+  // `#overview-greeting` is a container the villa hero owns. Writing to it
+  // here would delete its two leaf spans on the first tick; syncHeroGreeting()
+  // below updates those leaves in place and follows the selected atmosphere.
+  text('greeting-text',greeting(now));text('command-strip-salute',`At your command, ${salutation()}.`)
   const clock=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:format==='12h'})
   text('live-clock',clock);text('overview-clock',clock)
   // The photographic hero keeps the greeting split across two leaf spans (the
@@ -69,7 +75,7 @@ export function renderQuoteInline(){rotateQuote(true)}
 export function setMobileNav(open){mobileOpen=!!open;const nav=el('mobile-nav');if(!nav)return;nav.classList.toggle('hidden',!open);el('mobile-menu-btn')?.setAttribute('aria-expanded',String(!!open));document.body.classList.toggle('mobile-nav-open',!!open);if(open)nav.querySelector('.nav-item')?.focus();else el('mobile-menu-btn')?.focus({preventScroll:true})}
 export function toggleMobileNav(){setMobileNav(!mobileOpen)}
 export function footerVersion(version){const node=document.getElementById('app-version');if(node)node.textContent=`v${version}`}
-export function updateBreadcrumb(view){const label=el('breadcrumb-current');if(label)label.textContent=VIEW_LABELS[view]||'Overview';document.title=`${VIEW_LABELS[view]||'Overview'} · Command`}
+export function updateBreadcrumb(view){const label=el('breadcrumb-current');if(label)label.textContent=VIEW_LABELS[view]||'Overview';document.title=`${VIEW_LABELS[view]||'Overview'} · PAPER`}
 export function bindChrome(){
   el('sidebar-collapse')?.addEventListener('click',()=>{commit((s)=>s.settings.sidebarCollapsed=!s.settings.sidebarCollapsed,{silent:true,immediate:true});applyTheme();el('sidebar-collapse')?.setAttribute('aria-expanded',String(!state.settings.sidebarCollapsed));el('sidebar-collapse')?.setAttribute('aria-label',state.settings.sidebarCollapsed?'Expand sidebar':'Collapse sidebar')})
   el('theme-toggle')?.addEventListener('click',()=>{commit((s)=>s.settings.theme=document.documentElement.dataset.theme==='light'?'dark':'light',{silent:true,immediate:true});applyTheme();el('theme-toggle').innerHTML=icon(document.documentElement.dataset.theme==='light'?'moon':'sun')})
