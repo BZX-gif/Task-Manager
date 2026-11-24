@@ -16,6 +16,7 @@
 
 import { emit, on } from '../core/bus.js'
 import { commit, currentDayKey, state } from '../core/store.js'
+import { ensureSceneLayers, setScene } from './scenes.js'
 import {
   ATMOSPHERES,
   atmosphereInfo,
@@ -156,6 +157,9 @@ export function applyAtmospherePreference({ initial = false } = {}) {
 export function setAtmosphereScope(view) {
   const scope = view === 'dashboard' ? 'dashboard' : 'workspace'
   ROOT()?.setAttribute('data-atmosphere-view', scope)
+  // Each chapter paints its own commissioned environment. The attribute is
+  // set before the view renders, so its shared opening already knows the room.
+  setScene(view)
   // Every chapter gets an address (/calendar, /goals) so it can be linked and
   // reloaded. The Worker answers those paths with the shell, and the router
   // reads the last segment back on boot — see viewFromPath().
@@ -293,6 +297,7 @@ export function initAtmosphere() {
   if (typeof document === 'undefined') return () => {}
   root = ROOT()
   ensureLayers()
+  ensureSceneLayers()
   applyAtmospherePreference({ initial: true })
   bindAtmosphereSwitch()
   on('store:change', () => {

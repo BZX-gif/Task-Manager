@@ -1,0 +1,714 @@
+/* ==========================================================================
+   PAPER — WORLDS
+   The final cascade layer. Every chapter opens into its own original
+   environment; the navigation, type, glass and metals stay identical.
+
+     1  the photographic stage
+     2  palette for rooms
+     3  persistent shell (glass navigation)
+     4  the chapter opening
+     5  the shared glass sheet
+     6  eight individual compositions
+     7  the daily briefing room
+     8  motion, reduced motion, responsive
+   ========================================================================== */
+
+/* --------------------------------------------------- 1 · the photographic stage */
+#scene{
+  position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  background:#100D0A;
+}
+:root[data-scene=villa] #scene{display:none}
+.scene-static,.scene-layer{
+  position:absolute;inset:0;
+  background-position:center center;background-size:cover;background-repeat:no-repeat;
+}
+/* The static frame is in the shell, so the correct room is already painted on
+   the first frame — before the client bundle has even loaded. */
+.scene-static{z-index:0;opacity:1}
+.scene-layer{
+  z-index:1;opacity:0;will-change:opacity;contain:strict;
+  transition:opacity 900ms cubic-bezier(.4,0,.2,1);
+}
+.scene-layer.is-active{opacity:1}
+:root[data-scene=day]    .scene-static{background-image:url('/assets/atmospheres/myday/penthouse-sunrise-sm.webp');background-position:center 48%}
+:root[data-scene=missions] .scene-static{background-image:url('/assets/atmospheres/missions/mountain-workspace-sm.webp');background-position:center 58%}
+:root[data-scene=goals]  .scene-static{background-image:url('/assets/atmospheres/goals/coastal-villa-sm.webp');background-position:center 54%}
+:root[data-scene=projects] .scene-static{background-image:url('/assets/atmospheres/projects/creative-studio-sm.webp');background-position:center 56%}
+:root[data-scene=terrace] .scene-static{background-image:url('/assets/atmospheres/calendar/resort-terrace-sm.webp');background-position:center 54%}
+:root[data-scene=study]  .scene-static{background-image:url('/assets/atmospheres/focus/private-study-night-sm.webp');background-position:center 58%}
+:root[data-scene=lounge] .scene-static{background-image:url('/assets/atmospheres/briefing/hotel-lounge-morning-sm.webp');background-position:center 52%}
+:root[data-scene=writing] .scene-static{background-image:url('/assets/atmospheres/journal/writing-room-sm.webp');background-position:center 54%}
+
+/* One grade for the whole property: reading light on the left, a soft floor,
+   and just enough vignette to keep ivory type honest on any photograph. */
+#scene::after{
+  content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(8,6,4,.78) 0%,rgba(9,7,5,.56) 34%,rgba(10,8,6,.16) 68%,rgba(8,6,4,.34) 100%),
+    linear-gradient(180deg,rgba(8,6,4,.30) 0%,rgba(8,6,4,.04) 26%,rgba(8,6,4,.20) 66%,rgba(8,6,4,.66) 100%),
+    var(--scene-grade,transparent);
+  transition:background 700ms ease;
+}
+:root[data-scene=day]     #scene::after{--scene-grade:rgba(94,62,32,.10)}
+:root[data-scene=missions]#scene::after{--scene-grade:rgba(44,58,70,.10)}
+:root[data-scene=goals]   #scene::after{--scene-grade:rgba(20,62,76,.12)}
+:root[data-scene=projects]#scene::after{--scene-grade:rgba(56,48,34,.08)}
+:root[data-scene=terrace] #scene::after{--scene-grade:rgba(30,52,38,.08)}
+:root[data-scene=study]   #scene::after{--scene-grade:rgba(8,12,24,.30)}
+:root[data-scene=lounge]  #scene::after{--scene-grade:rgba(96,66,36,.10)}
+:root[data-scene=writing] #scene::after{--scene-grade:rgba(72,48,26,.11)}
+
+/* The workspace is now a room, not a flat paper ground. */
+:root:not([data-scene=villa]) body{background:transparent!important}
+:root:not([data-scene=villa]) html{background:#100D0A}
+:root:not([data-scene=villa]) .app-shell::before{display:none!important}
+
+/* ------------------------------------------------------ 2 · palette for rooms
+   Re-pointing PAPER's existing tokens means every legacy component inherits
+   the same glass rather than needing a per-view rewrite. */
+:root:not([data-scene=villa]){
+  --paper:rgba(20,16,12,.60);
+  --paper-raised:rgba(28,23,17,.68);
+  --paper-sunken:rgba(12,9,7,.52);
+  --paper-inset:rgba(8,6,4,.34);
+  --paper-edge:rgba(246,236,220,.16);
+  --paper-edge-strong:rgba(246,236,220,.27);
+
+  --ink:#F7F0E4;
+  --ink-soft:#E4D8C5;
+  --ink-muted:rgba(236,224,205,.82);
+  --ink-faint:rgba(232,219,199,.66);
+  --ink-ghost:rgba(230,217,197,.46);
+
+  --rule:rgba(246,236,220,.15);
+  --rule-strong:rgba(246,236,220,.27);
+  --rule-hair:rgba(246,236,220,.09);
+
+  --bronze:#D0A46C;
+  --gold:#E2BE82;
+  --champagne:#F0DFC4;
+  --accent-paper:#D0A46C;
+  --accent-paper-rgb:208,164,108;
+
+  --glass-blur:24px;
+  --room-shadow:0 1px 0 rgba(255,246,232,.09) inset,0 28px 70px -34px rgba(4,3,2,.88);
+}
+/* Light theme keeps its parchment, but as a luminous sheet held over the
+   photograph. The navigation stays dark glass in both themes: one identity. */
+:root[data-theme=light]:not([data-scene=villa]){
+  --paper:rgba(252,247,238,.80);
+  --paper-raised:rgba(255,251,243,.87);
+  --paper-sunken:rgba(243,235,221,.76);
+  --paper-inset:rgba(255,255,255,.52);
+  --paper-edge:rgba(74,56,36,.16);
+  --paper-edge-strong:rgba(74,56,36,.26);
+
+  --ink:#2A2118;
+  --ink-soft:#4B3E30;
+  --ink-muted:#6B5A46;
+  --ink-faint:rgba(42,33,24,.70);
+  --ink-ghost:rgba(42,33,24,.48);
+  --bronze:#8A6234;--gold:#9A7539;--champagne:#7A5C34;
+  --accent-paper:#94591D;--accent-paper-rgb:148,89,29;
+  --room-shadow:0 1px 0 rgba(255,255,255,.78) inset,0 26px 60px -30px rgba(38,28,16,.42);
+}
+
+/* --------------------------------------------------- 3 · persistent shell
+   One navigation identity on every route: dark translucent glass, hairline
+   separators, a bronze chapter mark and the same icon set everywhere. */
+:root:not([data-scene=villa]) .sidebar{
+  background:linear-gradient(180deg,rgba(17,14,11,.80),rgba(13,10,8,.72));
+  -webkit-backdrop-filter:blur(22px) saturate(130%);
+  backdrop-filter:blur(22px) saturate(130%);
+  border-right:1px solid rgba(246,236,220,.13);
+  box-shadow:12px 0 60px -40px rgba(0,0,0,.9);
+}
+:root:not([data-scene=villa]) .sidebar::after{
+  content:'';position:absolute;top:0;right:-1px;bottom:0;width:1px;
+  background:linear-gradient(180deg,transparent,rgba(208,164,108,.34) 24%,transparent 72%);
+  pointer-events:none;
+}
+:root:not([data-scene=villa]) .topbar,
+:root:not([data-scene=villa]) .command-strip{
+  background:linear-gradient(180deg,rgba(17,14,11,.72),rgba(17,14,11,.56))!important;
+  -webkit-backdrop-filter:blur(20px) saturate(130%);
+  backdrop-filter:blur(20px) saturate(130%);
+  border-bottom:1px solid rgba(246,236,220,.11);
+}
+:root[data-theme=light]:not([data-scene=villa]) .topbar,
+:root[data-theme=light]:not([data-scene=villa]) .command-strip{
+  background:linear-gradient(180deg,rgba(22,17,12,.82),rgba(18,14,10,.74))!important;
+}
+:root:not([data-scene=villa]) .topbar *{color:#F3E9D9}
+:root:not([data-scene=villa]) .topbar .search-trigger{
+  background:rgba(246,236,220,.07);
+  border:1px solid rgba(246,236,220,.15);
+  color:rgba(244,233,215,.74);
+}
+:root:not([data-scene=villa]) .topbar .search-trigger:hover{background:rgba(246,236,220,.12);border-color:rgba(208,164,108,.48)}
+:root:not([data-scene=villa]) .topbar .icon-btn,
+:root:not([data-scene=villa]) .sidebar .icon-btn{
+  color:rgba(244,233,215,.82);
+}
+:root:not([data-scene=villa]) .topbar .icon-btn:hover,
+:root:not([data-scene=villa]) .sidebar .icon-btn:hover{
+  background:rgba(246,236,220,.10);color:#FFF6E7;
+}
+:root:not([data-scene=villa]) .search-trigger kbd{
+  color:rgba(244,233,215,.60);border-color:rgba(246,236,220,.18);background:rgba(246,236,220,.07);
+}
+:root:not([data-scene=villa]) .topbar-separator{background:rgba(246,236,220,.16)}
+:root:not([data-scene=villa]) .brand-avatar{
+  background:linear-gradient(145deg,#C9A46D,#8E6338);color:#1B130A;border-color:rgba(255,236,205,.35);
+}
+:root:not([data-scene=villa]) .sidebar .brand-name-label{
+  text-transform:uppercase;letter-spacing:.30em;font-size:19px;font-weight:400;
+}
+:root:not([data-scene=villa]) .sidebar .brand-name{font-family:var(--font-display);letter-spacing:.04em}
+:root:not([data-scene=villa]) .sidebar .workspace-label{
+  border-top:1px solid rgba(246,236,220,.10);
+  border-bottom:1px solid rgba(246,236,220,.10);
+  padding:14px 0;margin:18px 0 12px;
+}
+:root:not([data-scene=villa]) .sidebar .workspace-avatar{
+  background:rgba(208,164,108,.16);border-color:rgba(208,164,108,.45);color:var(--gold);
+}
+:root:not([data-scene=villa]) .sidebar .nav-item{color:rgba(244,233,215,.68)}
+:root:not([data-scene=villa]) .sidebar .nav-item:hover{
+  color:#FFF6E7;background:rgba(246,236,220,.075);
+}
+:root:not([data-scene=villa]) .sidebar .nav-item.active-nav{
+  color:#FFF7E9;
+  background:linear-gradient(90deg,rgba(208,164,108,.20),rgba(208,164,108,.045) 80%,transparent);
+}
+:root:not([data-scene=villa]) .sidebar .nav-item.active-nav::before{
+  background:linear-gradient(180deg,#F1D6A6,#B7844D);height:19px;width:2px;
+}
+:root:not([data-scene=villa]) .sidebar .nav-label{color:rgba(240,216,180,.52)}
+:root:not([data-scene=villa]) .sidebar .nav-label::before{background:rgba(246,236,220,.12)}
+:root:not([data-scene=villa]) .sidebar .sidebar-focus,
+:root:not([data-scene=villa]) .sidebar .briefing-nav{
+  background:rgba(246,236,220,.055);
+  border:1px solid rgba(246,236,220,.12);
+}
+:root:not([data-scene=villa]) .sidebar .local-note{color:rgba(240,229,211,.42)}
+:root:not([data-scene=villa]) .command-strip{color:#F5EBDC}
+:root:not([data-scene=villa]) .command-strip-task{color:#FFF4E4}
+:root:not([data-scene=villa]) .command-strip-salute{color:rgba(226,190,130,.90)}
+:root:not([data-scene=villa]) .workspace-footer{
+  background:rgba(12,9,7,.45);color:rgba(240,229,211,.48);
+  border-top:1px solid rgba(246,236,220,.09);
+}
+:root:not([data-scene=villa]) .mobile-nav{
+  background:linear-gradient(160deg,rgba(19,15,11,.96),rgba(11,9,7,.98));
+  -webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);
+  border-left:1px solid rgba(208,164,108,.22);
+}
+:root:not([data-scene=villa]) .mobile-nav .nav-item{color:rgba(244,233,215,.78)}
+:root:not([data-scene=villa]) .mobile-nav .nav-item.active-nav{color:#FFF6E7;background:rgba(208,164,108,.16)}
+:root:not([data-scene=villa]) .mobile-dock,
+:root:not([data-scene=villa]) .hyb-fab{
+  background:rgba(18,14,10,.82)!important;
+  -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  border:1px solid rgba(246,236,220,.14);
+}
+:root:not([data-scene=villa]) .dock-item{color:rgba(244,233,215,.65)}
+:root:not([data-scene=villa]) .dock-item.is-active{color:var(--gold)}
+
+/* ------------------------------------------------ 4 · the chapter opening */
+.main-content{position:relative;z-index:1}
+:root:not([data-scene=villa]) .view-section{min-width:0}
+:root:not([data-scene=villa]) .scene-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(228px,294px);
+  align-items:end;gap:clamp(22px,3vw,52px);
+  position:relative;
+  min-height:clamp(250px,31vh,380px);
+  margin:0 0 clamp(24px,2.6vw,42px);
+  padding:clamp(26px,3.4vw,58px) 0 clamp(24px,2.4vw,34px);
+  border-bottom:1px solid rgba(246,236,220,.20);
+  background:none;box-shadow:none;backdrop-filter:none;
+}
+:root[data-theme=light]:not([data-scene=villa]) .scene-hero{border-bottom-color:rgba(255,248,235,.30)}
+.scene-hero-main{position:relative;min-width:0;max-width:68ch;align-self:end}
+.scene-hero-mark{display:flex;align-items:center;gap:12px;margin-bottom:clamp(12px,1.4vw,20px)}
+.scene-index{
+  font-family:var(--font-body);font-size:10px;font-weight:600;letter-spacing:.18em;
+  color:#E6BE80;padding:5px 8px;border:1px solid rgba(226,190,130,.42);border-radius:2px;
+  background:rgba(20,14,8,.28);
+}
+.scene-hair{display:block;width:clamp(22px,4vw,54px);height:1px;background:linear-gradient(90deg,rgba(226,190,130,.85),rgba(226,190,130,0))}
+.scene-hero .eyebrow{
+  font-size:10px;letter-spacing:.30em;font-weight:600;
+  color:#E2BE82;text-transform:uppercase;margin:0;
+  text-shadow:0 1px 12px rgba(0,0,0,.65);
+}
+.scene-hero h1{
+  font-family:var(--font-display);font-weight:400;
+  font-size:clamp(48px,6.1vw,92px);line-height:.95;
+  letter-spacing:-.035em;color:#FFF7EA;
+  margin:0 0 16px;max-width:15ch;
+  text-shadow:0 2px 34px rgba(0,0,0,.62),0 1px 3px rgba(0,0,0,.42);
+}
+.scene-hero h1 em,.scene-hero h1 i{font-style:italic;color:#F0D8AE}
+.scene-hero .scene-lede{
+  font-family:var(--font-display);font-style:italic;
+  font-size:clamp(17px,1.45vw,22px);line-height:1.42;
+  color:rgba(248,238,220,.90);max-width:52ch;margin:0 0 20px;
+  text-shadow:0 1px 18px rgba(0,0,0,.62);
+}
+:root[data-theme=light]:not([data-scene=villa]) .scene-hero h1{color:#FFF8EC}
+:root[data-theme=light]:not([data-scene=villa]) .scene-index{background:rgba(24,16,8,.62)}
+.scene-welcome{
+  display:inline-flex;align-items:flex-start;gap:11px;
+  max-width:62ch;padding:10px 15px 10px 12px;
+  border-left:2px solid rgba(226,190,130,.72);
+  background:linear-gradient(90deg,rgba(14,10,7,.52),rgba(14,10,7,.12));
+  -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);
+}
+.scene-welcome>span{color:#E2BE82;font-size:13px;line-height:1.5}
+.scene-welcome p{
+  margin:0;font-size:12.5px;line-height:1.5;letter-spacing:.012em;
+  color:rgba(246,235,215,.88);
+}
+.scene-hero-aside{
+  min-width:0;align-self:end;
+  padding:17px 18px 16px;
+  border:1px solid rgba(246,236,220,.20);
+  border-radius:16px;
+  background:linear-gradient(158deg,rgba(24,19,14,.66),rgba(14,11,8,.44));
+  -webkit-backdrop-filter:blur(20px) saturate(130%);
+  backdrop-filter:blur(20px) saturate(130%);
+  box-shadow:0 1px 0 rgba(255,246,232,.10) inset,0 24px 54px -30px rgba(0,0,0,.86);
+}
+:root[data-theme=light]:not([data-scene=villa]) .scene-hero-aside{
+  background:linear-gradient(158deg,rgba(255,251,243,.86),rgba(246,238,224,.72));
+  border-color:rgba(74,56,36,.20);
+}
+.scene-place{display:flex;flex-direction:column;gap:5px;padding-bottom:12px;border-bottom:1px solid rgba(246,236,220,.14)}
+.scene-place>span{
+  font-size:9px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#DDB57C;
+}
+.scene-place strong{font-family:var(--font-display);font-size:17px;font-weight:400;line-height:1.2;color:#FFF4E2}
+.scene-place small{font-size:10.5px;color:rgba(240,229,211,.62);letter-spacing:.03em}
+:root[data-theme=light]:not([data-scene=villa]) .scene-place strong{color:#2A2118}
+:root[data-theme=light]:not([data-scene=villa]) .scene-place small{color:#6B5A46}
+:root[data-theme=light]:not([data-scene=villa]) .scene-place{border-bottom-color:rgba(74,56,36,.16)}
+.scene-facts{display:flex;gap:8px;margin:12px 0 0;flex-wrap:wrap}
+.scene-facts>div{flex:1 1 68px;min-width:0}
+.scene-facts dt{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:rgba(233,214,183,.58)}
+.scene-facts dd{
+  margin:2px 0 0;font-family:var(--font-display);font-size:21px;line-height:1.1;
+  font-variant-numeric:tabular-nums;color:#F5E1BF;
+}
+:root[data-theme=light]:not([data-scene=villa]) .scene-facts dt{color:rgba(74,56,36,.66)}
+:root[data-theme=light]:not([data-scene=villa]) .scene-facts dd{color:#5B3E1E}
+.scene-hero-aside .heading-actions{
+  display:flex;gap:7px;flex-wrap:wrap;margin-top:14px;padding-top:13px;
+  border-top:1px solid rgba(246,236,220,.14);
+}
+:root[data-theme=light]:not([data-scene=villa]) .scene-hero-aside .heading-actions{border-top-color:rgba(74,56,36,.16)}
+.scene-hero-aside .btn{padding:8px 12px!important;font-size:11px!important;white-space:nowrap}
+
+/* ----------------------------------------------------- 5 · the glass sheet
+   Every panel is a held sheet of smoke-and-light. Solid surfaces are used
+   only where a long form genuinely needs maximum readability. */
+:root:not([data-scene=villa]) .card,
+:root:not([data-scene=villa]) .glass-card{
+  background:linear-gradient(155deg,rgba(31,25,19,.78),rgba(17,13,10,.66))!important;
+  border:1px solid rgba(246,236,220,.16)!important;
+  border-radius:18px!important;
+  box-shadow:var(--room-shadow)!important;
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(128%);
+  backdrop-filter:blur(var(--glass-blur)) saturate(128%);
+  padding:clamp(18px,1.8vw,28px);
+}
+:root[data-theme=light]:not([data-scene=villa]) .card,
+:root[data-theme=light]:not([data-scene=villa]) .glass-card{
+  background:linear-gradient(155deg,rgba(255,251,243,.91),rgba(246,238,224,.82))!important;
+  border-color:rgba(74,56,36,.16)!important;
+}
+:root:not([data-scene=villa]) .card:hover,
+:root:not([data-scene=villa]) .glass-card:hover{
+  border-color:rgba(226,190,130,.38)!important;
+  box-shadow:0 1px 0 rgba(255,246,232,.12) inset,0 34px 76px -34px rgba(0,0,0,.9)!important;
+}
+:root:not([data-scene=villa]) .card h3,
+:root:not([data-scene=villa]) .card h4{color:#F8EFDF}
+:root[data-theme=light]:not([data-scene=villa]) .card h3,
+:root[data-theme=light]:not([data-scene=villa]) .card h4{color:#2A2118}
+:root:not([data-scene=villa]) .card p,
+:root:not([data-scene=villa]) .card li{color:var(--ink-soft)}
+:root:not([data-scene=villa]) .card .meta,
+:root:not([data-scene=villa]) .card .form-hint{color:var(--ink-faint)}
+
+/* Controls stay legible on the glass; active states use the same bronze. */
+:root:not([data-scene=villa]) .input-field{
+  background:rgba(10,8,6,.38);border:1px solid rgba(246,236,220,.17);color:#F8EFDF;
+}
+:root:not([data-scene=villa]) .input-field::placeholder{color:rgba(240,229,211,.42)}
+:root[data-theme=light]:not([data-scene=villa]) .input-field{
+  background:rgba(255,255,255,.68);border-color:rgba(74,56,36,.18);color:#2A2118;
+}
+:root[data-theme=light]:not([data-scene=villa]) .input-field::placeholder{color:rgba(42,33,24,.46)}
+:root:not([data-scene=villa]) .segmented{
+  background:rgba(10,8,6,.32);border:1px solid rgba(246,236,220,.13);
+}
+:root:not([data-scene=villa]) .segmented button{color:rgba(244,233,215,.68)}
+:root:not([data-scene=villa]) .segmented button.seg-active{
+  background:rgba(208,164,108,.18);color:#FFEFD2;box-shadow:none;
+}
+:root[data-theme=light]:not([data-scene=villa]) .segmented{background:rgba(255,255,255,.48);border-color:rgba(74,56,36,.16)}
+:root[data-theme=light]:not([data-scene=villa]) .segmented button{color:#5B4C3B}
+:root[data-theme=light]:not([data-scene=villa]) .segmented button.seg-active{background:rgba(148,89,29,.14);color:#6A421C}
+:root:not([data-scene=villa]) .chip{
+  background:rgba(246,236,220,.08);border-color:rgba(246,236,220,.17);color:rgba(247,238,222,.86);
+}
+:root[data-theme=light]:not([data-scene=villa]) .chip{background:rgba(255,255,255,.5);border-color:rgba(74,56,36,.18);color:#4B3E30}
+:root:not([data-scene=villa]) .text-button{color:#E6BE80}
+:root:not([data-scene=villa]) .text-button:hover{color:#FFF1D6}
+:root[data-theme=light]:not([data-scene=villa]) .text-button{color:#8A6234}
+:root:not([data-scene=villa]) .empty-state{color:var(--ink-muted)}
+:root:not([data-scene=villa]) .notice{
+  background:rgba(208,164,108,.09);border-color:rgba(208,164,108,.22);color:var(--ink-soft);
+}
+
+/* ------------------------------------------------- 6 · eight compositions
+   The same components are arranged differently in every room. Nothing here
+   changes a handler, a data hook, or the source of a single number. */
+
+/* 02 · MY DAY — a wide, airy opening and a two-column morning page. */
+#view-day .scene-hero{min-height:clamp(270px,35vh,420px)}
+#view-day .scene-hero h1{font-size:clamp(52px,6.8vw,104px)}
+#view-day .overview-middle,
+#view-day .day-journal{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:var(--gutter);align-items:start}
+#view-day .overview-middle>.card{min-height:0}
+#view-day .reflection-card,
+#view-day .hyb-today-card{grid-column:1/-1}
+#view-day .priority-row,
+#view-day .paper-entry{border-bottom-color:rgba(246,236,220,.10)}
+#view-day .schedule-summary>div{
+  border-bottom:1px solid rgba(246,236,220,.10);
+  padding:10px 0;
+}
+#view-day .schedule-summary strong{font-family:var(--font-display);font-weight:400;font-size:21px;color:#F4DEB9}
+
+/* 03 · MISSIONS — an executive ledger under a mountain window. */
+#view-tasks .scene-hero h1{font-size:clamp(50px,5.7vw,86px)}
+#view-tasks .mission-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin:0 0 14px;padding:9px 12px;
+  border:1px solid rgba(246,236,220,.14);border-radius:14px;
+  background:rgba(14,11,8,.40);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-tasks .mission-toolbar{background:rgba(255,251,243,.62);border-color:rgba(74,56,36,.14)}
+#view-tasks .filter-row{margin-bottom:16px}
+#view-tasks .task-list-surface{
+  border:1px solid rgba(246,236,220,.16);border-radius:20px;
+  background:linear-gradient(160deg,rgba(24,19,14,.74),rgba(12,9,7,.60));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(125%);
+  backdrop-filter:blur(var(--glass-blur)) saturate(125%);
+  box-shadow:var(--room-shadow);
+  padding:clamp(16px,2vw,28px);
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-tasks .task-list-surface{
+  background:linear-gradient(160deg,rgba(255,251,243,.90),rgba(246,238,224,.80));
+  border-color:rgba(74,56,36,.15);
+}
+#view-tasks .list-heading{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+  padding-bottom:16px;margin-bottom:8px;border-bottom:1px solid rgba(246,236,220,.16);
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-tasks .list-heading{border-bottom-color:rgba(74,56,36,.16)}
+#view-tasks .list-heading p{font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:#DDB57C;margin:0 0 6px}
+#view-tasks .list-heading h3{font-family:var(--font-display);font-size:clamp(25px,2.4vw,34px);font-weight:400;color:#F8EFDF;margin:0}
+:root[data-theme=light]:not([data-scene=villa]) #view-tasks .list-heading h3{color:#2A2118}
+#view-tasks .task-row,#view-tasks .paper-entry{
+  border-bottom:1px solid rgba(246,236,220,.10);
+  transition:background 160ms ease,padding 160ms ease;
+}
+#view-tasks .task-row:hover,#view-tasks .paper-entry:hover{background:rgba(246,236,220,.045)}
+#view-tasks .mission-footer{
+  display:flex;align-items:center;gap:8px;margin-top:14px;
+  font-size:11px;color:rgba(240,229,211,.62);
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-tasks .mission-footer{color:rgba(42,33,24,.62)}
+
+/* 04 · GOALS — a horizon of chapter cards, not a tidy grid of tiles. */
+#view-goals .scene-hero h1{font-size:clamp(54px,6.3vw,96px);max-width:14ch}
+#view-goals .paper-chapter-grid,
+#view-goals .entity-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));
+  gap:clamp(16px,1.8vw,26px);align-items:stretch;
+}
+#view-goals .paper-chapter{
+  min-height:238px;
+  border-radius:20px!important;
+  background:linear-gradient(158deg,rgba(30,25,19,.78),rgba(13,12,11,.60))!important;
+  transition:transform 320ms cubic-bezier(.22,.61,.36,1),border-color 200ms ease;
+}
+#view-goals .paper-chapter:nth-child(3n+2){transform:translateY(10px)}
+:root[data-theme=light]:not([data-scene=villa]) #view-goals .paper-chapter{background:linear-gradient(158deg,rgba(255,251,243,.90),rgba(246,238,224,.78))!important}
+#view-goals .paper-chapter:hover{transform:translateY(-3px);border-color:rgba(226,190,130,.46)!important}
+#view-goals .paper-chapter-title{font-size:clamp(24px,2.2vw,32px);color:#F7EAD3}
+:root[data-theme=light]:not([data-scene=villa]) #view-goals .paper-chapter-title{color:#2A2118}
+#view-goals .paper-reading-main,
+#view-goals .paper-reading-grid{max-width:100%}
+
+/* 05 · PROJECTS — an architect's table. Figures sit in the margin. */
+#view-projects .scene-hero{min-height:clamp(240px,29vh,350px)}
+#view-projects .paper-workbook-figures{
+  display:flex;gap:clamp(20px,3vw,52px);margin:0 0 20px!important;padding:0 0 18px;
+  border-bottom:1px solid rgba(246,236,220,.14);
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-projects .paper-workbook-figures{border-bottom-color:rgba(74,56,36,.16)}
+#view-projects .paper-figure strong{font-size:clamp(30px,3.2vw,46px);color:#F2D8AB}
+:root[data-theme=light]:not([data-scene=villa]) #view-projects .paper-figure strong{color:#7A5627}
+#view-projects .entity-grid{grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr))}
+#view-projects .board{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gutter);align-items:start;
+}
+#view-projects .board-column{
+  border:1px solid rgba(246,236,220,.13);border-radius:18px;
+  background:rgba(14,11,8,.34);padding:16px;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-projects .board-column{background:rgba(255,251,243,.54);border-color:rgba(74,56,36,.14)}
+#view-projects .board-column-head{
+  font-size:10px;letter-spacing:.20em;text-transform:uppercase;color:#DDB57C;
+  border-bottom:1px solid rgba(246,236,220,.14);padding-bottom:12px;margin-bottom:12px;
+}
+#view-projects .project-timeline{
+  background:linear-gradient(160deg,rgba(28,23,18,.76),rgba(13,10,8,.60));
+  border:1px solid rgba(246,236,220,.16);border-radius:18px;
+  -webkit-backdrop-filter:blur(var(--glass-blur));backdrop-filter:blur(var(--glass-blur));
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-projects .project-timeline{background:rgba(255,251,243,.86);border-color:rgba(74,56,36,.16)}
+
+/* 06 · CALENDAR — a terrace planner. The grid gets the room; the hero bows. */
+#view-calendar .scene-hero,
+#view-schedule .scene-hero{
+  min-height:0;grid-template-columns:minmax(0,1fr) minmax(210px,268px);
+  padding-top:clamp(20px,2vw,34px);padding-bottom:20px;
+}
+#view-calendar .scene-hero h1,
+#view-schedule .scene-hero h1{font-size:clamp(44px,5vw,74px)}
+#view-calendar .scene-welcome,
+#view-schedule .scene-welcome{display:none}
+#view-calendar .cal-toolbar,
+#view-calendar .cal-layers{
+  border:1px solid rgba(246,236,220,.14);border-radius:14px;
+  background:rgba(14,11,8,.40);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  padding:10px 14px;margin-bottom:12px;
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-calendar .cal-toolbar,
+:root[data-theme=light]:not([data-scene=villa]) #view-calendar .cal-layers{background:rgba(255,251,243,.66);border-color:rgba(74,56,36,.14)}
+#view-calendar .cal-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,290px);gap:var(--gutter);align-items:start}
+#view-calendar .cal-main,
+#view-calendar .cal-side{
+  border:1px solid rgba(246,236,220,.14);border-radius:18px;
+  background:linear-gradient(160deg,rgba(25,20,15,.72),rgba(12,10,8,.58));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(125%);
+  backdrop-filter:blur(var(--glass-blur)) saturate(125%);
+  padding:clamp(14px,1.6vw,24px);
+  box-shadow:var(--room-shadow);
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-calendar .cal-main,
+:root[data-theme=light]:not([data-scene=villa]) #view-calendar .cal-side{background:rgba(255,251,243,.86);border-color:rgba(74,56,36,.15)}
+#view-calendar .cal-month,
+#view-calendar .cal-week{
+  border-radius:12px;
+}
+#view-calendar .cal-cell{
+  border-color:rgba(246,236,220,.11);border-radius:9px;min-height:82px;
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-calendar .cal-cell{border-color:rgba(74,56,36,.13)}
+#view-calendar .cal-cell.is-today{
+  border-color:rgba(226,190,130,.56);
+  background:rgba(208,164,108,.09);
+  box-shadow:0 0 0 1px rgba(226,190,130,.18) inset;
+}
+#view-calendar .cal-nav-label strong{font-family:var(--font-display);font-weight:400;font-size:clamp(24px,2.3vw,32px);color:#F6E6C9}
+:root[data-theme=light]:not([data-scene=villa]) #view-calendar .cal-nav-label strong{color:#2A2118}
+#view-schedule .timeline-card,
+#view-schedule .card{max-width:none}
+
+/* 07 · FOCUS — the quietest room in the house. Everything withdraws. */
+#view-focus .scene-hero{
+  min-height:0;padding:clamp(18px,2vw,28px) 0 14px;margin-bottom:clamp(16px,2vw,24px);
+}
+#view-focus .scene-hero h1{font-size:clamp(34px,3.6vw,56px);max-width:none}
+#view-focus .scene-lede,
+#view-focus .scene-welcome,
+#view-focus .scene-facts,
+#view-focus .scene-place small{display:none}
+#view-focus .scene-hero-aside{padding:10px 14px}
+#view-focus .focus-room{
+  display:grid;grid-template-columns:minmax(0,1.25fr) minmax(240px,.75fr);
+  gap:var(--gutter);align-items:start;
+}
+#view-focus .focus-room-main{
+  min-height:clamp(480px,66vh,680px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:24px;
+  background:radial-gradient(70% 70% at 50% 40%,rgba(40,29,19,.64),rgba(10,8,6,.74));
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-focus .focus-room-main{
+  background:radial-gradient(70% 70% at 50% 40%,rgba(255,252,244,.94),rgba(242,233,217,.88));
+}
+#view-focus .focus-room-ring{filter:drop-shadow(0 0 34px rgba(214,160,88,.18))}
+#view-focus .focus-room-clock strong{
+  font-size:clamp(62px,8vw,116px);font-family:var(--font-display);font-weight:400;
+  letter-spacing:-.04em;color:#FFF1D8;
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-focus .focus-room-clock strong{color:#3B2A15}
+#view-focus .focus-room-side .card{border-radius:16px}
+#view-focus.focus-room-fullscreen{
+  background:rgba(9,7,5,.72)!important;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+}
+#view-focus.focus-room-fullscreen .scene-hero{display:none}
+
+/* 08 · BRIEFING / PAPER — an editorial letter in the morning room. */
+#view-paper .scene-hero{min-height:clamp(220px,27vh,320px)}
+#view-paper .scene-hero h1{font-size:clamp(46px,5.4vw,80px)}
+#view-paper .paper-layout{
+  display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.75fr);
+  gap:var(--gutter);align-items:start;
+}
+#view-paper .paper-main,
+#view-paper .paper-side{display:flex;flex-direction:column;gap:var(--gutter);min-width:0}
+#view-paper .paper-briefing{
+  border-radius:20px;
+  background:linear-gradient(160deg,rgba(31,25,18,.80),rgba(13,10,8,.64))!important;
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-paper .paper-briefing{background:linear-gradient(160deg,rgba(255,252,245,.94),rgba(246,238,224,.86))!important}
+#view-paper .paper-brief-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;
+  border-top:1px solid rgba(246,236,220,.14);padding-top:18px;
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-paper .paper-brief-grid{border-top-color:rgba(74,56,36,.16)}
+#view-paper .paper-log{
+  background:rgba(9,7,5,.34);border:1px solid rgba(246,236,220,.10);border-radius:12px;
+}
+:root[data-theme=light]:not([data-scene=villa]) #view-paper .paper-log{background:rgba(255,255,255,.52);border-color:rgba(74,56,36,.12)}
+#view-paper .assistant-composer .input-field{background:rgba(9,7,5,.44)}
+
+/* 09 · JOURNAL — a writing desk, with a narrower measure for reading. */
+#view-journal .scene-hero h1{font-size:clamp(44px,5vw,74px)}
+#view-journal .journal-day,
+#view-journal .card{max-width:940px}
+#view-review .scene-hero h1,
+#view-progress .scene-hero h1,
+#view-forecast .scene-hero h1{font-size:clamp(42px,4.6vw,68px)}
+#view-settings .scene-hero{min-height:0;padding-top:clamp(18px,2vw,28px)}
+#view-settings .scene-hero h1{font-size:clamp(42px,4.4vw,64px)}
+#view-settings .settings-section,
+#view-hyb .card,
+#view-routines .card{max-width:100%}
+
+/* ------------------------------------------- 7 · the daily briefing room
+   The briefing is a private letter, delivered in the lounge. It is an
+   overlay, not a route, so it takes the room's photograph of its own. */
+.briefing-overlay{background:rgba(7,5,4,.66)!important;-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
+.briefing-panel{
+  position:relative;overflow:hidden;
+  background:linear-gradient(158deg,rgba(30,24,17,.94),rgba(13,10,8,.96))!important;
+  border:1px solid rgba(226,190,130,.28)!important;
+  border-radius:24px!important;
+  box-shadow:0 40px 110px -40px rgba(0,0,0,.95)!important;
+}
+.briefing-panel::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:url('/assets/atmospheres/briefing/hotel-lounge-morning-sm.webp') center 45%/cover no-repeat;
+  opacity:.22;
+}
+.briefing-panel>*{position:relative;z-index:1}
+.briefing-panel .briefing-aurora{display:none}
+.briefing-salute{
+  font-family:var(--font-display);font-weight:400;
+  font-size:clamp(38px,3.6vw,58px);color:#FFF4E1;letter-spacing:-.025em;
+}
+.briefing-lead{font-family:var(--font-display);font-style:italic;color:rgba(244,231,208,.82)}
+.briefing-focus,.briefing-stats,.briefing-agenda,.briefing-intention{
+  background:rgba(10,8,6,.30)!important;
+  border:1px solid rgba(246,236,220,.13)!important;
+  border-radius:16px!important;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+}
+.briefing-stat strong,.briefing-score strong{font-family:var(--font-display);font-weight:400;color:#F3DDB6}
+.briefing-intention textarea{background:rgba(9,7,5,.42);color:#F8EFDF}
+
+/* ----------------------------------------------- 8 · motion & responsive */
+@media (prefers-reduced-motion:reduce){
+  .scene-layer{transition:opacity 1ms linear}
+  #scene::after{transition:none}
+  #view-goals .paper-chapter:nth-child(3n+2){transform:none}
+  #view-goals .paper-chapter:hover{transform:none}
+}
+
+@media (max-width:1180px){
+  :root:not([data-scene=villa]) .scene-hero{
+    grid-template-columns:minmax(0,1fr) minmax(200px,250px);
+  }
+  #view-calendar .cal-layout,#view-paper .paper-layout,#view-focus .focus-room{grid-template-columns:minmax(0,1fr)}
+  #view-calendar .cal-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  #view-focus .focus-room-main{min-height:520px}
+  #view-projects .board{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media (max-width:900px){
+  :root:not([data-scene=villa]) .scene-hero{
+    grid-template-columns:1fr;align-items:start;
+    min-height:0;padding-top:30px;
+  }
+  :root:not([data-scene=villa]) .scene-hero-main{max-width:none}
+  :root:not([data-scene=villa]) .scene-hero h1{max-width:none;font-size:clamp(46px,8vw,76px)}
+  :root:not([data-scene=villa]) .scene-hero-aside{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:14px;
+  }
+  :root:not([data-scene=villa]) .scene-facts{margin:0}
+  :root:not([data-scene=villa]) .scene-hero-aside .heading-actions{
+    grid-column:1/-1;margin-top:0;padding-top:11px;
+  }
+  #view-day .overview-middle,#view-day .day-journal{grid-template-columns:1fr}
+  #view-paper .paper-brief-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media (max-width:767px){
+  :root:not([data-scene=villa]){--glass-blur:14px}
+  :root:not([data-scene=villa]) .scene-hero{
+    padding:24px 0 20px;margin-bottom:20px;
+  }
+  :root:not([data-scene=villa]) .scene-hero h1{font-size:clamp(40px,11vw,62px);margin-bottom:12px}
+  :root:not([data-scene=villa]) .scene-hero .scene-lede{font-size:16px;margin-bottom:14px}
+  :root:not([data-scene=villa]) .scene-welcome{padding:9px 12px}
+  :root:not([data-scene=villa]) .scene-hero-aside{display:block;padding:14px}
+  :root:not([data-scene=villa]) .scene-facts{margin-top:10px}
+  :root:not([data-scene=villa]) .scene-hero-aside .heading-actions{margin-top:11px}
+  :root:not([data-scene=villa]) .card,
+  :root:not([data-scene=villa]) .task-list-surface,
+  :root:not([data-scene=villa]) .cal-main,
+  :root:not([data-scene=villa]) .cal-side{
+    border-radius:15px!important;padding:16px;
+  }
+  #view-tasks .mission-toolbar{flex-wrap:wrap}
+  #view-projects .board{grid-template-columns:1fr}
+  #view-paper .paper-brief-grid{grid-template-columns:1fr}
+  #view-calendar .cal-side{grid-template-columns:1fr}
+  #view-focus .focus-room-main{min-height:460px}
+  #view-focus .focus-room-clock strong{font-size:clamp(52px,16vw,78px)}
+  .briefing-panel{border-radius:18px!important}
+  .briefing-panel::before{opacity:.12}
+}
+
+@media (max-width:480px){
+  :root:not([data-scene=villa]) .scene-hero-mark{gap:8px;margin-bottom:10px}
+  :root:not([data-scene=villa]) .scene-hero .eyebrow{font-size:9px;letter-spacing:.22em}
+  :root:not([data-scene=villa]) .scene-place strong{font-size:15px}
+  :root:not([data-scene=villa]) .scene-facts dd{font-size:18px}
+  #view-tasks .list-heading h3{font-size:24px}
+}

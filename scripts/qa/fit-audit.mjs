@@ -20,7 +20,7 @@ const GUTTER = (w) => (w >= 768 ? 44 : 20)
 const FIXTURE = '/tmp/command-qa-fixture.html'
 execFileSync(process.execPath, ['scripts/qa/preview.mjs', 'auto', 'dashboard', FIXTURE], { stdio: 'ignore' })
 // the whole cascade, in load order: a rule in paper.css can widen a layout
-const SHEETS = ['style', 'studio', 'system', 'atmosphere', 'paper']
+const SHEETS = ['style', 'studio', 'system', 'atmosphere', 'paper', 'worlds']
 const rules = []
 for (const sheet of SHEETS) {
   try { rules.push(...parseCss(await readFile(`public/static/${sheet}.css`, 'utf8'))) } catch { /* optional sheet */ }

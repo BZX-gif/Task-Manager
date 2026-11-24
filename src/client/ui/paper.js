@@ -11,20 +11,17 @@
 
 import { escapeHtml } from '../core/dom.js'
 import { icon } from './icons.js'
+import { sceneHero } from './scenes.js'
 
 /**
  * JournalPageHeader — the opening of a chapter.
- * eyebrow · title · lede (a line of italic prose) · actions
+ *
+ * Every chapter now opens inside its own photographic environment. The room's
+ * chapter mark, contextual line and real figures are supplied by sceneHero;
+ * the caller still owns the eyebrow, title, lede and actions.
  */
 export function paperHeader({ eyebrow = '', title = '', lede = '', actions = '' } = {}) {
-  return `<header class="page-heading paper-header">
-    <div class="paper-header-main">
-      ${eyebrow ? `<p class="eyebrow">${escapeHtml(eyebrow)}</p>` : ''}
-      <h1>${title}</h1>
-      ${lede ? `<p>${escapeHtml(lede)}</p>` : ''}
-    </div>
-    ${actions ? `<div class="heading-actions">${actions}</div>` : ''}
-  </header>`
+  return sceneHero({ eyebrow, title, lede, actions })
 }
 
 /** EditorialSectionHeading — a titled block inside a chapter. */

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { JSDOM } from 'jsdom'
 import { parseCss, computed, resolveVars, setViewport } from './css.mjs'
-const SHEETS=['style','studio','system','atmosphere','paper']
+const SHEETS=['style','studio','system','atmosphere','paper','worlds']
 const rules=[]
 for(const s of SHEETS){ try{ rules.push(...parseCss(await readFile(`public/static/${s}.css`,'utf8'))) }catch{} }
 setViewport(1440)
