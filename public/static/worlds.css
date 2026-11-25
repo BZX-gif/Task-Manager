@@ -665,7 +665,7 @@
    overlay, not a route, so it takes the room's photograph of its own. */
 .briefing-overlay{background:rgba(7,5,4,.66)!important;-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
 .briefing-panel{
-  position:relative;overflow:hidden;
+  position:relative;overflow-x:hidden;overflow-y:auto;
   background:linear-gradient(158deg,rgba(30,24,17,.94),rgba(13,10,8,.96))!important;
   border:1px solid rgba(226,190,130,.28)!important;
   border-radius:24px!important;

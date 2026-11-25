@@ -297,3 +297,106 @@ test('the briefing opens itself once a day, and not again after being seen', asy
     first.window.close()
   }
 })
+
+test('command briefing layout keeps next move and statistics cards separated, readable, and responsive', async () => {
+  const { parseCss } = await import('../../scripts/qa/css.mjs')
+  const sheets = ['style.css', 'studio.css', 'system.css', 'atmosphere.css', 'paper.css', 'worlds.css']
+  let rawCss = ''
+  for (const sheet of sheets) {
+    rawCss += '\n' + await readFile(path.join(root, 'public', 'static', sheet), 'utf8')
+  }
+  const rules = parseCss(rawCss)
+
+  const mediaOk = (media, vw) => {
+    if (!media) return true
+    if (/prefers-reduced-motion/.test(media)) return false
+    const maxM = media.match(/max-width:\s*(\d+)px/)
+    if (maxM && vw > Number(maxM[1])) return false
+    const minM = media.match(/min-width:\s*(\d+)px/)
+    if (minM && vw < Number(minM[1])) return false
+    return true
+  }
+  const cmpSpec = (a, b) => {
+    for (let i = 0; i < 4; i++) if (a[i] !== b[i]) return a[i] - b[i]
+    return 0
+  }
+  const styleAt = (el, vw) => {
+    const map = new Map()
+    for (const r of rules) {
+      if (!mediaOk(r.media, vw)) continue
+      if (/::|:(hover|focus|active)/.test(r.sel)) continue
+      let matched = false
+      try { matched = el.matches(r.sel) } catch {}
+      if (!matched) continue
+      for (const d of r.decls) {
+        const idx = d.indexOf(':')
+        if (idx < 0) continue
+        const prop = d.slice(0, idx).trim()
+        let val = d.slice(idx + 1).trim()
+        const imp = /!important\s*$/i.test(val)
+        if (imp) val = val.replace(/!important\s*$/i, '').trim()
+        const sp = [imp ? 1 : 0, r.specificity[0], r.specificity[1], r.specificity[2]]
+        const prev = map.get(prop)
+        if (!prev || cmpSpec(sp, prev.sp) >= 0) map.set(prop, { val, sp })
+      }
+    }
+    return Object.fromEntries([...map.entries()].map(([k, v]) => [k, v.val]))
+  }
+
+  const { window, errors, $ } = await boot({ seed: seedState({ briefingMode: 'off' }) })
+  open.push(window)
+  try {
+    window.CC.openBriefing()
+    await settle()
+
+    const panel = $('.briefing-panel')
+    const grid = $('.briefing-grid')
+    const lower = $('.briefing-lower')
+    const focus = $('.briefing-focus')
+    const stats = $('.briefing-stats')
+    const score = $('.briefing-score')
+    const statRows = $('.briefing-stat-rows')
+    const actions = $('.briefing-actions')
+
+    const desktopPanel = styleAt(panel, 1440)
+    assert.equal(desktopPanel['max-width'], '820px', 'briefing panel preserves its 820px max-width')
+    assert.equal(desktopPanel['overflow-x'], 'hidden')
+    assert.equal(desktopPanel['overflow-y'], 'auto')
+
+    const desktopGrid = styleAt(grid, 1440)
+    const desktopLower = styleAt(lower, 1440)
+    assert.match(desktopGrid['grid-template-columns'], /minmax\(0,\s*1\.08fr\)\s+minmax\(0,\s*1fr\)/)
+    assert.match(desktopLower['grid-template-columns'], /minmax\(0,\s*1\.08fr\)\s+minmax\(0,\s*1fr\)/)
+    assert.notEqual(desktopGrid.gap, '0', 'next move and stats cards have explicit horizontal separation')
+    assert.equal(desktopGrid.padding, '0', 'grid aligns flush with header and footer inside panel padding')
+
+    for (const card of [focus, stats, $('.briefing-agenda'), $('.briefing-intention')]) {
+      const cardStyle = styleAt(card, 1440)
+      assert.equal(cardStyle['min-width'], '0')
+      assert.equal(cardStyle['box-sizing'], 'border-box')
+      assert.equal(cardStyle.margin, '0')
+      assert.equal(cardStyle.padding, '19px 21px')
+    }
+
+    const desktopStats = styleAt(stats, 1440)
+    assert.equal(desktopStats.display, 'flex', 'stats card stacks score above stat rows instead of a 3-col squeeze')
+    assert.equal(desktopStats['flex-direction'], 'column')
+    assert.equal(styleAt(score, 1440)['min-width'], '0')
+    assert.match(styleAt(statRows, 1440)['grid-template-columns'], /repeat\(2,\s*minmax\(0,\s*1fr\)\)/)
+
+    const desktopActions = styleAt(actions, 1440)
+    assert.equal(desktopActions['flex-wrap'], 'wrap')
+    assert.equal(desktopActions['max-width'], '100%')
+
+    // Tablet stacks the main cards cleanly before columns become cramped
+    assert.equal(styleAt(grid, 768)['grid-template-columns'], 'minmax(0,1fr)')
+    assert.equal(styleAt(lower, 768)['grid-template-columns'], 'minmax(0,1fr)')
+
+    // Small phones switch stat rows to a single full-width column
+    assert.equal(styleAt(statRows, 390)['grid-template-columns'], 'minmax(0,1fr)')
+    assert.deepEqual(errors, [])
+  } finally {
+    window.CC?.closeBriefing({ restoreFocus: false })
+    window.close()
+  }
+})
