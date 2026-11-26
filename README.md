@@ -34,6 +34,7 @@ No account, database, paid client dependency or API key is required for the core
 - **Goals → milestones → projects → missions → time blocks** — connected progress, editable checkpoints, goal detail chains and project list/board/timeline views.
 - **Focus Room** — Pomodoro, custom durations, stopwatch, short/long breaks, mission/goal attribution, fullscreen/minimal overlay, daily target and real history. Timer math is timestamp-based and survives pause, tab switches, refresh and reopen.
 - **Routines** — ordered activities, weekday schedules, check-ins, consistency history and non-punitive momentum. Missed days are not debts.
+- **Rituals** — the rules you set for yourself: *talk less*, *brush twice*, *no phone for the first hour*. Each rule is ticked once a day (or on the days you choose), the run counts only due-and-kept days, a rest day never breaks it, and today stays open until the day ends. Every rule has its own 35-day record, the page has a six-week heatmap and a per-rule best run, and the Command Center carries one quiet line of the same data. Local only, schema `v9`.
 - **Analytics / Weekly Review** — completion, focus time, planned vs completed, categories, productive days, adherence and consistency from recorded data only; private reflections and next-week planning.
 - **PAPER · your chief of staff** — a real intelligence engine, fully local: an executive daily briefing, priorities ranked against your goals and deadlines, honest alerts, time-aware recommendations with their reasons, and prepared actions that execute only after you confirm. The workspace answers questions from your data and says plainly when there is not enough data to judge. An optional external model (server-side key) can be consulted explicitly; the app works completely without it.
 - **Command Center** — the opening page: today's command, the day's real shape and a PAPER strip with live alerts, recommendations and goal health, so you can see what the engine sees without asking.
@@ -42,7 +43,7 @@ No account, database, paid client dependency or API key is required for the core
 
 ## The forward view
 
-The workspace answers three questions in order: **what needs me now** (the briefing), **what does the next fortnight look like** (Forecast), and **what actually happened** (Journal). The **Calendar** is the same data read as a month, and **HYB** is the layer for everything that is a plan rather than a task. Forecast counts only real commitments from your schedule — sleep and protected windows are excluded — and reports clashes and carried-over work without blame. The Journal stores one entry per day (note, win, next step, mood, energy) inside state schema **v7**; HYB plans and the calendar preferences arrived in **v8**, again as an additive migration with no change to existing records. Quick capture understands dates, times, durations, priorities, categories and repetition, and mirrors every parsed field into the visible controls before anything is saved. See `docs/workspace-4.4.md` for HYB and the calendar, and `docs/workspace-4.3.md` for the earlier behaviour tables and recorded verification.
+The workspace answers three questions in order: **what needs me now** (the briefing), **what does the next fortnight look like** (Forecast), and **what actually happened** (Journal). The **Calendar** is the same data read as a month, and **HYB** is the layer for everything that is a plan rather than a task. Forecast counts only real commitments from your schedule — sleep and protected windows are excluded — and reports clashes and carried-over work without blame. The Journal stores one entry per day (note, win, next step, mood, energy) inside state schema **v7**; HYB plans and the calendar preferences arrived in **v8**, and your own daily rules arrived in **v9** — each an additive migration with no change to existing records. Quick capture understands dates, times, durations, priorities, categories and repetition, and mirrors every parsed field into the visible controls before anything is saved. See `docs/workspace-4.4.md` for HYB and the calendar, `docs/rituals-7.md` for the rules page and its counting contract, and `docs/workspace-4.3.md` for the earlier behaviour tables and recorded verification.
 
 ## The briefing
 
@@ -67,7 +68,7 @@ Nothing in the briefing is invented and nothing is written except your intention
 | Client | Vanilla JS ES modules, no UI framework |
 | Build | esbuild client bundle, compiled Tailwind, Vite Worker build |
 | Charts | locally bundled Chart.js |
-| Storage | browser `localStorage`, key `kcc_state_v1`, schema **v8** |
+| Storage | browser `localStorage`, key `kcc_state_v1`, schema **v9** |
 | Typography/icons | warm editorial system: serif display, system UI text, monospace numerals + inline local SVG |
 
 ```text
@@ -77,8 +78,8 @@ src/client/lib/paper/  the PAPER engine: context, priorities, scheduling, reason
 src/client/core/     store, actions, DOM/dialogs, charts, event bus
 src/client/ui/       shell chrome, router, focus overlay, capture, reminders, PWA
 src/client/views/    Command Center, My Day, Calendar, HYB Studio, Schedule, Missions,
-                     Goals, Projects, Routines, Focus Room, Analytics, Weekly Review,
-                     Journal, Forecast, PAPER workspace, Settings
+                     Goals, Projects, Routines, Rituals, Focus Room, Analytics,
+                     Weekly Review, Journal, Forecast, PAPER workspace, Settings
 public/sw.js         versioned offline shell
 tests/unit/          pure-domain tests
 tests/integration/   real Worker routes + real client bundle in jsdom + AI contract
@@ -105,7 +106,7 @@ Without a key or network, PAPER reports the failure honestly and every local cap
 
 ## Keyboard
 
-`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `H` HYB deck · `C` calendar · `F` Focus Room · `N` capture · `P` PAPER · `J` Journal · `O` Forecast · `1–9` main views · `Esc` close/minimise · schedule `Alt + ↑/↓` reschedule · calendar grid arrows / `PageUp` `PageDown` month / `Enter` open day / `Space` or `+` add plan · assistant `Enter` send / `Shift + Enter` newline. The old `assistant` route remains as an alias of the PAPER workspace.
+`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `H` HYB deck · `C` calendar · `F` Focus Room · `N` capture · `P` PAPER · `J` Journal · `R` Rituals · `O` Forecast · `1–9` main views · `Esc` close/minimise · schedule `Alt + ↑/↓` reschedule · calendar grid arrows / `PageUp` `PageDown` month / `Enter` open day / `Space` or `+` add plan · assistant `Enter` send / `Shift + Enter` newline. The old `assistant` route remains as an alias of the PAPER workspace.
 
 ## Verification
 

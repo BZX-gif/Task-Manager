@@ -51,6 +51,7 @@ const paths = {
   board: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16m6-16v16"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h1m-1 6h1m-1 6h1"/>',
   leaf: '<path d="M20 3C8 2 2 8 5 15s17 7 15-12ZM4 21 15 10"/>',
+  rituals: '<path d="M12 3c2.5 2.2 4 4.6 4 7.2A4 4 0 0 1 12 14a4 4 0 0 1-4-3.8C8 7.6 9.5 5.2 12 3Z"/><path d="M12 14v7m-4 0h8"/>',
 }
 export function icon(name, cls = '') { return `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.overview}</svg>` }
 export function brandMark() { return '<span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>' }

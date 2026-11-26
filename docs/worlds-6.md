@@ -1,4 +1,4 @@
-# PAPER 6.0 — one product, eight worlds
+# PAPER 6.0 — one product, nine worlds
 
 The Command Center's villa was already the right idea: a full-screen original
 photograph, editorial type laid over it, and glass panels that carry real data.
@@ -20,8 +20,9 @@ for every chapter.
 | `focus` | study | private study at night, one warm lamp |
 | `paper`, `progress`, `settings` | lounge | morning hotel lounge |
 | `journal`, `review` | writing | private writing room in late afternoon |
+| `rituals` | garden | garden room at first light, olive trees and a still pool |
 
-Nine rooms, nine distinct frames. The villa's three photographs are unchanged;
+Ten chapters, nine distinct frames. The villa's three photographs are unchanged;
 no photograph is used by two named sections. Secondary routes inherit the room
 of the work they belong to, so navigation never jumps to an unrelated world.
 
@@ -89,6 +90,8 @@ The eight named sections then arrange the shared components differently:
 - **Briefing / PAPER** — a private letter: the executive briefing in a wide
   glass column, recommendations and alerts in the right margin.
 - **Journal** — a narrower reading measure on the writing room.
+- **Rituals** — the garden room's ledger: a tick ring, the rule rows, a six-week
+  heatmap and a week strip, all on the shared glass sheet.
 
 The daily briefing overlay itself takes the lounge photograph behind its
 letter, so the environment is continuous when `B` opens the briefing.

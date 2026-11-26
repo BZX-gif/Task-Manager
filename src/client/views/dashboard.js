@@ -18,6 +18,7 @@ import { goalChain, goalProgress, taskProgress } from '../lib/relationships.js'
 import { top3Stats, top3Candidates } from '../lib/top3.js'
 import { overdueTasks, describeScoreFormula } from '../lib/score.js'
 import { drawChart, chartColors, alpha, vGrad } from '../core/charts.js'
+import { ritualDay, ritualOverview } from '../lib/rituals.js'
 import { icon, ring, empty, metric, timeLabel, bindCommon, domainTabs, DOMAIN_TABS } from '../ui/common.js'
 import { paperHeader, paperCard, divider, progress as paperProgress, priorityMarker, agendaRow, absent, figure, noteField } from '../ui/paper.js'
 import { buildWorkspaceContext } from '../lib/paper/context.js'
@@ -341,6 +342,37 @@ function actionsPanel() {
   </article>`
 }
 
+/**
+ * Rituals on the Command Center — one quiet line of the user's own rules, with
+ * the tick that keeps the day honest. Renders nothing at all until the user
+ * has written a rule, so the dashboard of a new workspace is unchanged.
+ */
+function ritualStrip(today) {
+  const overview = ritualOverview(state.rituals, today, { days: 60 })
+  if (!overview.count) return ''
+  const day = ritualDay(state.rituals, today)
+  const next = day.due.find((ritual) => !isTickedFor(ritual.id, today)) || day.due[0]
+  const pct = day.dueCount ? Math.round((day.doneCount / day.dueCount) * 100) : 0
+  return `<article class="card atmo-panel ritual-strip-card" aria-label="Your rituals today">
+    <div class="ritual-strip">
+      <div class="ritual-strip-ring" role="img" aria-label="${day.doneCount} of ${day.dueCount} rules kept today">
+        <svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" class="ritual-strip-track"/><circle cx="22" cy="22" r="18" class="ritual-strip-value" stroke-dasharray="113.1" stroke-dashoffset="${113.1 * (1 - pct / 100)}"/></svg>
+        <strong>${day.doneCount}/${day.dueCount}</strong>
+      </div>
+      <div class="ritual-strip-copy">
+        <p class="ritual-strip-eyebrow">Your rules</p>
+        <p class="ritual-strip-line">${day.dueCount === 0 ? 'Nothing asked of you today. A rest day is allowed.' : day.complete ? 'Every rule kept today. That is the whole game.' : next ? `Next: ${escapeHtml(next.title)}` : 'Keep the smallest one.'}</p>
+      </div>
+      ${next && !day.complete ? `<button class="ritual-strip-tick" type="button" data-ritual-quick-tick="${escapeHtml(next.id)}" aria-label="Tick ${escapeHtml(next.title)}">${icon('check')}</button>` : ''}
+      <button class="btn-ghost btn-small" type="button" data-common="rituals">${icon('rituals')}Open rituals</button>
+    </div>
+  </article>`
+}
+
+function isTickedFor(id, day) {
+  return !!state.rituals?.log?.[day]?.[id]
+}
+
 function paperRibbon({ alerts, stripRecs, slipping }) {
   const alertCard = `<article class="card atmo-panel atmo-paper-card" aria-label="Alerts">
     <div class="atmo-panel-head"><div class="atmo-panel-titles"><h2>${icon('bell')} Alerts</h2><p>${alerts.length} open</p></div></div>
@@ -486,10 +518,25 @@ export function renderDashboard() {
         ${actionsPanel()}
       </div>
     </div>
+    ${ritualStrip(today)}
     ${paperRibbon({ alerts, stripRecs, slipping })}
     <div class="atmo-goal-banner">${icon('target')}<span>${state.goals.length ? `${state.goals.length} meaningful goal${state.goals.length === 1 ? '' : 's'}. Every mission is a step toward something bigger.` : 'Connect what you do today to who you want to become.'}</span><button class="text-button" type="button" data-common="goals">${state.goals.length ? 'Explore your goals' : 'Create your first goal'} ${icon('arrow')}</button></div>`
 
   bindCommon(section)
+  qsa(section, '[data-ritual-quick-tick]').forEach((button) =>
+    button.addEventListener('click', () => {
+      const id = button.dataset.ritualQuickTick
+      let nowDone = false
+      commit((draft) => {
+        if (!draft.rituals) draft.rituals = { rituals: [], log: {} }
+        if (!draft.rituals.log[today]) draft.rituals.log[today] = {}
+        nowDone = !draft.rituals.log[today][id]
+        if (nowDone) draft.rituals.log[today][id] = true
+        else delete draft.rituals.log[today][id]
+      })
+      toast(nowDone ? 'Kept. That is a day added to the run.' : 'Tick removed.', nowDone ? 'success' : 'info')
+    }),
+  )
   qsa(section, '[data-priority-toggle]').forEach((b) => b.addEventListener('click', () => window.CC.toggleMission(b.dataset.priorityToggle)))
   qsa(section, '[data-priority-edit]').forEach((b) => b.addEventListener('click', () => window.CC.openTaskModal(b.dataset.priorityEdit)))
   qsa(section, '[data-priority-up]').forEach((b) => b.addEventListener('click', () => window.CC.movePriority(b.dataset.priorityUp, -1)))

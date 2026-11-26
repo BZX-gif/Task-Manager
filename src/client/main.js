@@ -17,6 +17,7 @@ import { openDayPlanner, openRecoveryModal } from './views/planner.js'
 import { openGoalModal, openGoalDetail } from './views/goals.js'
 import { openProjectModal, openProjectDetail } from './views/projects.js'
 import { openRoutineModal } from './views/routines.js'
+import { openRitualEditor } from './views/rituals.js'
 import { openRescheduleModal, toggleScheduleItem } from './views/schedule.js'
 import { openFocusRoom, paintFocusRoom, exitFocusFullscreen, isFocusFullscreen } from './views/focus-room.js'
 import { toggleMission, postponeMission, skipMission, applyTheme } from './core/actions.js'
@@ -68,6 +69,7 @@ window.CC = {
   openProjectModal,
   openProjectDetail,
   openRoutineModal,
+  openRitualEditor,
   openProtectedModal,
   openCategoryModal,
   openRescheduleModal,
@@ -120,7 +122,34 @@ window.CC = {
   currentAtmosphere:()=>currentAtmosphere(),
   tickAtmosphere:(now)=>tickAtmosphere(now),
 }
-function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isOnboardingOpen()){closeOnboarding();return}if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isHybDeckOpen()){closeHybDeck();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||isHybDeckOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='h'){event.preventDefault();toggleHybDeck()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='c'){event.preventDefault();openCalendar()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='p'){event.preventDefault();switchView('paper')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','tasks','goals','projects','calendar','focus','journal','progress'];switchView(views[Number(event.key)-1])}})}
+function bindKeyboard(){document.addEventListener('keydown',(event)=>{const target=event.target,typing=target instanceof HTMLElement&&(target.tagName==='INPUT'||target.tagName==='TEXTAREA'||target.tagName==='SELECT'||target.isContentEditable);if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(event.shiftKey){if(document.getElementById('palette-query'))closeModal();else openCommandPalette()}else if(isQuickCaptureOpen())closeQuickCapture();else openQuickCapture();return}if(event.key==='Escape'){if(isOnboardingOpen()){closeOnboarding();return}if(isFocusFullscreen()){exitFocusFullscreen();return}if(isModalOpen()){closeModal();return}if(isHybDeckOpen()){closeHybDeck();return}if(isBriefingOpen()){closeBriefing();return}}if(typing||isModalOpen()||isBriefingOpen()||isHybDeckOpen()||document.querySelector('.focus-overlay'))return;if(event.key==='?'||(event.shiftKey&&event.key==='/')){event.preventDefault();openShortcuts();return}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='h'){event.preventDefault();toggleHybDeck()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='c'){event.preventDefault();openCalendar()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='b'){event.preventDefault();openBriefing()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='f'){event.preventDefault();openFocusRoom()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='n'){event.preventDefault();openQuickCapture()}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='j'){event.preventDefault();switchView('journal')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='o'){event.preventDefault();switchView('forecast')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='r'){event.preventDefault();switchView('rituals')}if(!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='p'){event.preventDefault();switchView('paper')}if(!event.ctrlKey&&!event.metaKey&&/^[1-9]$/.test(event.key)){const views=['dashboard','day','tasks','goals','projects','calendar','focus','journal','progress'];switchView(views[Number(event.key)-1])}})}
+/**
+ * A demonstration workspace for the Rituals room, reachable only with
+ * `?seed=rituals`. It writes nothing unless the state has no rituals yet and it
+ * is asked for explicitly, so the shipped product is untouched by it.
+ */
+function seedRitualDemo(){
+  if(state?.rituals?.rituals?.length)return
+  const iso=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  const now=new Date(),today=iso(now)
+  const rules=[
+    {id:'rd1',title:'Talk less',note:'Count to three before replying',tone:'speech',days:[0,1,2,3,4,5,6],ago:14,run:9},
+    {id:'rd2',title:'Brush my teeth twice',tone:'body',days:[0,1,2,3,4,5,6],ago:11,run:6},
+    {id:'rd3',title:'No phone for the first hour',note:'The morning belongs to me',tone:'mind',days:[0,1,2,3,4,5,6],ago:8,run:4},
+    {id:'rd4',title:'One deep-work hour',tone:'work',days:[0,1,2,3,4],ago:6,run:3},
+    {id:'rd5',title:'Walk after dinner',tone:'body',days:[0,1,2,3,4,5,6],ago:3,run:0},
+  ]
+  commit((draft)=>{
+    draft.rituals={rituals:rules.map(({ago,run,...rule})=>({...rule,createdAt:now.getTime()-86400000*ago,dayKey:iso(new Date(now.getTime()-86400000*ago)),archived:false})),log:{}}
+    for(let i=1;i<=12;i++){
+      const day=new Date(now);day.setDate(day.getDate()-i)
+      const row={}
+      for(const rule of rules)if(i<=rule.run)row[rule.id]=true
+      if(Object.keys(row).length)draft.rituals.log[iso(day)]=row
+    }
+    draft.rituals.log[today]={rd1:true,rd2:true}
+  },{silent:true})
+}
 let lastDay=currentDayKey(),reminderInterval=null,minuteInterval=null,recurrenceInterval=null
 function boot(){
   initStore();ensureRecurringOccurrences(currentDayKey());lastDay=currentDayKey();applyTheme();initAtmosphere();startChromeTimers();bindChrome();initRouter();initFocus();initHyb();initPwa();bindKeyboard()
@@ -136,6 +165,7 @@ function boot(){
   window.addEventListener('unhandledrejection',(event)=>{if(event?.preventDefault)event.preventDefault();console.warn('[app] an action could not complete',event?.reason?.message||event?.reason);toast('Something could not complete just now. Your saved data is unchanged.','error',{timeout:7000})})
   const persist=()=>{syncScoreHistory(currentDayKey());flush()};window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else{updateClockAndGreeting();refreshCommandStrip();refreshCurrentView();checkReminders()}});window.addEventListener('pagehide',persist)
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&isFocusFullscreen())exitFocusFullscreen()})
+  try{if(new URLSearchParams(location.search).get('seed')==='rituals')seedRitualDemo()}catch{}
   refreshAll();switchView(viewFromPath());reminderInterval=startReminderRunner();announceStatus();footerVersion(APP_VERSION);initBriefing();if(needsOnboarding())setTimeout(()=>{if(!isModalOpen()&&!isOnboardingOpen())openOnboarding()},450)
   minuteInterval=setInterval(()=>{if(document.visibilityState!=='visible')return;const day=currentDayKey();if(day!==lastDay){lastDay=day;ensureRecurringOccurrences(day);syncScoreHistory(day);commit(()=>{},{immediate:true});refreshCommandStrip();return}refreshCommandStrip();if(!isModalOpen()&&!isBriefingOpen()&&!['settings','paper','focus'].includes(getCurrentView())&&!document.querySelector('.calendar-event.is-dragging'))refreshCurrentView()},60000)
   recurrenceInterval=setInterval(()=>{const created=ensureRecurringOccurrences();if(created.length)commit(()=>{},{immediate:true})},3600000)

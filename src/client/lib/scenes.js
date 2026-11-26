@@ -112,6 +112,17 @@ export const SCENES = [
     image: '/assets/atmospheres/journal/writing-room.webp',
     imageSmall: '/assets/atmospheres/journal/writing-room-sm.webp',
   },
+  {
+    id: 'garden',
+    index: '10',
+    view: 'rituals',
+    name: 'Rituals',
+    place: 'The garden room · a still pool, olive trees',
+    light: 'First sunlight',
+    welcome: 'The rules you keep are the person you become. One tick at a time.',
+    image: '/assets/atmospheres/rituals/discipline-garden.webp',
+    imageSmall: '/assets/atmospheres/rituals/discipline-garden-sm.webp',
+  },
 ]
 
 /** Secondary routes inherit the environment of the room they belong to. */
@@ -129,6 +140,7 @@ export const VIEW_SCENE = {
   paper: 'lounge',
   journal: 'writing',
   review: 'writing',
+  rituals: 'garden',
   progress: 'lounge',
   forecast: 'terrace',
   settings: 'villa',

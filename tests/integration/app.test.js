@@ -535,7 +535,7 @@ test('quick capture works from the keyboard shortcut and files to the inbox', as
 
 const CLIENT_ROUTES = [
   'dashboard', 'day', 'calendar', 'schedule', 'hyb', 'tasks', 'goals', 'projects',
-  'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings',
+  'routines', 'rituals', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings',
 ]
 
 test('the Worker serves the shell for every client route, so deep links never 404', async () => {

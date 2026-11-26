@@ -39,6 +39,7 @@
 :root[data-scene=study]  .scene-static{background-image:url('/assets/atmospheres/focus/private-study-night-sm.webp');background-position:center 58%}
 :root[data-scene=lounge] .scene-static{background-image:url('/assets/atmospheres/briefing/hotel-lounge-morning-sm.webp');background-position:center 52%}
 :root[data-scene=writing] .scene-static{background-image:url('/assets/atmospheres/journal/writing-room-sm.webp');background-position:center 54%}
+:root[data-scene=garden] .scene-static{background-image:url('/assets/atmospheres/rituals/discipline-garden-sm.webp');background-position:center 56%}
 
 /* One grade for the whole property: reading light on the left, a soft floor,
    and just enough vignette to keep ivory type honest on any photograph. */
@@ -58,6 +59,7 @@
 :root[data-scene=study]   #scene::after{--scene-grade:rgba(8,12,24,.30)}
 :root[data-scene=lounge]  #scene::after{--scene-grade:rgba(96,66,36,.10)}
 :root[data-scene=writing] #scene::after{--scene-grade:rgba(72,48,26,.11)}
+:root[data-scene=garden]  #scene::after{--scene-grade:rgba(84,60,30,.12)}
 
 /* The workspace is now a room, not a flat paper ground. */
 :root:not([data-scene=villa]) body{background:transparent!important}
@@ -660,6 +662,7 @@
 #view-hyb .card,
 #view-routines .card{max-width:100%}
 
+
 /* ------------------------------------------- 7 · the daily briefing room
    The briefing is a private letter, delivered in the lounge. It is an
    overlay, not a route, so it takes the room's photograph of its own. */
@@ -761,4 +764,391 @@
   :root:not([data-scene=villa]) .scene-place strong{font-size:15px}
   :root:not([data-scene=villa]) .scene-facts dd{font-size:18px}
   #view-tasks .list-heading h3{font-size:24px}
+}
+
+/* ----------------------------------------------------------- the page body */
+.rituals-page{display:flex;flex-direction:column;gap:clamp(16px,1.7vw,22px);min-width:0}
+
+/* ------------------------------------------------- 1 · today's ledger card */
+.ritual-ledger{
+  position:relative;overflow:hidden;
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;gap:clamp(18px,2.4vw,34px);
+  padding:clamp(18px,2.1vw,26px);
+  border:1px solid var(--paper-edge-strong);border-radius:var(--r-paper-lg);
+  background:
+    radial-gradient(120% 160% at 0% 0%,rgba(192,138,78,.13),transparent 58%),
+    linear-gradient(158deg,var(--paper-raised),var(--paper));
+  box-shadow:inset 0 1px 0 rgba(255,246,232,.06),0 28px 64px -46px rgba(0,0,0,.9);
+}
+.ritual-ledger::after{
+  content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(90deg,transparent,rgba(255,246,232,.045) 50%,transparent);
+  mix-blend-mode:screen;opacity:.55;
+}
+.ritual-ledger-main{min-width:0;display:flex;flex-direction:column;gap:8px}
+.ritual-ledger-eyebrow{display:flex;align-items:center;gap:9px;margin:0}
+.ritual-ledger h2{
+  font-family:var(--font-display);font-weight:400;
+  font-size:clamp(24px,2.5vw,34px);line-height:1.08;letter-spacing:-.02em;
+  color:var(--ink);margin:0;
+}
+.ritual-ledger-line{
+  margin:0;font-size:var(--fs-2xs);line-height:1.6;color:var(--ink-muted);max-width:56ch;
+  font-variant-numeric:tabular-nums;
+}
+.ritual-ledger-figures{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:2px}
+.ritual-ledger-figure{display:flex;flex-direction:column;gap:2px;min-width:58px}
+.ritual-ledger-figure span{
+  font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-ghost);font-weight:600;
+}
+.ritual-ledger-figure strong{
+  font-family:var(--font-mono,ui-monospace,monospace);font-size:17px;font-weight:600;
+  color:var(--ink);letter-spacing:-.01em;font-variant-numeric:tabular-nums;
+}
+.ritual-ledger-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;align-self:start}
+
+/* the ring: today's rules kept */
+.ritual-ring{position:relative;width:112px;height:112px;flex-shrink:0;display:grid;place-items:center}
+.ritual-ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.ritual-ring .ring-track{fill:none;stroke:rgba(240,229,211,.11);stroke-width:3.4}
+.ritual-ring .ring-value{
+  fill:none;stroke:var(--accent-paper);stroke-width:3.4;stroke-linecap:round;
+  transition:stroke-dashoffset 900ms cubic-bezier(.22,.9,.24,1);
+  filter:none;
+}
+.ritual-ring.is-complete .ring-value{stroke:var(--success,#7FC9A8)}
+.ritual-ring-label{display:flex;flex-direction:column;align-items:center;gap:1px;z-index:1}
+.ritual-ring-label strong{
+  font-family:var(--font-display);font-size:29px;line-height:1;font-weight:400;
+  color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+}
+.ritual-ring-label small{
+  font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-ghost);font-weight:600;
+}
+:root[data-theme=light] .ritual-ring .ring-track{stroke:rgba(74,56,36,.14)}
+
+/* ------------------------------------------- 2 · the two working columns */
+.rituals-layout{
+  display:grid;grid-template-columns:minmax(0,1.32fr) minmax(0,1fr);
+  gap:clamp(14px,1.5vw,20px);align-items:start;
+}
+.rituals-stack{display:flex;flex-direction:column;gap:clamp(14px,1.5vw,20px);min-width:0}
+
+.rituals-panel{
+  border:1px solid var(--paper-edge);border-radius:var(--r-paper-lg);
+  background:var(--paper-raised);
+  box-shadow:inset 0 1px 0 rgba(255,246,232,.04),0 18px 44px -36px rgba(0,0,0,.8);
+  padding:clamp(15px,1.7vw,21px);
+  min-width:0;
+}
+.rituals-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.rituals-panel-head h3{
+  font-family:var(--font-display);font-weight:400;font-size:19px;line-height:1.15;
+  letter-spacing:-.015em;color:var(--ink);margin:0 0 3px;
+}
+.rituals-panel-head .meta{margin:0;font-size:var(--fs-3xs);color:var(--ink-faint);line-height:1.5}
+.rituals-panel-head .btn-ghost,.rituals-panel-head .btn-primary{padding:7px 11px!important;font-size:11px!important;white-space:nowrap}
+
+/* --------------------------------------------------- 3 · a rule, and its tick */
+.ritual-list{display:flex;flex-direction:column;gap:8px}
+.ritual-row{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;gap:12px;
+  padding:11px 13px;border-radius:12px;
+  border:1px solid var(--rule-hair);
+  background:linear-gradient(180deg,rgba(255,246,232,.028),rgba(255,246,232,.012));
+  transition:border-color 220ms ease,background 220ms ease,transform 220ms ease;
+}
+.ritual-row:hover{border-color:var(--rule-strong);background:linear-gradient(180deg,rgba(255,246,232,.05),rgba(255,246,232,.018))}
+:root[data-theme=light] .ritual-row{background:linear-gradient(180deg,rgba(255,252,245,.7),rgba(255,252,245,.4))}
+:root[data-theme=light] .ritual-row:hover{background:rgba(255,253,248,.9)}
+
+.ritual-tick{
+  --tick:22px;
+  width:var(--tick);height:var(--tick);flex-shrink:0;
+  display:grid;place-items:center;border-radius:7px;
+  border:1.4px solid var(--rule-strong);
+  background:transparent;color:transparent;
+  padding:0;cursor:pointer;
+  transition:border-color 160ms ease,background 160ms ease,color 160ms ease,transform 160ms ease;
+}
+.ritual-tick svg{width:13px;height:13px;stroke-width:2.6;transition:transform 200ms cubic-bezier(.22,.9,.24,1),opacity 160ms ease;transform:scale(.6);opacity:0}
+.ritual-tick:hover{border-color:var(--accent-paper);background:rgba(192,138,78,.10)}
+.ritual-tick:focus-visible{outline:2px solid var(--accent-paper);outline-offset:2px}
+.ritual-tick.is-done{
+  border-color:var(--accent-paper);
+  background:var(--accent-paper);color:#1A120A;
+}
+.ritual-tick.is-done svg{transform:scale(1);opacity:1}
+:root[data-theme=light] .ritual-tick.is-done{color:#FFFBF2}
+.ritual-row.is-done .ritual-title{color:var(--ink-faint)}
+.ritual-row.is-done .ritual-title::after{
+  content:'';display:block;height:1px;margin-top:2px;
+  background:currentColor;opacity:.35;
+}
+
+.ritual-body{min-width:0;display:flex;flex-direction:column;gap:4px}
+.ritual-title{
+  font-size:13px;font-weight:600;letter-spacing:-.006em;color:var(--ink);
+  overflow-wrap:anywhere;line-height:1.35;
+}
+.ritual-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px;font-size:10px;color:var(--ink-faint);line-height:1.4}
+.ritual-sub .ritual-tone{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+  color:var(--accent-paper);
+}
+.ritual-sub .ritual-tone .icon{width:11px;height:11px}
+.ritual-sub .ritual-sep{opacity:.4}
+.ritual-sub .ritual-note{color:var(--ink-muted);font-size:10.5px;font-style:italic;overflow-wrap:anywhere}
+
+.ritual-streak{
+  display:flex;align-items:center;gap:7px;flex-shrink:0;
+  padding:5px 9px;border-radius:8px;
+  border:1px solid var(--rule-hair);
+  background:var(--paper-sunken);
+  font-variant-numeric:tabular-nums;
+}
+.ritual-streak .icon{width:12px;height:12px;color:var(--accent-paper)}
+.ritual-streak strong{
+  font-family:var(--font-mono,ui-monospace,monospace);font-size:13px;font-weight:600;color:var(--ink);
+  letter-spacing:-.02em;
+}
+.ritual-streak span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-ghost);font-weight:600}
+.ritual-streak.is-hot{border-color:rgba(192,138,78,.4);background:rgba(192,138,78,.10)}
+.ritual-streak.is-hot .icon,.ritual-streak.is-hot strong{color:var(--accent-paper)}
+.ritual-streak-actions{display:flex;align-items:center;gap:2px}
+.ritual-streak-actions .icon-btn{width:26px;height:26px;opacity:.55}
+.ritual-streak-actions .icon-btn:hover{opacity:1}
+.ritual-streak-actions .icon-btn .icon{width:13px;height:13px}
+
+.ritual-row.is-rest{opacity:.55}
+.ritual-row.is-rest .ritual-tick{display:none}
+.ritual-row.is-rest .ritual-body{padding-left:2px}
+
+/* the week strip inside a rule row, shown on the "your rules" list */
+.ritual-week{display:flex;gap:3px;margin-top:1px}
+.ritual-week i{
+  width:9px;height:3px;border-radius:2px;background:rgba(240,229,211,.13);
+}
+.ritual-week i.kept{background:var(--accent-paper)}
+.ritual-week i.rest{background:transparent;box-shadow:inset 0 0 0 1px rgba(240,229,211,.10)}
+:root[data-theme=light] .ritual-week i{background:rgba(74,56,36,.13)}
+:root[data-theme=light] .ritual-week i.kept{background:var(--accent-paper)}
+
+/* --------------------------------------------- 4 · the month heatmap ledger */
+.ritual-heatmap{display:flex;flex-direction:column;gap:9px}
+.ritual-heatmap-weeks{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px}
+.ritual-heat-week{display:flex;flex-direction:column;gap:4px}
+.ritual-heat-day{
+  aspect-ratio:1;min-height:0;width:100%;border-radius:3px;
+  background:rgba(240,229,211,.055);
+  border:1px solid transparent;
+  transition:transform 140ms ease,border-color 140ms ease;
+}
+.ritual-heat-day.is-partial{background:rgba(192,138,78,.34)}
+.ritual-heat-day.is-kept{background:var(--accent-paper)}
+.ritual-heat-day.is-perfect{background:var(--accent-paper);box-shadow:inset 0 0 0 1.5px rgba(255,246,232,.55)}
+.ritual-heat-day.is-rest{background:transparent;border-color:rgba(240,229,211,.07)}
+.ritual-heat-day.is-today{border-color:rgba(246,236,220,.6)}
+.ritual-heat-day.is-future{opacity:.28}
+.ritual-heat-day:hover{transform:scale(1.18);border-color:var(--paper-edge-strong)}
+:root[data-theme=light] .ritual-heat-day{background:rgba(74,56,36,.07)}
+:root[data-theme=light] .ritual-heat-day.is-rest{background:transparent;border-color:rgba(74,56,36,.10)}
+.ritual-heatmap-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;color:var(--ink-ghost)}
+.ritual-heat-key{display:inline-flex;align-items:center;gap:5px}
+.ritual-heat-key i{width:8px;height:8px;border-radius:2px;display:inline-block}
+
+/* ------------------------------------------------------ 5 · the week strip */
+.ritual-weekstrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.ritual-weekstrip-day{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:9px 4px 8px;border-radius:10px;
+  border:1px solid var(--rule-hair);background:var(--paper-sunken);
+  min-width:0;
+}
+.ritual-weekstrip-day span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-ghost);font-weight:600}
+.ritual-weekstrip-day strong{
+  font-family:var(--font-mono,ui-monospace,monospace);font-size:12px;color:var(--ink-muted);font-weight:600;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+.ritual-weekstrip-day.is-today{border-color:rgba(192,138,78,.5);background:rgba(192,138,78,.09)}
+.ritual-weekstrip-day.is-today span,.ritual-weekstrip-day.is-today strong{color:var(--accent-paper)}
+.ritual-weekstrip-day.is-perfect{border-color:rgba(127,201,168,.42);background:rgba(127,201,168,.09)}
+.ritual-weekstrip-day.is-perfect strong{color:var(--success,#7FC9A8)}
+.ritual-weekstrip-day i{width:100%;height:3px;border-radius:2px;background:rgba(240,229,211,.12);overflow:hidden}
+.ritual-weekstrip-day i b{display:block;height:100%;background:var(--accent-paper);border-radius:2px}
+:root[data-theme=light] .ritual-weekstrip-day i{background:rgba(74,56,36,.10)}
+
+/* ------------------------------------- 6 · the streak shelf (best per rule) */
+.ritual-shelf{display:flex;flex-direction:column;gap:2px}
+.ritual-shelf-row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;
+  padding:8px 2px;border-bottom:1px solid var(--rule-hair);
+  font-size:11.5px;
+}
+.ritual-shelf-row:last-child{border-bottom:0}
+.ritual-shelf-row span{color:var(--ink-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ritual-shelf-row em{
+  font-style:normal;font-family:var(--font-mono,ui-monospace,monospace);font-size:11px;
+  color:var(--ink-ghost);font-variant-numeric:tabular-nums;
+}
+.ritual-shelf-row strong{
+  font-family:var(--font-mono,ui-monospace,monospace);font-size:12.5px;font-weight:600;
+  color:var(--accent-paper);font-variant-numeric:tabular-nums;min-width:34px;text-align:right;
+}
+
+/* ------------------------------------------------------ 7 · the editor */
+.ritual-editor{display:flex;flex-direction:column;gap:16px;min-width:0}
+.ritual-tone-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px}
+.ritual-tone-btn{
+  display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+  padding:9px 10px;border-radius:9px;text-align:left;
+  border:1px solid var(--rule-hair);background:transparent;cursor:pointer;
+  color:var(--ink-faint);font-size:11px;font-weight:600;
+  transition:border-color 160ms ease,background 160ms ease,color 160ms ease;
+}
+.ritual-tone-btn .icon{width:14px;height:14px}
+.ritual-tone-btn:hover{border-color:var(--rule-strong);color:var(--ink)}
+.ritual-tone-btn.is-active{border-color:var(--accent-border,var(--accent-paper));background:var(--accent-soft,rgba(192,138,78,.12));color:var(--accent-paper)}
+.ritual-preview{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;border-radius:11px;
+  border:1px dashed var(--rule-strong);background:rgba(192,138,78,.05);
+  font-size:12px;color:var(--ink-muted);
+}
+.ritual-preview .ritual-tick{pointer-events:none}
+.ritual-preview.is-empty{border-style:dashed;color:var(--ink-ghost);font-style:italic}
+.ritual-preset-list{display:flex;flex-wrap:wrap;gap:6px}
+.ritual-preset{
+  font-size:10.5px;padding:5px 9px;border-radius:999px;
+  border:1px solid var(--rule-hair);background:transparent;color:var(--ink-muted);
+  cursor:pointer;transition:all 160ms ease;
+}
+.ritual-preset:hover{border-color:var(--accent-paper);color:var(--accent-paper);background:rgba(192,138,78,.07)}
+.ritual-preset.is-active{border-color:var(--accent-paper);color:var(--accent-paper);background:rgba(192,138,78,.13)}
+.ritual-editor [data-ritual-day-picker][hidden]{display:none}
+
+/* ---------------------------------------------------- 8 · ritual detail */
+.ritual-detail-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.ritual-detail-head .ritual-detail-mark{
+  width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;
+  background:var(--accent-soft,rgba(192,138,78,.14));color:var(--accent-paper);
+}
+.ritual-detail-figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin-bottom:16px}
+.ritual-detail-figure{padding:11px 12px;border-radius:10px;border:1px solid var(--rule-hair);background:var(--paper-sunken)}
+.ritual-detail-figure span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-ghost);font-weight:600;margin-bottom:4px}
+.ritual-detail-figure strong{font-family:var(--font-mono,ui-monospace,monospace);font-size:17px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.ritual-detail-ledger{display:flex;flex-direction:column;gap:3px;max-height:340px;overflow:auto}
+.ritual-detail-day{display:grid;grid-template-columns:84px minmax(0,1fr) auto;align-items:center;gap:10px;padding:6px 8px;border-radius:7px;font-size:11px}
+.ritual-detail-day:hover{background:rgba(255,246,232,.03)}
+.ritual-detail-day span{color:var(--ink-muted);font-variant-numeric:tabular-nums}
+.ritual-detail-day strong{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.ritual-detail-day .chip{font-size:10px;padding:2px 6px}
+.ritual-dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:rgba(240,229,211,.18)}
+.ritual-dot.is-kept{background:var(--accent-paper)}
+.ritual-dot.is-missed{background:rgba(226,188,133,.35)}
+
+/* ------------------------------------------------- 9 · empty / quiet states */
+.ritual-empty{padding:34px 18px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:11px}
+.ritual-empty .ritual-empty-mark{
+  width:52px;height:52px;border-radius:15px;display:grid;place-items:center;
+  background:var(--paper-sunken);border:1px solid var(--rule-hair);color:var(--accent-paper);
+}
+.ritual-empty .ritual-empty-mark .icon{width:22px;height:22px}
+.ritual-empty h3{font-family:var(--font-display);font-weight:400;font-size:22px;letter-spacing:-.015em;color:var(--ink);margin:0}
+.ritual-empty p{margin:0;font-size:12px;line-height:1.65;color:var(--ink-muted);max-width:38ch}
+.ritual-quiet{margin:0;font-size:11px;line-height:1.65;color:var(--ink-ghost);font-style:italic;padding:6px 0}
+
+/* ------------------------------------------------------------- 10 · motion */
+.ritual-row,.ritual-tick,.ritual-heat-day,.ritual-weekstrip-day{will-change:auto}
+.view-enter .ritual-row{animation:ritual-rise 460ms cubic-bezier(.22,.9,.24,1) both}
+.view-enter .ritual-row:nth-child(2){animation-delay:40ms}
+.view-enter .ritual-row:nth-child(3){animation-delay:80ms}
+.view-enter .ritual-row:nth-child(4){animation-delay:120ms}
+.view-enter .ritual-row:nth-child(5){animation-delay:160ms}
+.view-enter .ritual-row:nth-child(6){animation-delay:200ms}
+.view-enter .ritual-row:nth-child(n+7){animation-delay:230ms}
+@keyframes ritual-rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes ritual-pop{0%{transform:scale(.86)}55%{transform:scale(1.07)}100%{transform:scale(1)}}
+.ritual-tick.just-ticked{animation:ritual-pop 320ms cubic-bezier(.22,.9,.24,1)}
+
+@media (prefers-reduced-motion:reduce){
+  .view-enter .ritual-row{animation:none!important}
+  .ritual-tick.just-ticked{animation:none}
+  .ritual-ring .ring-value{transition:none}
+  .ritual-heat-day:hover{transform:none}
+}
+
+/* ------------------------------------------------------------ 11 · layout */
+@media (max-width:1180px){
+  .rituals-layout{grid-template-columns:1fr}
+}
+@media (max-width:820px){
+  .ritual-ledger{grid-template-columns:auto minmax(0,1fr);grid-template-areas:'ring main' 'actions actions';row-gap:14px}
+  .ritual-ring{grid-area:ring;width:84px;height:84px}
+  .ritual-ring-label strong{font-size:22px}
+  .ritual-ledger-main{grid-area:main}
+  .ritual-ledger-actions{grid-area:actions;flex-direction:row;flex-wrap:wrap;align-items:center}
+  .ritual-ledger-actions .btn-primary,.ritual-ledger-actions .btn-ghost{flex:1 1 auto;justify-content:center}
+}
+@media (max-width:560px){
+  .ritual-ledger{grid-template-columns:1fr;grid-template-areas:'ring' 'main' 'actions';justify-items:start;padding:16px}
+  .ritual-ledger h2{font-size:23px}
+  .ritual-ledger-figures{gap:8px 16px}
+  .ritual-row{grid-template-columns:auto minmax(0,1fr);grid-template-areas:'tick body' 'streak streak';row-gap:8px;padding:11px 11px}
+  .ritual-tick{grid-area:tick;align-self:start;margin-top:1px}
+  .ritual-body{grid-area:body}
+  .ritual-row-end{grid-area:streak;justify-content:space-between;width:100%}
+  .rituals-panel{padding:14px}
+  .ritual-tone-picker{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
+  .ritual-weekstrip{gap:4px}
+  .ritual-weekstrip-day{padding:7px 2px 6px;border-radius:8px}
+  .ritual-weekstrip-day strong{font-size:10.5px}
+  .ritual-weekstrip-day span{font-size:10px;letter-spacing:.1em}
+  .ritual-detail-day{grid-template-columns:74px minmax(0,1fr) auto}
+}
+@media (max-width:390px){
+  .ritual-ledger-figure{min-width:50px}
+  .ritual-ledger-figure strong{font-size:15px}
+  .ritual-tone-picker{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* the row's right-hand group on wide screens */
+.ritual-row-end{display:flex;align-items:center;gap:4px;flex-shrink:0}
+
+/* light theme hairlines */
+:root[data-theme=light] .rituals-panel{box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 14px 34px -32px rgba(74,56,36,.5)}
+:root[data-theme=light] .ritual-tick{border-color:rgba(74,56,36,.28)}
+:root[data-theme=light] .ritual-streak{background:var(--paper-sunken)}
+:root[data-theme=light] .ritual-heat-day.is-perfect{box-shadow:inset 0 0 0 1.5px rgba(255,251,242,.7)}
+
+/* ── 10b · RITUALS on the Command Center ─────────────────────────────────────
+   One quiet line of the user's own rules, inside the villa's panel language.
+   The strip only exists once a rule has been written. */
+.ritual-strip-card{padding:0!important;overflow:hidden}
+.ritual-strip{display:flex;align-items:center;gap:clamp(12px,1.6vw,20px);padding:13px clamp(14px,1.8vw,20px);flex-wrap:wrap}
+.ritual-strip-ring{position:relative;width:46px;height:46px;flex-shrink:0;display:grid;place-items:center}
+.ritual-strip-ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.ritual-strip-track{fill:none;stroke:rgba(240,229,211,.12);stroke-width:3}
+.ritual-strip-value{fill:none;stroke:var(--accent-paper);stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset 700ms cubic-bezier(.22,.9,.24,1)}
+.ritual-strip-ring strong{font-family:var(--font-mono,ui-monospace,monospace);font-size:10.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.ritual-strip-copy{min-width:0;flex:1 1 200px;display:flex;flex-direction:column;gap:2px}
+.ritual-strip-eyebrow{margin:0;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--accent-paper)}
+.ritual-strip-line{margin:0;font-size:12.5px;line-height:1.5;color:var(--ink-soft);overflow-wrap:anywhere}
+.ritual-strip-tick{
+  width:32px;height:32px;flex-shrink:0;display:grid;place-items:center;border-radius:9px;
+  border:1.4px solid rgba(192,138,78,.55);background:rgba(192,138,78,.10);color:var(--accent-paper);
+  cursor:pointer;transition:background 160ms ease,color 160ms ease,transform 160ms ease;
+}
+.ritual-strip-tick:hover{background:var(--accent-paper);color:#1A120A;transform:translateY(-1px)}
+.ritual-strip-tick .icon{width:15px;height:15px;stroke-width:2.4}
+.ritual-strip .btn-ghost{white-space:nowrap}
+:root[data-theme=light] .ritual-strip-track{stroke:rgba(74,56,36,.16)}
+:root[data-theme=light] .ritual-strip-tick:hover{color:#FFFBF2}
+@media (max-width:520px){
+  .ritual-strip{padding:12px 13px;gap:11px}
+  .ritual-strip-copy{flex:1 1 100%;order:3}
+  .ritual-strip .btn-ghost{margin-left:auto}
 }

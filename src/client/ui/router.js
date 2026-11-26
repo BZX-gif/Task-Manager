@@ -7,6 +7,7 @@ import { renderTasks } from '../views/tasks.js'
 import { renderGoals } from '../views/goals.js'
 import { renderProjects } from '../views/projects.js'
 import { renderRoutines } from '../views/routines.js'
+import { renderRituals } from '../views/rituals.js'
 import { renderFocusRoom } from '../views/focus-room.js'
 import { renderProgress } from '../views/progress.js'
 import { renderReview } from '../views/review.js'
@@ -36,8 +37,8 @@ export function viewFromPath(pathname) {
   return VIEWS.includes(view) ? view : 'dashboard'
 }
 
-export const VIEWS = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','focus','progress','review','journal','forecast','paper','settings']
-const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,calendar:renderCalendar,schedule:renderSchedule,hyb:renderHyb,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,paper:renderPaper,settings:renderSettings}
+export const VIEWS = ['dashboard','day','calendar','schedule','hyb','tasks','goals','projects','routines','rituals','focus','progress','review','journal','forecast','paper','settings']
+const RENDERERS = {dashboard:renderDashboard,day:renderMyDay,calendar:renderCalendar,schedule:renderSchedule,hyb:renderHyb,tasks:renderTasks,goals:renderGoals,projects:renderProjects,routines:renderRoutines,rituals:renderRituals,focus:renderFocusRoom,progress:renderProgress,review:renderReview,journal:renderJournal,forecast:renderForecast,paper:renderPaper,settings:renderSettings}
 /** Legacy route names kept alive so old links and habits never 404. */
 const VIEW_ALIASES = { assistant: 'paper', overview: 'dashboard', tasks: 'tasks' }
 let currentView='dashboard';const enterTimers={};let booted=false

@@ -21,7 +21,7 @@ const worker = (await import(path.join(root, 'dist', 'index.js'))).default
 const bundle = await readFile(path.join(root, 'public', 'static', 'js', 'app.js'), 'utf8')
 const shell = await (await worker.request('/')).text()
 
-const ROUTES = ['dashboard', 'day', 'calendar', 'schedule', 'hyb', 'tasks', 'goals', 'projects', 'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings']
+const ROUTES = ['dashboard', 'day', 'calendar', 'schedule', 'hyb', 'tasks', 'goals', 'projects', 'routines', 'rituals', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings']
 
 let window
 let errors = []
@@ -270,7 +270,7 @@ test('every chapter opens in its own photographic environment', async () => {
   const doc = window.document
   const expected = {
     day: 'day', tasks: 'missions', goals: 'goals', projects: 'projects',
-    calendar: 'terrace', focus: 'study', paper: 'lounge', journal: 'writing',
+    calendar: 'terrace', focus: 'study', paper: 'lounge', journal: 'writing', rituals: 'garden',
   }
   for (const [route, scene] of Object.entries(expected)) {
     await visit(route)
@@ -421,7 +421,7 @@ test('the focus room is a room: one timer, real controls, real history', async (
 
 test('no chapter still looks like the old generic product', async () => {
   // the visual contract: every route's opening is a PAPER chapter opening
-  for (const route of ['schedule', 'hyb', 'routines', 'review', 'forecast', 'progress', 'journal', 'paper', 'settings']) {
+  for (const route of ['schedule', 'hyb', 'routines', 'rituals', 'review', 'forecast', 'progress', 'journal', 'paper', 'settings']) {
     const view = await go(route)
     const head = view.querySelector('.page-heading.paper-header')
     assert.ok(head, `${route} opens with the journal's chapter heading`)
