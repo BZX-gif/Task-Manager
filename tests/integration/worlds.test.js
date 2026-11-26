@@ -76,6 +76,7 @@ test('each named section paints its own photograph and one active layer', async 
     calendar: ['terrace', 'resort-terrace-sm.webp'],
     focus: ['study', 'private-study-night-sm.webp'],
     paper: ['lounge', 'hotel-lounge-morning-sm.webp'],
+    rituals: ['garden', 'discipline-garden-sm.webp'],
   }
   const seen = new Set()
   for (const [route, [scene, asset]] of Object.entries(rooms)) {
@@ -87,7 +88,7 @@ test('each named section paints its own photograph and one active layer', async 
     assert.match(active[0].getAttribute('style'), new RegExp(asset), `${route} uses its own original file`)
     seen.add(asset)
   }
-  assert.equal(seen.size, 7, 'seven different photographs were activated')
+  assert.equal(seen.size, 8, 'eight different photographs were activated')
 })
 
 test('the navigation rail shows the same world in its own glass frame', async () => {
@@ -99,6 +100,7 @@ test('the navigation rail shows the same world in its own glass frame', async ()
     calendar: ['Calendar & Schedule', 'resort-terrace-sm.webp'],
     focus: ['Focus', 'private-study-night-sm.webp'],
     paper: ['Daily Briefing', 'hotel-lounge-morning-sm.webp'],
+    rituals: ['Rituals', 'discipline-garden-sm.webp'],
   }
   for (const [route, [name, asset]] of Object.entries(rooms)) {
     await visit(route)
@@ -116,7 +118,7 @@ test('the navigation rail shows the same world in its own glass frame', async ()
 })
 
 test('every chapter has its own editorial opening with figures from real data', async () => {
-  for (const route of ['day', 'tasks', 'goals', 'projects', 'calendar', 'focus', 'paper', 'journal']) {
+  for (const route of ['day', 'tasks', 'goals', 'projects', 'calendar', 'focus', 'paper', 'journal', 'rituals']) {
     const section = await visit(route)
     const hero = section.querySelector('.scene-hero')
     assert.ok(hero, `${route} opens with a scene hero`)

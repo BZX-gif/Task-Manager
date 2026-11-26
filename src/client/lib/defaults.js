@@ -3,7 +3,7 @@
    Kept separate from the store so tests and migrations can import them alone.
    ------------------------------------------------------------------------- */
 
-export const STATE_VERSION = 8
+export const STATE_VERSION = 9
 
 export const DEFAULT_CATEGORIES = [
   { id: 'personal', name: 'Personal', color: '#B7A7F7' },

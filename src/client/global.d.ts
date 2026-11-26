@@ -29,6 +29,7 @@ interface Window {
     openProjectModal(id?: string | null, options?: { goalId?: string | null; milestoneId?: string | null }): void
     openProjectDetail(id: string): void
     openRoutineModal(id?: string | null): void
+    openRitualEditor(id?: string | null): void
     /** Protected-time and category editors on the Settings screen. */
     openProtectedModal(id?: string | null): void
     openCategoryModal(id?: string | null): void

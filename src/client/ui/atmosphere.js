@@ -173,7 +173,7 @@ export function setAtmosphereScope(view) {
     const path = (typeof window !== 'undefined' && window.location?.pathname) || '/'
     const segments = path.split('/').filter(Boolean)
     const KNOWN = ['dashboard', 'day', 'calendar', 'schedule', 'hyb', 'tasks', 'goals', 'projects',
-      'routines', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings',
+      'routines', 'rituals', 'focus', 'progress', 'review', 'journal', 'forecast', 'paper', 'settings',
       'assistant', 'overview']
     // drop a trailing chapter name if there is one, then add the new chapter
     if (segments.length && KNOWN.includes(segments[segments.length - 1])) segments.pop()

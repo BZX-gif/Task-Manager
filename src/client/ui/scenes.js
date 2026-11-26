@@ -18,6 +18,7 @@ import { formatDuration } from '../lib/dates.js'
 import { sessionTotals } from '../lib/focus.js'
 import { scheduleFor } from '../lib/planner.js'
 import { isSceneId, sceneForView, sceneImage, sceneInfo, SCENE_IDS } from '../lib/scenes.js'
+import { ritualOverview } from '../lib/rituals.js'
 
 const ROOT = () => (typeof document === 'undefined' ? null : document.documentElement)
 const CURRENT = { id: 'villa', view: 'dashboard', warmed: new Set() }
@@ -152,6 +153,7 @@ function sceneFacts(id) {
   const projects = state?.projects || []
   const milestones = goals.reduce((sum, goal) => sum + count(goal.milestones || [], (m) => m.done), 0)
   const entries = count(state?.journal?.entries || state?.journal || [], (entry) => !!entry?.dateKey || !!entry?.date)
+  const rituals = ritualOverview(state?.rituals, today, { days: 60 })
   const map = {
     villa: [['Today', String(doneToday)], ['Open', String(open)]],
     day: [['Date', new Date(`${today}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })], ['Priorities', `${top3Done}/${top3.length || 3}`], ['Open', String(open)]],
@@ -162,6 +164,7 @@ function sceneFacts(id) {
     study: [['Focused today', focusMinutes > 60 ? formatDuration(focusMinutes) : `${Math.round(focusMinutes)}m`], ['Target', formatDuration(focusTarget)]],
     lounge: [['Open', String(open)], ['Earlier', String(overdue)], ['Done today', String(doneToday)]],
     writing: [['Entries', String(entries)], ['Focused today', focusMinutes > 60 ? formatDuration(focusMinutes) : `${Math.round(focusMinutes)}m`]],
+    garden: [['Kept today', `${rituals.doneToday}/${rituals.dueToday}`], ['Best run', `${rituals.bestRun}d`], ['Rules', String(rituals.count)]],
   }
   return map[id] || map.villa
 }

@@ -20,6 +20,7 @@ import { LEGACY_TIMETABLE_MISSION_ID, normalizeMissions } from './missions.js'
 import { normalizeHybPlan } from './hyb.js'
 import { normalizeLayers } from './calendar.js'
 import { normalizePaper } from './paper/memory.js'
+import { normalizeRitual, normalizeRitualLog } from './rituals.js'
 
 /** Legacy key kept for backward compatibility with existing installs. */
 export const STORAGE_KEY = 'kcc_state_v1'
@@ -221,6 +222,8 @@ export function emptyState(ctx = makeContext()) {
     journal: {},
     /** HYB — hybrid plans; see lib/hyb.js */
     hyb: { plans: [] },
+    /** RITUALS — your own daily rules and the tick that keeps a streak; see lib/rituals.js */
+    rituals: { rituals: [], log: {} },
     top3: {},
     completionLog: {},
     dayPlans: {},
@@ -297,6 +300,12 @@ export function migrateState(raw, ctx = makeContext()) {
     working = migrateStateV7ToV8(working, ctx)
     applied.push('migrateStateV7ToV8')
     version = 8
+  }
+
+  if (version < 9) {
+    working = migrateStateV8ToV9(working, ctx)
+    applied.push('migrateStateV8ToV9')
+    version = 9
   }
 
   const state = normalizeState(working, ctx, warnings)
@@ -657,6 +666,16 @@ export function normalizeState(raw, ctx = makeContext(), warnings = []) {
       .filter(Boolean)
       .slice(-2000),
   }
+  // --- v9: RITUALS — your own rules, one tick a day (additive; never seeds) ---
+  const rawRituals = isObj(raw.rituals) ? raw.rituals : {}
+  const ritualList = asArray(rawRituals.rituals)
+    .map((ritual) => normalizeRitual(ritual, ctx))
+    .filter(Boolean)
+    .slice(-200)
+  state.rituals = {
+    rituals: ritualList,
+    log: normalizeRitualLog(rawRituals.log, new Set(ritualList.map((ritual) => ritual.id))),
+  }
   state.meta.legacyStudyPlans = raw.meta?.legacyStudyPlans === true || (Number(raw.version) || 1) < 6
   state.focus.active = state.focus.active ? { ...state.focus.active, mode: ['break', 'stopwatch'].includes(state.focus.active.mode) ? state.focus.active.mode : 'focus', goalId: state.focus.active.goalId ? String(state.focus.active.goalId) : null } : null
 
@@ -682,6 +701,25 @@ export function migrateStateV7ToV8(raw, ctx = makeContext()) {
     ...raw,
     version: 8,
     hyb: { plans: asArray(hyb.plans).filter(isObj).map((plan) => normalizeHybPlan(plan, ctx)).filter(Boolean) },
+  }
+}
+
+/**
+ * v8 → v9: adds RITUALS — a private list of daily rules, each ticked once a
+ * day. Purely additive: no mission, goal, HYB plan, schedule, journal or
+ * routine record is touched, and a workspace with no rituals simply starts
+ * with an empty list and an empty log.
+ */
+export function migrateStateV8ToV9(raw, ctx = makeContext()) {
+  const rituals = isObj(raw.rituals) ? raw.rituals : {}
+  const list = asArray(rituals.rituals).map((ritual) => normalizeRitual(ritual, ctx)).filter(Boolean)
+  return {
+    ...raw,
+    version: 9,
+    rituals: {
+      rituals: list,
+      log: normalizeRitualLog(rituals.log, new Set(list.map((ritual) => ritual.id))),
+    },
   }
 }
 

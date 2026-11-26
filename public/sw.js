@@ -7,7 +7,7 @@
    • /api/* is never cached — AI responses must always be live.
    ------------------------------------------------------------------------- */
 
-const VERSION = 'v6-0-0'
+const VERSION = 'v6-1-0'
 const SHELL_CACHE = `cc-shell-${VERSION}`
 const ASSET_CACHE = `cc-assets-${VERSION}`
 
@@ -23,6 +23,7 @@ const SHELL_ASSETS = [
   '/assets/atmospheres/focus/private-study-night-sm.webp',
   '/assets/atmospheres/briefing/hotel-lounge-morning-sm.webp',
   '/assets/atmospheres/journal/writing-room-sm.webp',
+  '/assets/atmospheres/rituals/discipline-garden-sm.webp',
   '/assets/atmospheres/navigation/gallery-corridor-sm.webp',
   '/static/fonts/instrument-serif-400.woff2',
   '/static/fonts/instrument-serif-400-italic.woff2',

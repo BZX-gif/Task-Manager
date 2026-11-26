@@ -1,5 +1,5 @@
 /**
- * The world map is a contract: eight named sections, eight different original
+ * The world map is a contract: nine named sections, nine different original
  * photographs, one persistent navigation. These are the exact assertions —
  * the ones that can be decided without a browser.
  */
@@ -18,7 +18,7 @@ const css = await readFile(path.join(root, 'public', 'static', 'worlds.css'), 'u
 
 test('every named environment exists and has a distinct original photograph', () => {
   const named = SCENES.filter((scene) => scene.id !== 'villa')
-  assert.equal(named.length, 8)
+  assert.equal(named.length, 9)
   const images = named.map((scene) => scene.image)
   assert.equal(new Set(images).size, images.length, 'no photograph is reused between sections')
   const smalls = named.map((scene) => scene.imageSmall)
@@ -33,7 +33,7 @@ test('every named environment exists and has a distinct original photograph', ()
   assert.equal(isSceneId('not-a-room'), false)
 })
 
-test('the eight photographs ship in two optimised WebP widths', async () => {
+test('the nine photographs ship in two optimised WebP widths', async () => {
   for (const scene of SCENES.filter((entry) => entry.id !== 'villa')) {
     for (const file of [scene.image, scene.imageSmall]) {
       const info = await stat(path.join(root, 'public', file)).catch(() => null)
@@ -63,14 +63,14 @@ test('the navigation rail has its own commissioned portrait', async () => {
 })
 
 test('all sixteen routes resolve to a room, with the villa kept for the Command Center', () => {
-  const named = ['day', 'tasks', 'goals', 'projects', 'calendar', 'focus', 'paper']
+  const named = ['day', 'tasks', 'goals', 'projects', 'calendar', 'focus', 'paper', 'rituals']
   for (const route of named) {
     assert.equal(isSceneId(sceneForView(route)), true, `${route} has a commissioned room`)
     assert.notEqual(sceneForView(route), 'villa', `${route} does not reuse the villa`)
   }
   assert.equal(sceneForView('dashboard'), 'villa')
   assert.equal(sceneForView('nonsense'), 'villa')
-  assert.equal(Object.keys(VIEW_SCENE).length, 16, 'every CLIENT route is mapped')
+  assert.equal(Object.keys(VIEW_SCENE).length, 17, 'every CLIENT route is mapped')
   assert.equal(sceneInfo('nope').id, 'villa', 'an unknown room falls back safely')
   const villa = sceneImage('villa', 'evening')
   assert.match(villa.image, /atmosphere-night\.webp$/, 'the villa still honours its time of day')
@@ -89,7 +89,7 @@ test('the shell selects and preloads the room before the first paint', () => {
   assert.ok(sw.includes('/static/worlds.css'), 'and it is precached for offline use')
 })
 
-test('the world sheet is a glass system, not eight copies of a card grid', () => {
+test('the world sheet is a glass system, not nine copies of a card grid', () => {
   assert.match(css, /backdrop-filter:blur\(var\(--glass-blur\)\)/, 'panels blur the photograph')
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)/, 'reduced motion is honoured')
   assert.match(css, /@media \(max-width:767px\)/, 'the composition is rebuilt on phones')

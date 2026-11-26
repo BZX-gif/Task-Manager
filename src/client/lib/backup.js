@@ -31,6 +31,8 @@ export function buildExport(state, { now = Date.now(), app = "Kulshresth's Comma
       timetable: allTimetableBlocks(data).length,
       focusSessions: data.focus?.sessions?.length ?? 0,
       hybPlans: data.hyb?.plans?.length ?? 0,
+      rituals: data.rituals?.rituals?.length ?? 0,
+      ritualTicks: Object.values(data.rituals?.log || {}).reduce((sum, day) => sum + Object.keys(day || {}).length, 0),
       days: Object.keys(data.completionLog || {}).length,
     },
     data,
@@ -122,6 +124,7 @@ export function validateImport(payload, { now = Date.now(), id = defaultUid } = 
       recurring: normalized.tasks.filter((t) => t.recurrence).length,
       focusSessions: normalized.focus.sessions.length,
       hybPlans: normalized.hyb?.plans?.length ?? 0,
+      rituals: normalized.rituals?.rituals?.length ?? 0,
       trackedDays: dates.length,
       historyFrom: dates[0] || taskDates[0] || null,
       historyTo: dates[dates.length - 1] || taskDates[taskDates.length - 1] || null,
@@ -137,6 +140,7 @@ export function describeImport(summary) {
     `${summary.tasks} task${summary.tasks === 1 ? '' : 's'} (${summary.openTasks} open)`,
     `${summary.timetable} timetable block${summary.timetable === 1 ? '' : 's'}`,
     `${summary.focusSessions} focus session${summary.focusSessions === 1 ? '' : 's'}`,
+    ...(summary.rituals ? [`${summary.rituals} private rule${summary.rituals === 1 ? '' : 's'}`] : []),
     `${summary.trackedDays} tracked day${summary.trackedDays === 1 ? '' : 's'}`,
   ]
   if (summary.hybPlans) parts.push(`${summary.hybPlans} HYB plan${summary.hybPlans === 1 ? '' : 's'}`)
