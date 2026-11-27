@@ -6,7 +6,7 @@ VoiceBill is a voice-first billing app for Indian kirana shops, general stores a
 
 > “3 kilo chini, 2 kilo aata aur 3 litre soybean oil” → Sugar 3 kg × ₹45 = ₹135, Aata 2 kg × ₹40 = ₹80, Soybean Oil 3 L × ₹130 = ₹390 → **₹605**
 
-This repository currently contains VoiceBill only; the branch replaces the previous unrelated application.
+It is a standalone static app: `npm install && npm run dev`, then deploy the `dist/` folder anywhere (Vercel preset: Vite).
 
 ---
 
