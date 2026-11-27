@@ -1,22 +1,19 @@
 {
-  "name": "Command · Personal Command Center",
-  "short_name": "Command",
-  "description": "A calmer place to plan your day, connect your goals and do your best work. Private and local-first.",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "name": "VoiceBill — Speak. Review. Bill.",
+  "short_name": "VoiceBill",
+  "description": "Voice-powered billing for Indian kirana shops. Speak your items, review them, print the bill.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "any",
-  "background_color": "#090B10",
-  "theme_color": "#090B10",
-  "categories": ["productivity", "education"],
+  "orientation": "portrait",
+  "background_color": "#f7f4ed",
+  "theme_color": "#f7f4ed",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/static/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
-  ],
-  "shortcuts": [
-    { "name": "Quick capture", "url": "/?action=capture" },
-    { "name": "Focus Room", "url": "/?action=focus" }
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
   ]
 }

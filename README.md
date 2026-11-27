@@ -1,115 +1,180 @@
-# PAPER · Personal Command Platform
+# VoiceBill
 
-A local-first personal command platform: **what matters today, where your time goes, and how the week is really going**. Every chapter opens into its own original photographic environment, with one persistent glass navigation system.
+**Just speak. Get your bill.**
 
-Command is an original interface with a warm, editorial identity — warm near-black dark mode by default, a warm paper light theme, serif display type with monospace numerals, local SVG icons, restrained motion, and a dedicated mobile dock/drawer. It is a working product, not a landing page: missions, goals, projects, routines, scheduling, focus, analytics, review, reminders, backup/restore and the built-in PAPER intelligence engine are all wired to real browser-local data.
+VoiceBill is a voice-first billing app for Indian kirana shops, general stores and small retailers. The shopkeeper taps the mic, speaks the items in Hindi, Hinglish or English, checks what was heard, and prints a receipt — no typing, no account, no API key.
 
-**PAPER** is the chief of staff inside Command. It reasons over your actual workspace — missions, schedule, goals, focus, history — with deterministic, inspectable rules; every statement it makes is labelled as fact, calculation, inference, recommendation or missing information. It prepares changes and never applies them without your confirmation. No account, no server and no external model are required.
+> “3 kilo chini, 2 kilo aata aur 3 litre soybean oil” → Sugar 3 kg × ₹45 = ₹135, Aata 2 kg × ₹40 = ₹80, Soybean Oil 3 L × ₹130 = ₹390 → **₹605**
 
-## Quick start
+This repository currently contains VoiceBill only; the branch replaces the previous unrelated application.
+
+---
+
+## What it does
+
+| Screen | What the shopkeeper gets |
+| --- | --- |
+| **Dashboard** | Greeting with shop name, today’s sales and bill count (computed from saved bills), a large “speak a bill” action, recent bills, setup checklist, quick links. |
+| **New bill** | The centrepiece. Big mic, Hindi/English switch, live interim transcript, final-utterance log, auto-matched items with prices, quantity steppers, editable prices, product swap, discount (₹ or %), review-before-save, manual add, frequently-billed chips. |
+| **Products** | Add / edit / delete products with price, unit and spoken aliases; search; sample-data badges; validation. |
+| **Bill history** | Every saved bill with search, day grouping, date presets and a custom range, totals, and one tap to reprint. |
+| **Settings** | Shop name/address/phone, currency symbol, receipt width (58 mm / 80 mm / A4), thank-you message, recognition language, backup export/import, erase-all, storage footprint. |
+| **Receipt** | Thermal-style receipt, print / Save-as-PDF through the browser dialog, copy summary, reprint from history. |
+
+Voice input is feature-detected. When it is unavailable (Firefox, older WebViews, blocked mic, no microphone), the screen says so plainly and the manual path keeps working.
+
+## Technology
+
+- **React 19 + TypeScript** (strict) — component UI, typed domain model.
+- **Vite 8** — dev server and static production build.
+- **Tailwind CSS 3** — utility layer plus a hand-built design system in `src/styles.css` (warm off-white canvas, charcoal ink, green accent, self-hosted DM Sans + Instrument Serif).
+- **Browser Web Speech API** — speech recognition, wrapped in `src/lib/speech.ts`.
+- **localStorage** — persistence, versioned keys, sanitised on every read.
+- **Browser print** — receipts, with `@page` sizing per width and a print stylesheet.
+
+No backend, no database, no authentication, no paid API, no API key, no CDN and no network requests from the app. The whole build is static and deploys to Vercel (or any static host) as-is.
+
+**Why Vite rather than Next.js?** VoiceBill has no server-side requirements at all: no API routes, no secrets, no SSR data. A static React build is faster to load on a ₹6,000 Android phone, works offline after the first load, and deploys identically to Vercel, Cloudflare Pages or a local folder. Next.js would add a server runtime and a framework dependency without adding a feature.
+
+## Run it
 
 ```bash
 npm install
-npm run dev          # builds the client, then starts the Hono/Vite dev server
-npm run verify       # lint + both typechecks + production build + full test suite
-npm run build        # clean production build → dist/
-npm run preview      # Wrangler local preview of the Worker
-npm run deploy       # build + deploy to Cloudflare Workers
+npm run dev          # http://localhost:5173
 ```
 
-No account, database, paid client dependency or API key is required for the core app. A fresh workspace starts empty; legacy study-plan data is migrated and preserved.
+Production build:
 
-## What works
+```bash
+npm run build        # type-checks, then emits dist/
+npm run preview      # serve dist/ locally
+```
 
-- **HYB** — the hybrid plan layer and the button that opens it: study, work, body, people, events and ideas in six lanes. A plan is lighter than a mission and heavier than a note — lane, day, optional time, length, energy, steps, tags and links. Type `Mock paper tomorrow 6pm for 3h @study ~deep !high #gs` and every field is mirrored back as a chip before anything is saved. Repeating plans are finished day by day, never all at once, and any plan can be put on the real schedule or turned into a real mission. HYB Studio is the full working surface: scopes, lane/energy filters, search, day groups, week strip, lane balance and streak.
-- **Calendar** — one month/week/agenda view over everything the app already stores: time blocks, missions, HYB plans, routines, deadlines and journal days, each a layer you can switch off. Cells carry chips, quiet markers and a load bar; the day rail shows one day in reading order with actions. A HYB plan that has been scheduled is drawn once, in its lane colour, at the time it was actually placed. Arrow keys move, `Enter` opens the day in Schedule, `+` adds a plan to it.
-- **Forecast** — the only forward-looking view: committed load for the next 7/14/30 days from the same schedule the planner uses, capacity line, load status per day, clashes, category balance and carried-over work. Rest blocks are never counted as commitments.
-- **Journal** — one honest entry a day: what happened, one win, the next step, mood and energy. Thirty-day mood/streak metrics, a gentle summary line and a timeline of recent entries. Local only.
-- **Natural-language capture** — quick capture reads “Pay the bill tomorrow at 6pm for 15m !high #work” and shows each detected field as a chip before saving; repetition becomes a real series.
-- **Briefing** — opening the app greets you as **“Sir”** (editable), names the one mission that needs you now, and shows the honest shape of the day: score, Top 3, focus minutes, overdue work, the next blocks, tomorrow’s first move and one written intention. An always-visible command strip keeps that next move in sight on every screen; `B` opens the full briefing at any time.
-- **Overview / My Day** — time-aware greeting, live clock, today’s command, transparent daily score, Top 3 priorities, upcoming timeline, real weekly chart and quick actions. Secondary surfaces (HYB, Routines, Forecast, Weekly Review) live as domain tabs under the primary page of their domain.
-- **Schedule** — day/week/list calendars, dated time blocks, protected windows, conflict warnings, pointer drag, keyboard rescheduling (`Alt + ↑/↓`), task extension that moves only flexible blocks, and legacy study-plan templates.
-- **Plan My Day / Recover My Day** — deterministic proposals from real available time. Existing commitments and protected windows stay put; excess work is explicitly deferred. Every row is editable and nothing applies until you accept.
-- **Missions** — daily/weekly/long-term/quick horizons, seven statuses, subtasks, deadlines, recurrence, search/filter, quick capture, inbox, reschedule/skip history and goal/project/milestone links.
-- **Goals → milestones → projects → missions → time blocks** — connected progress, editable checkpoints, goal detail chains and project list/board/timeline views.
-- **Focus Room** — Pomodoro, custom durations, stopwatch, short/long breaks, mission/goal attribution, fullscreen/minimal overlay, daily target and real history. Timer math is timestamp-based and survives pause, tab switches, refresh and reopen.
-- **Routines** — ordered activities, weekday schedules, check-ins, consistency history and non-punitive momentum. Missed days are not debts.
-- **Rituals** — the rules you set for yourself: *talk less*, *brush twice*, *no phone for the first hour*. Each rule is ticked once a day (or on the days you choose), the run counts only due-and-kept days, a rest day never breaks it, and today stays open until the day ends. Every rule has its own 35-day record, the page has a six-week heatmap and a per-rule best run, and the Command Center carries one quiet line of the same data. Local only, schema `v9`.
-- **Analytics / Weekly Review** — completion, focus time, planned vs completed, categories, productive days, adherence and consistency from recorded data only; private reflections and next-week planning.
-- **PAPER · your chief of staff** — a real intelligence engine, fully local: an executive daily briefing, priorities ranked against your goals and deadlines, honest alerts, time-aware recommendations with their reasons, and prepared actions that execute only after you confirm. The workspace answers questions from your data and says plainly when there is not enough data to judge. An optional external model (server-side key) can be consulted explicitly; the app works completely without it.
-- **Command Center** — the opening page: today's command, the day's real shape and a PAPER strip with live alerts, recommendations and goal health, so you can see what the engine sees without asking.
-- **Settings** — profile, theme/accent, week start, time format, working hours, focus/break preferences, reminders, categories, protected time, export/import/reset and safety copies.
-- **PWA** — installable shell, offline navigation/assets, local data, responsible notification permissions and in-app reminder fallback.
+### Deploy to Vercel
 
-## The forward view
+1. Import the repository in Vercel.
+2. Framework preset: **Vite**. Build command `npm run build`, output directory `dist`.
+3. Deploy. No environment variables are needed.
 
-The workspace answers three questions in order: **what needs me now** (the briefing), **what does the next fortnight look like** (Forecast), and **what actually happened** (Journal). The **Calendar** is the same data read as a month, and **HYB** is the layer for everything that is a plan rather than a task. Forecast counts only real commitments from your schedule — sleep and protected windows are excluded — and reports clashes and carried-over work without blame. The Journal stores one entry per day (note, win, next step, mood, energy) inside state schema **v7**; HYB plans and the calendar preferences arrived in **v8**, and your own daily rules arrived in **v9** — each an additive migration with no change to existing records. Quick capture understands dates, times, durations, priorities, categories and repetition, and mirrors every parsed field into the visible controls before anything is saved. See `docs/workspace-4.4.md` for HYB and the calendar, `docs/rituals-7.md` for the rules page and its counting contract, and `docs/workspace-4.3.md` for the earlier behaviour tables and recorded verification.
+Because routing is hash-based (`/#/products`, `/#/bill/<id>`), no rewrite rules are required. The `base: './'` setting also makes the build portable to a sub-folder or a USB stick.
 
-## The briefing
+## Testing
 
-The briefing is the first thing you see and the fastest way back into the day. It is deterministic: the same records always produce the same next move.
+```bash
+npm test              # 91 unit tests (Node test runner, TypeScript stripped natively)
+npm run test:integration   # 12 end-to-end UI tests in jsdom against the real app
+npm run typecheck     # app + tests, strict
+npm run lint          # secrets, CDN/network, storage namespaces, assets, routes, fallbacks
+npm run build         # production build
+npm run verify        # everything above, in order
+```
 
-| Surface | What it does |
-|---|---|
-| Startup briefing | Greets you by your salutation, then names the current mission. Opens once a day by default; configurable to every load or only on request. |
-| Command strip | A one-line “At your command, Sir.” under the top bar that always names the next mission, its reason and its time. Updates on every change. |
-| Next-move order | Running time block → unfinished Top 3 → most overdue → highest-priority mission today → next scheduled block → newest inbox capture → an honest clear day. |
-| Intention | One short sentence per day, saved locally, shown in the greeting, the briefing and PAPER’s context. |
-| Spoken briefing | Optional browser-voice reading of the same summary. No audio leaves the device; unsupported browsers simply show the text. |
-| Recovery | When earlier work is still open, the briefing offers *Recover my day* without blame. |
+What is covered:
 
-Nothing in the briefing is invented and nothing is written except your intention and the “last shown” day. Settings → **Briefing** controls the salutation, when it opens and whether it speaks. The pure model lives in `src/client/lib/briefing.js` and is covered by unit and jsdom integration tests.
+- product creation, validation, editing, deletion, duplicate names, sample data
+- alias matching, custom aliases, typo handling, ambiguity, refusing unrelated products
+- Devanagari transliteration, Hindi/English number words, mixed Hinglish, decimals and fractions
+- multiple products in one utterance, product-first and quantity-first phrasing, unit conversion
+- unknown products, missing prices, unit mismatches, empty bills, discounts and paise rounding
+- bill numbers per day, history, draft persistence across a reload, corrupted/invalid saved data
+- receipt model and print CSS, 58/80/A4 widths
+- speech: final-results-only, duplicate-event suppression, permission denial, unsupported browsers
+- UI journeys: onboarding → products → pick/voice items → review → save → receipt → history; draft restore; discount; product swap; unrecognised-item blocking
+
+### The 20 required cases, and where they run
+
+Every row below is a test that actually runs under `npm test` or `npm run test:integration`; the numbers are the test’s position in the run output, so a reader can confirm them without trusting this table.
+
+| # | Required case | Test(s) that cover it | Result |
+| --- | --- | --- | --- |
+| 1 | Product CRUD | unit 13–19 (catalog), 73–74 (store); UI 2–3 | pass |
+| 2 | Alias matching (`chini`, `aata`, `sarson ka tel`, custom aliases) | unit 29, 30, 90 | pass |
+| 3 | Hindi normalisation / transliteration | unit 39, 86, 87 | pass |
+| 4 | English sentence parsing | unit 36, 88 | pass |
+| 5 | Hinglish parsing | unit 37, 38, 89 | pass |
+| 6 | Multi-product utterance | unit 36, 37, 41; UI 10 | pass |
+| 7 | Units (kg/g/litre/ml/piece/packet/dozen, conversion, mismatch) | unit 3, 4, 43 | pass |
+| 8 | Decimal and fractional quantities | unit 42, 89 | pass |
+| 9 | Unknown product is never invented | unit 32, 76; UI 8 | pass |
+| 10 | Missing price blocks the bill | unit 8, 81 | pass |
+| 11 | Calculations and paise rounding | unit 1, 2, 5 | pass |
+| 12 | Discounts (₹ and %) | unit 5, 78; UI 7 | pass |
+| 13 | Bill history, numbering, reprint link | unit 10, 79; UI 4 | pass |
+| 14 | Persistence across refresh | unit 64, 68, 80; UI 6 | pass |
+| 15 | Receipt renders every required field | unit 50–53 | pass |
+| 16 | Print layout per paper width | unit 21–23, 26–27 (CSS-source assertions) | pass* |
+| 17 | Microphone permission failure | unit 59, 60; UI 11 | pass |
+| 18 | Unsupported-browser fallback | unit 54, 62; UI 12 | pass |
+| 19 | Duplicate/interim recognition events | unit 56, 57, 58; UI 9 | pass |
+| 20 | Empty bill cannot be finalised | unit 6 (+ review gate in `NewBill`) | pass |
+
+\* Print coverage is a CSS-source assertion (the `@page` rule exists per width, the print block hides the app chrome and keeps only the receipt). No physical thermal printer and no browser binary was available in this environment, so no pixel-level or paper-level print test was run.
 
 ## Architecture
 
-| Layer | Choice |
-|---|---|
-| Edge | Cloudflare Worker + Hono (`src/index.tsx`, `src/worker.ts`, `src/ai.ts`) |
-| Client | Vanilla JS ES modules, no UI framework |
-| Build | esbuild client bundle, compiled Tailwind, Vite Worker build |
-| Charts | locally bundled Chart.js |
-| Storage | browser `localStorage`, key `kcc_state_v1`, schema **v9** |
-| Typography/icons | warm editorial system: serif display, system UI text, monospace numerals + inline local SVG |
-
-```text
-src/client/lib/      pure planning, briefing, score, focus, recurrence, relationships, routines, backup…
-src/client/lib/paper/  the PAPER engine: context, priorities, scheduling, reasoning,
-                       history, recommendations, intent, prepared actions, memory (pure, offline)
-src/client/core/     store, actions, DOM/dialogs, charts, event bus
-src/client/ui/       shell chrome, router, focus overlay, capture, reminders, PWA
-src/client/views/    Command Center, My Day, Calendar, HYB Studio, Schedule, Missions,
-                     Goals, Projects, Routines, Rituals, Focus Room, Analytics,
-                     Weekly Review, Journal, Forecast, PAPER workspace, Settings
-public/sw.js         versioned offline shell
-tests/unit/          pure-domain tests
-tests/integration/   real Worker routes + real client bundle in jsdom + AI contract
+```
+src/
+  lib/                 pure, testable domain logic (no React, no DOM)
+    types.ts           Product, Bill, Draft, Settings, ParsedItem…
+    text.ts            Devanagari → Latin, numbers, normalisation, distances
+    units.ts           unit synonyms, labels, conversions (gram ↔ kg, ml ↔ litre)
+    parser.ts          transcript → { name, quantity, unit }[]
+    matcher.ts         spoken name → catalogue product, with confidence rules
+    billing.ts         draft lines, readiness rules, bill numbering, finalisation
+    money.ts           integer-paise arithmetic, discounts, rounding
+    catalog.ts         product validation + CRUD helpers + optional samples
+    storage.ts         versioned localStorage, sanitising, backup import/export
+    receipt.ts         receipt document model
+    speech.ts          Web Speech wrapper: feature detection, dedupe, errors
+    format.ts          money/date/quantity formatting
+  state/
+    store.ts           observable store: actions + persistence + safety rules
+    react.tsx          StoreProvider / useAppState
+    useSpeech.ts       React binding for the recogniser
+  ui/                  icons, dialogs, toasts, product form/picker, onboarding
+  views/               Dashboard, NewBill, Products, Bills, Receipt, Settings
+  App.tsx              shell, navigation, routing, onboarding gate
+  styles.css           design tokens, components, responsive + print rules
+tests/unit             pure logic + speech + layout tests
+tests/integration      jsdom tests driving the real React app
 ```
 
-## PAPER and the optional external model
+### The voice pipeline
 
-PAPER itself needs no configuration: it is deterministic, runs on this device and answers from your workspace with labelled evidence. Only if you choose "consult the external model" in the PAPER workspace does the browser call `/api/ai`; the Worker adds the credential server-side and returns a sanitized response. The client never receives or stores an API key.
+1. **Normalise** (`text.ts`): transliterate Devanagari, map Hindi numerals, fold punctuation, split `3kg` → `3 kg`.
+2. **Parse** (`parser.ts`): split on “aur/and/,”, find quantity groups, read Hindi/English words (`teen`, `aadha`, `twenty five`, `do point five`), attach units, keep the product words.
+3. **Match** (`matcher.ts`): exact name → alias → token containment → typo tolerance, with a hard threshold and an ambiguity margin. Below that, the item stays **unmatched** with suggestions — a wrong price is worse than a correction step.
+4. **Price** (`billing.ts`): use the catalogue price, convert compatible units (500 gram → 0.5 kg), flag incompatible ones (2 kg of a per-packet product).
+5. **Review** (`NewBill`): totals, discount, and a blocking issue list. **Save** freezes a bill and clears the draft.
+6. **Print** (`Receipt`): receipt model → thermal-style page → browser print dialog.
 
-```bash
-npx wrangler secret put GEMINI_API_KEY     # production
-# local-only alternative: .dev.vars (git-ignored)
-```
+Final speech results are used for billing; interim text is display-only. Repeated result events are ignored by result index, and speaking the same product twice updates the existing line instead of duplicating it.
 
-Without a key or network, PAPER reports the failure honestly and every local capability — briefings, priorities, alerts, recommendations, planner, recovery — keeps working.
+## Data, privacy and limits
 
-## Data safety
+- Everything is stored **on this device** under `voicebill.products.v1`, `voicebill.bills.v1`, `voicebill.settings.v1`, `voicebill.draft.v1`, `voicebill.meta.v1`.
+- VoiceBill asks for the microphone only when the mic is tapped. Audio is handled by the browser’s speech engine; the app never records, stores or uploads it.
+- There is no account, no server and no analytics.
+- **Clearing the browser’s site data deletes the shop’s bills.** Export a backup before changing phones or clearing data (Settings → Download backup).
+- Speech recognition availability and quality vary by browser, phone and accent. Hindi/English switching, aliases, editing and manual entry exist precisely because recognition is not perfect. Hinglish is supported through aliases and transliteration, not guaranteed.
+- Chrome/Edge implement the Web Speech API; Firefox does not. Some browsers require a network connection for recognition and some require HTTPS.
+- Sample products are optional, marked “Sample”, and never replace the shopkeeper’s catalogue.
+- Thermal printing requires the printer’s driver and the right paper size; VoiceBill supplies the 58 mm / 80 mm layout and page size, not the driver.
+- Not implemented: GST invoices, multiple shops/users, cloud sync, product stock, barcode scanning.
 
-- Additive migrations preserve existing IDs, tasks, timetables, completion logs, focus history, journal entries and preferences; exports report HYB plan counts so a backup says what is inside it.
-- Pre-upgrade, pre-import, pre-reset and unreadable-data rescue copies are kept when storage permits.
-- Import validates the whole file before replacing anything; a safety copy is written first.
-- Storage denial/quota failure is reported visibly; the current tab keeps working and export remains available.
-- Clearing browser data still erases local data — export backups regularly.
+## Manual acceptance walkthrough
 
-## Keyboard
+1. Open the app → enter a shop name → keep “Add sample products” → **Start billing**.
+2. Dashboard shows the shop name, ₹0 sales, no bills, and a setup/quick-action card.
+3. Go to **Products** → edit a sample price → add your own product with aliases.
+4. Go to **New bill** → tap the mic → say “3 kilo chini aur 2 kilo aata” (allow the microphone).
+5. The items appear with catalogue prices and quantities; change a quantity, change a price, swap a product.
+6. Speak “sarson ka tel 2 litre” → Mustard Oil appears.
+7. Say something not in the catalogue (e.g. “sabun”) → the line is flagged **Needs product**; picking a product prices it.
+8. Tap **Review bill** → confirm the total and save → the receipt appears.
+9. Tap **Print receipt** → choose a printer, or **Save as PDF**.
+10. Open **Bill history** → find the bill, search for it, filter by date, reprint it. Reload the page — everything is still there.
 
-`B` briefing · `?` keyboard shortcut sheet · `Ctrl/⌘ + K` quick capture · `Ctrl/⌘ + Shift + K` command palette · `H` HYB deck · `C` calendar · `F` Focus Room · `N` capture · `P` PAPER · `J` Journal · `R` Rituals · `O` Forecast · `1–9` main views · `Esc` close/minimise · schedule `Alt + ↑/↓` reschedule · calendar grid arrows / `PageUp` `PageDown` month / `Enter` open day / `Space` or `+` add plan · assistant `Enter` send / `Shift + Enter` newline. The old `assistant` route remains as an alias of the PAPER workspace.
+---
 
-## Verification
-
-The visual system lives in `public/static/system.css` (loaded last, so its tokens win). See `docs/command-5-visual-system.md` for the scale, the depth planes and the defects the redesign fixed.
-
-`npm run verify` runs the project lint, Worker/client typechecks, clean production build and the full Node test suite. 4.5 added contrast floors (`tests/unit/theme-contrast.test.js`) and keyboard/focus contracts to that suite; see `docs/smoothing-4.5.md` for the defect list. The transformation also received headless Chromium interaction/viewport/offline QA; see `docs/command-center-final-report.md` for the recorded results and remaining operational limits. `docs/command-2.0-audit.md` records the architecture audit, the PAPER finding contract and the phase roadmap that drove the COMMAND 2.0 rebuild.
+_VoiceBill v1.0 — speak, review, bill._
